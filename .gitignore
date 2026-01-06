@@ -1,2 +1,12 @@
-/serato-itch-sync/
-.idea
+# Build output
+out/
+
+# IDE
+.idea/
+*.iml
+
+# OS
+.DS_Store
+
+# Logs
+*.log

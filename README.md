@@ -1,65 +1,61 @@
-# serato-itch-sync
+# ssync_pro
 
-Map one-to-one your directory structure to Serato parent crates and subcrates (also works with Scratch Live).
+Serato crate synchronization tool - automatically sync your filesystem folders to Serato crates.
 
-Latest version [0.1.5](https://github.com/sero53/serato-itch-sync/tree/master/distr/0.1.5) tested with Serato DJ Pro 2.1.0
+## License
 
-Working on a [new version here](https://github.com/sero53/serato-sync)
+[GNU GPL v3](http://www.gnu.org/licenses/gpl.html)
 
-Original see: [https://github.com/ralekseenkov/serato-sync-old](https://github.com/ralekseenkov/serato-sync-old/)
-by Roman Alekseenkov
+Based on [serato-sync](https://github.com/ralekseenkov/serato-sync-old/) by Roman Alekseenkov.
 
-License: [GNU GPL v3](http://www.gnu.org/licenses/gpl.html)
+## Features
 
-# How do I run it ?
-The installation process is very simple and it consists of two steps.
+- **Folder → Crate Mapping**: Mirror your directory structure directly to Serato crates
+- **Smart Deduplication**: Prevents duplicate tracks using Unicode-aware filename matching
+- **Pre-Sync Backup**: Automatically backs up `_Serato_` folder with preserved timestamps
+- **Parent Crate Support**: Add synced folders as subcrates under existing Serato crates
 
-First of all, you download the latest version and put it into any directory/folder on your computer. Let's say "~/serato-itch-sync" on Mac OS, or "C:\serato-itch-sync" on Windows.
+## Quick Start
 
-Second, you need to create the file with settings called "itch-sync.properties" in the same directory with the following contents (of course, replacing the paths to your libraries).
+1. Download `ssync_pro.jar`
+2. Create `ssync.properties` in the same folder:
 
-# Mac OS
-For Mac OS, the properties file should look like: ```
-
-# mode - gui vs. cmd
+```properties
 mode=gui
+music.library.filesystem=/path/to/your/music
+music.library.ssync=/Volumes/DriveName/_Serato_
+```
 
-# path to your personal music collection
-music.library.filesystem=/Users/ralekseenkov/Music/iTunes/iTunes Music/Music
+1. Run: `java -jar ssync_pro.jar`
 
-# path to your serato library
-music.library.itch=/Users/ralekseenkov/Music/Serato ```
+## Configuration Options
 
-Important notes for Mac OS users: * make sure to use forward slash in the library paths * the easiest way to create a properties file is to open a "TextEdit", go to "Format" menu and select "Make Plain Text", then enter the contents, and finally "File" and "Save As" giving it "itch-sync.properties" name.
+| Property | Description | Default |
+|----------|-------------|---------|
+| `mode` | `gui` or `cmd` | `gui` |
+| `music.library.filesystem` | Path to your music folder | Required |
+| `music.library.ssync` | Path to `_Serato_` folder | Required |
+| `music.library.ssync.clear-before-sync` | Clear existing crates first | `false` |
+| `crate.parent.path` | Parent crate for synced folders | None |
+| `dedup.mode` | `filename`, `path`, or `off` | `filename` |
+| `backup.enabled` | Create backup before sync | `true` |
 
-# Windows
-For Windows, the properties file should look like (alternatively, you can replace double backslash \\ with a single forward slash /): ```
+## Building from Source
 
-# mode - gui vs. cmd
-mode=gui
+Requires Java 8+ and Apache Ant:
 
-# path to your personal music collection
-music.library.filesystem=C:\Music
+```bash
+ant all
+```
 
-# path to your serato library
-music.library.itch=C:\Documents and Settings\ralekseenkov\My Documents\My Music\_Serato_ ```
+Output: `out/artifacts/ssync_pro/ssync_pro.jar`
 
-Important notes for Windows users: * make sure to use double backslash in the library paths * the easiest way to create a properties file is to open "Notepad", enter the contents, and then "File" and "Save As" giving it "itch-sync.properties" name. Make sure you saving the file as type "All﻿ Files", so that "Notepad" doesn't add ".txt" extension to the file name
+## Project Structure
 
-# Graphical vs. Command-Line execution mode
-As you can see, there is an extra parameter in the config file, which controls the execution mode. If you are not an experienced user, it is recommended to keep the value set to "gui" (GUI means graphical user interface). If you have no issues with the command line, you can change the setting to "cmd" avoiding popup windows on your screen and achieving full automation. If GUI can not be initialized for some reason, the tool will fallback to the command-line mode automatically.
-
-So, it's all set, and now you just need to execute the tool. In both Mac OS and Windows you can just double click the icon and it will launch the jar file (Mac OS will run jar laucher, while Windows will run java.exe or javaw.exe). Or, alternatively, you can just type "java -jar itch-sync-<version>.jar" in the command line inside the directory where the tool is installed.
-
-# Optional settings
-# Clear Serato library prior to sync
-The option is useful if you want to completely Serato database before sync, erasing all previously existing crates and tracks from it, and then make a full sync with a folder on your filesystem.
-
-By default it is disabled, so the sync preserves all existing crates and subcrates in Serato.
-
-When enabled, it deletes all files from directories "Crates" and "Subcrates" (that clears up all existing crates in Serato), and it also deletes the file "database V2" (that clears up all existing tracks from "All" view in Serato) before the sync.
-
-To enable, add the following lines to your properties file: ```
-
-# deletes all existing crates from serato library prior to sync, as well as all tracks from "All" view
-music.library.itch.clear-before-sync=true ```
+```
+ssync_pro/
+├── src/           # Source files (16 Java files)
+├── build.xml      # Ant build script
+├── out/           # Build output (generated)
+└── README.md
+```

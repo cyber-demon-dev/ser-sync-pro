@@ -2,11 +2,10 @@ import java.io.File;
 import java.io.IOException;
 
 /**
- * Legacy entry point - redirects to ssync_main.
- * 
- * @author Roman Alekseenkov (original), refactored for ssync
+ * Main entry point for serato-sync.
+ * Syncs filesystem directory structure to Serato crates.
  */
-public class Main {
+public class ssync_main {
 
     public static void main(String[] args) {
         // Load configuration
@@ -19,7 +18,7 @@ public class Main {
             return;
         }
 
-        // Set mode
+        // Set mode (GUI vs command line)
         ssync_log.setMode(config.isGuiMode());
 
         // Load media library
@@ -44,6 +43,16 @@ public class Main {
             return;
         }
 
+        // Backup Serato folder
+        if (config.isBackupEnabled()) {
+            String backupPath = ssync_backup.createBackup(seratoPath);
+            if (backupPath == null) {
+                ssync_log.error("Backup failed. Aborting sync for safety.");
+                ssync_log.fatalError();
+                return;
+            }
+        }
+
         // Validate parent crate path
         String parentCratePath = config.getParentCratePath();
         if (parentCratePath != null) {
@@ -52,7 +61,7 @@ public class Main {
             File parentCrateFile = new File(seratoPath + "/Subcrates/" + parentCratePath + ".crate");
             if (!parentCrateFile.exists()) {
                 ssync_log.error("Parent crate '" + parentCratePath + "' does not exist in Serato.");
-                ssync_log.error("Please create the parent crate '" + parentCratePath + "' in Serato first.");
+                ssync_log.error("Please create the parent crate in Serato first, then re-run sync.");
                 ssync_log.fatalError();
                 return;
             }
@@ -79,8 +88,15 @@ public class Main {
             }
         }
 
-        // Build and write library
-        ssync_library crateLibrary = ssync_library.createFrom(fsLibrary, parentCratePath);
+        // Load track index for deduplication
+        ssync_track_index trackIndex = null;
+        if (config.isSkipExistingTracks()) {
+            trackIndex = ssync_track_index.createFrom(seratoPath, config.getDedupMode());
+        }
+
+        // Build crate library
+        ssync_library crateLibrary = ssync_library.createFrom(fsLibrary, parentCratePath, trackIndex);
+
         try {
             crateLibrary.writeTo(seratoPath, config.isClearLibraryBeforeSync());
         } catch (ssync_exception e) {
@@ -89,8 +105,13 @@ public class Main {
             ssync_log.fatalError();
             return;
         }
+
+        // Summary
         ssync_log.info("Wrote " + crateLibrary.getTotalNumberOfCrates() + " crates and " +
                 crateLibrary.getTotalNumberOfSubCrates() + " subcrates");
+        if (trackIndex != null && trackIndex.getSkippedCount() > 0) {
+            ssync_log.info("Skipped " + trackIndex.getSkippedCount() + " duplicate tracks");
+        }
         ssync_log.info("Enjoy!");
 
         ssync_log.success();
