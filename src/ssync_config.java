@@ -86,6 +86,10 @@ public class ssync_config {
         return mode.trim().toLowerCase();
     }
 
+    public boolean isHardDriveDupeScanEnabled() {
+        return getBooleanOption("harddrive.dupe.scan.enabled", false);
+    }
+
     // ==================== Helper Methods ====================
 
     private boolean getBooleanOption(String name, boolean defaultValue) {

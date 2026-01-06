@@ -69,6 +69,13 @@ public class ssync_media_library implements Comparable<ssync_media_library> {
         return result;
     }
 
+    public void flattenTracks(java.util.List<String> list) {
+        list.addAll(tracks);
+        for (ssync_media_library child : children) {
+            child.flattenTracks(list);
+        }
+    }
+
     public static ssync_media_library readFrom(String mediaLibraryPath) {
         ssync_media_library result = new ssync_media_library(".");
         result.collectAll(mediaLibraryPath);

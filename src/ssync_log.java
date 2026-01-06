@@ -12,7 +12,9 @@ public class ssync_log {
     private static boolean GUI_MODE = true;
     private static ssync_log_window_handler WINDOW_HANDLER;
     private static PrintWriter FILE_WRITER;
+    private static PrintWriter DUPE_WRITER;
     private static final String LOG_FILE = "ssync-pro.log";
+    private static final String DUPE_FILE = "ssync-dupe-files.log";
 
     public static void info(String message) {
         initGui();
@@ -25,6 +27,14 @@ public class ssync_log {
             System.out.flush();
         }
         writeToFile(timestamped);
+    }
+
+    public static void dupe(String message) {
+        initGui();
+        if (DUPE_WRITER != null) {
+            DUPE_WRITER.println(message);
+            DUPE_WRITER.flush();
+        }
     }
 
     public static void error(String message) {
@@ -94,6 +104,7 @@ public class ssync_log {
             FILE_WRITER = new PrintWriter(new FileWriter(LOG_FILE, false));
             FILE_WRITER.println(getTimestamp() + " [INFO] ssync-pro started");
             FILE_WRITER.flush();
+            DUPE_WRITER = new PrintWriter(new FileWriter(DUPE_FILE, false));
         } catch (IOException e) {
             // Can't write log file - continue without it
         }
@@ -110,6 +121,9 @@ public class ssync_log {
         if (FILE_WRITER != null) {
             FILE_WRITER.println(getTimestamp() + " [INFO] ssync-pro finished");
             FILE_WRITER.close();
+        }
+        if (DUPE_WRITER != null) {
+            DUPE_WRITER.close();
         }
     }
 

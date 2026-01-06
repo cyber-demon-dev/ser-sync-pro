@@ -112,8 +112,47 @@ public class ssync_main {
         if (trackIndex != null && trackIndex.getSkippedCount() > 0) {
             ssync_log.info("Skipped " + trackIndex.getSkippedCount() + " duplicate tracks");
         }
+
+        // Scan for hard drive duplicates if enabled
+        if (config.isHardDriveDupeScanEnabled()) {
+            scanForHardDriveDuplicates(fsLibrary);
+        }
+
         ssync_log.info("Enjoy!");
 
         ssync_log.success();
+    }
+
+    private static void scanForHardDriveDuplicates(ssync_media_library library) {
+        ssync_log.info("Scanning for hard drive duplicates...");
+        java.util.List<String> allTracks = new java.util.ArrayList<>();
+        library.flattenTracks(allTracks);
+
+        java.util.Map<String, java.util.List<String>> groups = new java.util.HashMap<>();
+        for (String path : allTracks) {
+            java.io.File f = new java.io.File(path);
+            String key = f.getName().toLowerCase() + "|" + f.length();
+            groups.computeIfAbsent(key, k -> new java.util.ArrayList<>()).add(path);
+        }
+
+        int dupeCount = 0;
+        for (java.util.Map.Entry<String, java.util.List<String>> entry : groups.entrySet()) {
+            java.util.List<String> paths = entry.getValue();
+            if (paths.size() > 1) {
+                dupeCount++;
+                ssync_log.dupe("Duplicate group: " + entry.getKey());
+                for (String path : paths) {
+                    ssync_log.dupe("  " + path);
+                }
+                ssync_log.dupe("");
+            }
+        }
+
+        if (dupeCount > 0) {
+            ssync_log.info("Found " + dupeCount
+                    + " duplicate file groups on hard drive. See ssync-dupe-files.log for details.");
+        } else {
+            ssync_log.info("No hard drive duplicates found.");
+        }
     }
 }
