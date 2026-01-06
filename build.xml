@@ -9,7 +9,7 @@
     <!-- Properties -->
     <property name="src.dir" value="src"/>
     <property name="build.dir" value="out/production/ssync_pro"/>
-    <property name="dist.dir" value="out/artifacts/ssync_pro"/>
+    <property name="dist.dir" value="distr/ssync_pro"/>
     <property name="jar.name" value="ssync_pro.jar"/>
     <property name="main.class" value="ssync_main"/>
     

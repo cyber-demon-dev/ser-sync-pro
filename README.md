@@ -42,20 +42,31 @@ music.library.ssync=/Volumes/DriveName/_Serato_
 
 ## Building from Source
 
-Requires Java 8+ and Apache Ant:
+### 1. Install Dependencies
+
+Requires **Java 11** and **Apache Ant**.
+
+#### macOS (using [Homebrew](https://brew.sh/))
+
+```bash
+brew install openjdk@11 ant
+```
+
+### 2. Compile and Package
 
 ```bash
 ant all
 ```
 
-Output: `out/artifacts/ssync_pro/ssync_pro.jar`
+Output: `distr/ssync_pro/ssync_pro.jar`
 
 ## Project Structure
 
 ```
 ssync_pro/
-├── src/           # Source files (16 Java files)
+├── src/           # Source files
 ├── build.xml      # Ant build script
-├── out/           # Build output (generated)
+├── out/           # Compiled classes (generated)
+├── distr/         # Distribution artifacts (generated)
 └── README.md
 ```
