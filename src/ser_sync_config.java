@@ -5,16 +5,16 @@ import java.util.Properties;
 
 /**
  * Configuration loader for serato-sync.
- * Reads settings from ssync.properties file.
+ * Reads settings from ser-sync.properties file.
  */
-public class ssync_config {
+public class ser_sync_config {
 
-    public static final String CONFIG_FILE = "ssync.properties";
-    public static final String CONFIG_FILE_ALT = "ssync.properties.txt";
+    public static final String CONFIG_FILE = "ser-sync.properties";
+    public static final String CONFIG_FILE_ALT = "ser-sync.properties.txt";
 
     private Properties properties;
 
-    public ssync_config() throws IOException {
+    public ser_sync_config() throws IOException {
         properties = new Properties();
 
         FileInputStream in = null;
@@ -40,7 +40,7 @@ public class ssync_config {
     }
 
     public String getSeratoLibraryPath() {
-        return getRequiredOption("music.library.ssync");
+        return getRequiredOption("music.library.ser-sync");
     }
 
     // ==================== Parent Crate ====================
@@ -53,9 +53,9 @@ public class ssync_config {
         path = path.trim();
         // Reject nested paths
         if (path.contains("%%")) {
-            ssync_log.error("Invalid 'crate.parent.path': nested paths are not supported.");
-            ssync_log.error("Use a single crate name like 'Current', not 'Current%%2025'.");
-            ssync_log.fatalError();
+            ser_sync_log.error("Invalid 'crate.parent.path': nested paths are not supported.");
+            ser_sync_log.error("Use a single crate name like 'Current', not 'Current%%2025'.");
+            ser_sync_log.fatalError();
         }
         return path;
     }
@@ -63,7 +63,7 @@ public class ssync_config {
     // ==================== Sync Options ====================
 
     public boolean isClearLibraryBeforeSync() {
-        return getBooleanOption("music.library.ssync.clear-before-sync", false);
+        return getBooleanOption("music.library.ser-sync.clear-before-sync", false);
     }
 
     // ==================== Backup ====================
@@ -81,7 +81,7 @@ public class ssync_config {
     public String getDedupMode() {
         String mode = properties.getProperty("dedup.mode");
         if (mode == null || mode.trim().isEmpty()) {
-            return ssync_track_index.MODE_PATH; // default
+            return ser_sync_track_index.MODE_PATH; // default
         }
         return mode.trim().toLowerCase();
     }
@@ -103,8 +103,8 @@ public class ssync_config {
     private String getRequiredOption(String name) {
         String result = properties.getProperty(name);
         if (result == null || result.trim().length() <= 0) {
-            ssync_log.error("Required config option '" + name + "' is not specified");
-            ssync_log.fatalError();
+            ser_sync_log.error("Required config option '" + name + "' is not specified");
+            ser_sync_log.fatalError();
         }
         return result;
     }

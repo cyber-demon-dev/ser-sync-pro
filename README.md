@@ -1,4 +1,4 @@
-# ssync-pro
+# ser-sync-pro
 
 Serato crate synchronization tool - automatically sync your filesystem folders to Serato crates.
 
@@ -17,16 +17,16 @@ Based on [serato-sync](https://github.com/ralekseenkov/serato-sync-old/) by Roma
 
 ## Quick Start
 
-1. Download `ssync-pro.jar`
-2. Create `ssync.properties` in the same folder:
+1. Download `ser-sync-pro.jar`
+2. Create `ser-sync.properties` in the same folder:
 
 ```properties
 mode=gui
 music.library.filesystem=/path/to/your/music
-music.library.ssync=/Volumes/DriveName/_Serato_
+music.library.ser-sync=/Volumes/DriveName/_Serato_
 ```
 
-1. Run: `java -jar ssync-pro.jar`
+1. Run: `java -jar ser-sync-pro.jar`
 
 ## Configuration Options
 
@@ -34,8 +34,8 @@ music.library.ssync=/Volumes/DriveName/_Serato_
 |----------|-------------|---------|
 | `mode` | `gui` or `cmd` | `gui` |
 | `music.library.filesystem` | Path to your music folder | Required |
-| `music.library.ssync` | Path to `_Serato_` folder | Required |
-| `music.library.ssync.clear-before-sync` | Clear existing crates first | `false` |
+| `music.library.ser-sync` | Path to `_Serato_` folder | Required |
+| `music.library.ser-sync.clear-before-sync` | Clear existing crates first | `false` |
 | `crate.parent.path` | Parent crate for synced folders | None |
 | `dedup.mode` | `filename`, `path`, or `off` | `filename` |
 | `backup.enabled` | Create backup before sync | `true` |
@@ -58,12 +58,12 @@ brew install openjdk@11 ant
 ant all
 ```
 
-Output: `distr/ssync-pro/ssync-pro.jar`
+Output: `distr/ser-sync-pro/ser-sync-pro.jar`
 
 ## Project Structure
 
 ```
-ssync-pro/
+ser-sync-pro/
 ├── src/           # Source files
 ├── build.xml      # Ant build script
 ├── out/           # Compiled classes (generated)

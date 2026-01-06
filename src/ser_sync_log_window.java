@@ -3,13 +3,13 @@ import javax.swing.*;
 /**
  * GUI log window for serato-sync.
  * 
- * @author Roman Alekseenkov (original), refactored for ssync
+ * @author Roman Alekseenkov (original), refactored for ser-sync
  */
-public class ssync_log_window extends JFrame {
+public class ser_sync_log_window extends JFrame {
 
     private JTextArea textArea;
 
-    public ssync_log_window(String title, int width, int height) {
+    public ser_sync_log_window(String title, int width, int height) {
         super(title);
         setSize(width, height);
         textArea = new JTextArea();
@@ -30,20 +30,20 @@ public class ssync_log_window extends JFrame {
 /**
  * Singleton handler for the log window.
  */
-class ssync_log_window_handler {
+class ser_sync_log_window_handler {
 
-    private ssync_log_window window = null;
-    private static ssync_log_window_handler handler = null;
+    private ser_sync_log_window window = null;
+    private static ser_sync_log_window_handler handler = null;
 
-    private ssync_log_window_handler() {
+    private ser_sync_log_window_handler() {
         if (window == null) {
-            window = new ssync_log_window("ssync-pro logging window", 650, 350);
+            window = new ser_sync_log_window("ser-sync-pro logging window", 650, 350);
         }
     }
 
-    public static synchronized ssync_log_window_handler getInstance() {
+    public static synchronized ser_sync_log_window_handler getInstance() {
         if (handler == null) {
-            handler = new ssync_log_window_handler();
+            handler = new ser_sync_log_window_handler();
         }
         return handler;
     }

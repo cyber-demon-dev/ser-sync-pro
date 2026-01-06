@@ -8,7 +8,7 @@ import java.util.regex.Pattern;
  * Represents a media library on the filesystem.
  * Recursively scans directories for supported audio/video files.
  */
-public class ssync_media_library implements Comparable<ssync_media_library> {
+public class ser_sync_media_library implements Comparable<ser_sync_media_library> {
 
     private static final Pattern[] MUSIC_FILENAME_PATTERNS = {
             Pattern.compile("(.*)\\.mp3", Pattern.CASE_INSENSITIVE),
@@ -35,9 +35,9 @@ public class ssync_media_library implements Comparable<ssync_media_library> {
 
     private String directory;
     private SortedSet<String> tracks = new TreeSet<String>();
-    private SortedSet<ssync_media_library> children = new TreeSet<ssync_media_library>();
+    private SortedSet<ser_sync_media_library> children = new TreeSet<ser_sync_media_library>();
 
-    public ssync_media_library(String directory) {
+    public ser_sync_media_library(String directory) {
         this.directory = directory;
     }
 
@@ -49,13 +49,13 @@ public class ssync_media_library implements Comparable<ssync_media_library> {
         return tracks;
     }
 
-    public SortedSet<ssync_media_library> getChildren() {
+    public SortedSet<ser_sync_media_library> getChildren() {
         return children;
     }
 
     public int getTotalNumberOfTracks() {
         int result = tracks.size();
-        for (ssync_media_library childLibrary : children) {
+        for (ser_sync_media_library childLibrary : children) {
             result += childLibrary.getTotalNumberOfTracks();
         }
         return result;
@@ -63,7 +63,7 @@ public class ssync_media_library implements Comparable<ssync_media_library> {
 
     public int getTotalNumberOfDirectories() {
         int result = children.size();
-        for (ssync_media_library childLibrary : children) {
+        for (ser_sync_media_library childLibrary : children) {
             result += childLibrary.getTotalNumberOfDirectories();
         }
         return result;
@@ -71,13 +71,13 @@ public class ssync_media_library implements Comparable<ssync_media_library> {
 
     public void flattenTracks(java.util.List<String> list) {
         list.addAll(tracks);
-        for (ssync_media_library child : children) {
+        for (ser_sync_media_library child : children) {
             child.flattenTracks(list);
         }
     }
 
-    public static ssync_media_library readFrom(String mediaLibraryPath) {
-        ssync_media_library result = new ssync_media_library(".");
+    public static ser_sync_media_library readFrom(String mediaLibraryPath) {
+        ser_sync_media_library result = new ser_sync_media_library(".");
         result.collectAll(mediaLibraryPath);
         return result;
     }
@@ -106,7 +106,7 @@ public class ssync_media_library implements Comparable<ssync_media_library> {
         for (File file : all) {
             if (file.isDirectory()) {
                 String childDirectory = file.getName();
-                ssync_media_library child = new ssync_media_library(childDirectory);
+                ser_sync_media_library child = new ser_sync_media_library(childDirectory);
                 child.collectAll(path + "/" + childDirectory);
                 children.add(child);
             }
@@ -126,7 +126,7 @@ public class ssync_media_library implements Comparable<ssync_media_library> {
         return false;
     }
 
-    public int compareTo(ssync_media_library that) {
+    public int compareTo(ser_sync_media_library that) {
         return this.directory.compareTo(that.directory);
     }
 
@@ -140,7 +140,7 @@ public class ssync_media_library implements Comparable<ssync_media_library> {
         for (String track : tracks) {
             result.append(indent(level + 1)).append(track).append("\n");
         }
-        for (ssync_media_library library : children) {
+        for (ser_sync_media_library library : children) {
             result.append(library.toString(level + 1));
         }
         return result.toString();

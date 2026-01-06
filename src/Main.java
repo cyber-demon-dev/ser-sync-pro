@@ -2,58 +2,58 @@ import java.io.File;
 import java.io.IOException;
 
 /**
- * Legacy entry point - redirects to ssync_main.
+ * Legacy entry point - redirects to ser_sync_main.
  * 
- * @author Roman Alekseenkov (original), refactored for ssync
+ * @author Roman Alekseenkov (original), refactored for ser-sync
  */
 public class Main {
 
     public static void main(String[] args) {
         // Load configuration
-        ssync_config config;
+        ser_sync_config config;
         try {
-            config = new ssync_config();
+            config = new ser_sync_config();
         } catch (IOException e) {
-            ssync_log.error("Unable to load config file '" + ssync_config.CONFIG_FILE + "'");
-            ssync_log.fatalError();
+            ser_sync_log.error("Unable to load config file '" + ser_sync_config.CONFIG_FILE + "'");
+            ser_sync_log.fatalError();
             return;
         }
 
         // Set mode
-        ssync_log.setMode(config.isGuiMode());
+        ser_sync_log.setMode(config.isGuiMode());
 
         // Load media library
-        ssync_log.info("Scanning media library " + config.getMusicLibraryPath() + "...");
-        ssync_media_library fsLibrary = ssync_media_library.readFrom(config.getMusicLibraryPath());
+        ser_sync_log.info("Scanning media library " + config.getMusicLibraryPath() + "...");
+        ser_sync_media_library fsLibrary = ser_sync_media_library.readFrom(config.getMusicLibraryPath());
         if (fsLibrary.getTotalNumberOfTracks() <= 0) {
-            ssync_log.error("Unable to find any supported files in your media library directory.");
-            ssync_log.error("Are you sure you specified the right path in the config file?");
-            ssync_log.fatalError();
+            ser_sync_log.error("Unable to find any supported files in your media library directory.");
+            ser_sync_log.error("Are you sure you specified the right path in the config file?");
+            ser_sync_log.fatalError();
             return;
         }
-        ssync_log.info("Found " + fsLibrary.getTotalNumberOfTracks() + " tracks in " +
+        ser_sync_log.info("Found " + fsLibrary.getTotalNumberOfTracks() + " tracks in " +
                 fsLibrary.getTotalNumberOfDirectories() + " directories");
 
         // Check Serato library exists
         String seratoPath = config.getSeratoLibraryPath();
-        ssync_log.info("Writing files into serato library " + seratoPath + "...");
+        ser_sync_log.info("Writing files into serato library " + seratoPath + "...");
         if (!new File(seratoPath).isDirectory()) {
-            ssync_log.error("Unable to detect your Serato library. It doesn't exist.");
-            ssync_log.error("Are you sure you specified the right path in the config file?");
-            ssync_log.fatalError();
+            ser_sync_log.error("Unable to detect your Serato library. It doesn't exist.");
+            ser_sync_log.error("Are you sure you specified the right path in the config file?");
+            ser_sync_log.fatalError();
             return;
         }
 
         // Validate parent crate path
         String parentCratePath = config.getParentCratePath();
         if (parentCratePath != null) {
-            ssync_log.info("Using parent crate: " + parentCratePath);
+            ser_sync_log.info("Using parent crate: " + parentCratePath);
 
             File parentCrateFile = new File(seratoPath + "/Subcrates/" + parentCratePath + ".crate");
             if (!parentCrateFile.exists()) {
-                ssync_log.error("Parent crate '" + parentCratePath + "' does not exist in Serato.");
-                ssync_log.error("Please create the parent crate '" + parentCratePath + "' in Serato first.");
-                ssync_log.fatalError();
+                ser_sync_log.error("Parent crate '" + parentCratePath + "' does not exist in Serato.");
+                ser_sync_log.error("Please create the parent crate '" + parentCratePath + "' in Serato first.");
+                ser_sync_log.fatalError();
                 return;
             }
 
@@ -70,29 +70,29 @@ public class Main {
                     }
                 }
                 if (count > 1) {
-                    ssync_log.error("Duplicate parent crate detected: found " + count + " crates named '"
+                    ser_sync_log.error("Duplicate parent crate detected: found " + count + " crates named '"
                             + parentCratePath + "'.");
-                    ssync_log.error("Please resolve the duplication in Serato before syncing.");
-                    ssync_log.fatalError();
+                    ser_sync_log.error("Please resolve the duplication in Serato before syncing.");
+                    ser_sync_log.fatalError();
                     return;
                 }
             }
         }
 
         // Build and write library
-        ssync_library crateLibrary = ssync_library.createFrom(fsLibrary, parentCratePath);
+        ser_sync_library crateLibrary = ser_sync_library.createFrom(fsLibrary, parentCratePath);
         try {
             crateLibrary.writeTo(seratoPath, config.isClearLibraryBeforeSync());
-        } catch (ssync_exception e) {
-            ssync_log.error("Error occurred!");
-            ssync_log.error(e);
-            ssync_log.fatalError();
+        } catch (ser_sync_exception e) {
+            ser_sync_log.error("Error occurred!");
+            ser_sync_log.error(e);
+            ser_sync_log.fatalError();
             return;
         }
-        ssync_log.info("Wrote " + crateLibrary.getTotalNumberOfCrates() + " crates and " +
+        ser_sync_log.info("Wrote " + crateLibrary.getTotalNumberOfCrates() + " crates and " +
                 crateLibrary.getTotalNumberOfSubCrates() + " subcrates");
-        ssync_log.info("Enjoy!");
+        ser_sync_log.info("Enjoy!");
 
-        ssync_log.success();
+        ser_sync_log.success();
     }
 }

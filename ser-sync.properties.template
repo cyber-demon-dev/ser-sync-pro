@@ -5,7 +5,7 @@ mode=gui
 music.library.filesystem=/Volumes/Current/Crates
 
 # path to your serato library
-music.library.ssync=/Volumes/Current/_Serato_
+music.library.ser-sync=/Volumes/Current/_Serato_
 
 # Backup before sync (default: true)
 backup.enabled=true
@@ -20,5 +20,5 @@ dedup.mode=filename
 crate.parent.path=Current
 
 # Scan for duplicate files on hard drive (default: true)
-# Identical files (same name and size) in different folders will be logged to ssync-dupe-files.log, nothing is deleted or removed.
+# Identical files (same name and size) in different folders will be logged to ser-sync-dupe-files.log, nothing is deleted or removed.
 harddrive.dupe.scan.enabled=true

@@ -6,7 +6,7 @@ import java.util.*;
  * Parses Serato database V2 file to extract existing track information.
  * Used for deduplication during sync.
  */
-public class ssync_database {
+public class ser_sync_database {
 
     // Track info storage: path -> size
     private Map<String, String> tracksByPath = new HashMap<>();
@@ -18,21 +18,21 @@ public class ssync_database {
      * Reads and parses the database V2 file.
      * 
      * @param databasePath Path to the database V2 file
-     * @return ssync_database instance with parsed tracks, or null if file doesn't
+     * @return ser_sync_database instance with parsed tracks, or null if file doesn't
      *         exist
      */
-    public static ssync_database readFrom(String databasePath) {
+    public static ser_sync_database readFrom(String databasePath) {
         File dbFile = new File(databasePath);
         if (!dbFile.exists()) {
             return null;
         }
 
-        ssync_database db = new ssync_database();
+        ser_sync_database db = new ser_sync_database();
 
         try {
             db.parseDatabase(dbFile);
         } catch (Exception e) {
-            ssync_log.error("Error parsing database V2: " + e.getMessage());
+            ser_sync_log.error("Error parsing database V2: " + e.getMessage());
             return null;
         }
 

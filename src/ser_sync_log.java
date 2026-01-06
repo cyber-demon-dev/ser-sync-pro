@@ -3,18 +3,18 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 /**
- * Logging utility for ssync-pro.
+ * Logging utility for ser-sync-pro.
  * Supports GUI and command-line modes, with optional file logging.
  */
-public class ssync_log {
+public class ser_sync_log {
 
     private static boolean GUI_INITIALIZED = false;
     private static boolean GUI_MODE = true;
-    private static ssync_log_window_handler WINDOW_HANDLER;
+    private static ser_sync_log_window_handler WINDOW_HANDLER;
     private static PrintWriter FILE_WRITER;
     private static PrintWriter DUPE_WRITER;
-    private static final String LOG_FILE = "ssync-pro.log";
-    private static final String DUPE_FILE = "ssync-dupe-files.log";
+    private static final String LOG_FILE = "ser-sync-pro.log";
+    private static final String DUPE_FILE = "ser-sync-dupe-files.log";
 
     public static void info(String message) {
         initGui();
@@ -89,7 +89,7 @@ public class ssync_log {
         if (!GUI_INITIALIZED) {
             if (GUI_MODE) {
                 try {
-                    WINDOW_HANDLER = ssync_log_window_handler.getInstance();
+                    WINDOW_HANDLER = ser_sync_log_window_handler.getInstance();
                 } catch (Exception e) {
                     GUI_MODE = false;
                 }
@@ -102,7 +102,7 @@ public class ssync_log {
     private static void initLogFile() {
         try {
             FILE_WRITER = new PrintWriter(new FileWriter(LOG_FILE, false));
-            FILE_WRITER.println(getTimestamp() + " [INFO] ssync-pro started");
+            FILE_WRITER.println(getTimestamp() + " [INFO] ser-sync-pro started");
             FILE_WRITER.flush();
             DUPE_WRITER = new PrintWriter(new FileWriter(DUPE_FILE, false));
         } catch (IOException e) {
@@ -119,7 +119,7 @@ public class ssync_log {
 
     private static void closeLogFile() {
         if (FILE_WRITER != null) {
-            FILE_WRITER.println(getTimestamp() + " [INFO] ssync-pro finished");
+            FILE_WRITER.println(getTimestamp() + " [INFO] ser-sync-pro finished");
             FILE_WRITER.close();
         }
         if (DUPE_WRITER != null) {

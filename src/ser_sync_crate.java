@@ -6,7 +6,7 @@ import java.util.*;
  * Represents a single Serato crate.
  * Handles reading and writing .crate binary files.
  */
-public class ssync_crate {
+public class ser_sync_crate {
 
     private static final String DEFAULT_VERSION = "81.0";
     private static final String DEFAULT_SORTING = "song";
@@ -19,9 +19,9 @@ public class ssync_crate {
     private List<String> columns = new ArrayList<>();
     private List<String> tracks = new ArrayList<>();
     private Set<String> normalizedPaths = new HashSet<>(); // For deduplication
-    private ssync_database database; // Reference to database for path lookup
+    private ser_sync_database database; // Reference to database for path lookup
 
-    public ssync_crate() {
+    public ser_sync_crate() {
     }
 
     /**
@@ -29,7 +29,7 @@ public class ssync_crate {
      * When adding tracks, if the track exists in the database,
      * we use the exact database path to match encoding.
      */
-    public void setDatabase(ssync_database db) {
+    public void setDatabase(ser_sync_database db) {
         this.database = db;
     }
 
@@ -71,7 +71,7 @@ public class ssync_crate {
     /**
      * Adds tracks with deduplication filtering.
      */
-    public void addTracksFiltered(Collection<String> trackPaths, ssync_track_index index) {
+    public void addTracksFiltered(Collection<String> trackPaths, ser_sync_track_index index) {
         if (index == null) {
             tracks.addAll(trackPaths);
             return;
@@ -139,14 +139,14 @@ public class ssync_crate {
     /**
      * Reads crate from file.
      */
-    public static ssync_crate readFrom(File inFile) throws ssync_exception {
-        ssync_crate result = new ssync_crate();
-        ssync_input_stream in;
+    public static ser_sync_crate readFrom(File inFile) throws ser_sync_exception {
+        ser_sync_crate result = new ser_sync_crate();
+        ser_sync_input_stream in;
 
         try {
-            in = new ssync_input_stream(new FileInputStream(inFile));
+            in = new ser_sync_input_stream(new FileInputStream(inFile));
         } catch (FileNotFoundException e) {
-            throw new ssync_exception(e);
+            throw new ser_sync_exception(e);
         }
 
         try {
@@ -215,8 +215,8 @@ public class ssync_crate {
     /**
      * Writes crate to output stream.
      */
-    public void writeTo(OutputStream outStream) throws ssync_exception {
-        ssync_output_stream out = new ssync_output_stream(outStream);
+    public void writeTo(OutputStream outStream) throws ser_sync_exception {
+        ser_sync_output_stream out = new ser_sync_output_stream(outStream);
 
         try {
             // Version header
@@ -259,7 +259,7 @@ public class ssync_crate {
             }
 
         } catch (IOException e) {
-            throw new ssync_exception(e);
+            throw new ser_sync_exception(e);
         } finally {
             try {
                 out.close();
@@ -285,11 +285,11 @@ public class ssync_crate {
         return name;
     }
 
-    public void writeTo(File outFile) throws ssync_exception {
+    public void writeTo(File outFile) throws ser_sync_exception {
         try {
             writeTo(new FileOutputStream(outFile));
         } catch (FileNotFoundException e) {
-            throw new ssync_exception("Error writing to file " + outFile.getName(), e);
+            throw new ser_sync_exception("Error writing to file " + outFile.getName(), e);
         }
     }
 }

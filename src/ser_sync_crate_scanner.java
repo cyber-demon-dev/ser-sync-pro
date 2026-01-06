@@ -6,7 +6,7 @@ import java.util.*;
  * Scans existing .crate files to extract track information.
  * Used in addition to database V2 for comprehensive deduplication.
  */
-public class ssync_crate_scanner {
+public class ser_sync_crate_scanner {
 
     private Map<String, String> tracksByPath = new HashMap<>();
     private Map<String, String> tracksByFilename = new HashMap<>();
@@ -18,10 +18,10 @@ public class ssync_crate_scanner {
      * Scans all .crate files in the Subcrates directory.
      * 
      * @param seratoPath Path to the _Serato_ folder
-     * @return ssync_crate_scanner instance with parsed tracks
+     * @return ser_sync_crate_scanner instance with parsed tracks
      */
-    public static ssync_crate_scanner scanFrom(String seratoPath) {
-        ssync_crate_scanner scanner = new ssync_crate_scanner();
+    public static ser_sync_crate_scanner scanFrom(String seratoPath) {
+        ser_sync_crate_scanner scanner = new ser_sync_crate_scanner();
 
         File subcratesDir = new File(seratoPath + "/Subcrates");
         if (!subcratesDir.exists() || !subcratesDir.isDirectory()) {

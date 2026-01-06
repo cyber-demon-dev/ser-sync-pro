@@ -5,9 +5,9 @@ import java.nio.file.*;
  * Handles backup of Serato folder before sync operations.
  * Creates timestamped backup directories in a sibling folder.
  */
-public class ssync_backup {
+public class ser_sync_backup {
 
-    private static final String BACKUP_FOLDER_NAME = "ssync_backup";
+    private static final String BACKUP_FOLDER_NAME = "ser_sync_backup";
 
     /**
      * Creates a backup of the Serato folder.
@@ -20,7 +20,7 @@ public class ssync_backup {
         File seratoDir = new File(seratoPath);
 
         if (!seratoDir.exists() || !seratoDir.isDirectory()) {
-            ssync_log.error("Serato folder does not exist: " + seratoPath);
+            ser_sync_log.error("Serato folder does not exist: " + seratoPath);
             return null;
         }
 
@@ -33,12 +33,12 @@ public class ssync_backup {
         String backupName = timestamp + "_Serato_";
         File backupDir = new File(backupRoot, backupName);
 
-        ssync_log.info("Creating backup: " + backupDir.getAbsolutePath());
+        ser_sync_log.info("Creating backup: " + backupDir.getAbsolutePath());
 
         try {
             // Create backup directory
             if (!backupDir.mkdirs()) {
-                ssync_log.error("Failed to create backup directory: " + backupDir.getAbsolutePath());
+                ser_sync_log.error("Failed to create backup directory: " + backupDir.getAbsolutePath());
                 return null;
             }
 
@@ -46,13 +46,13 @@ public class ssync_backup {
             long totalBytes = copyDirectory(seratoDir, backupDir);
 
             String sizeStr = formatSize(totalBytes);
-            ssync_log.info("Backup complete (" + sizeStr + ")");
+            ser_sync_log.info("Backup complete (" + sizeStr + ")");
 
             return backupDir.getAbsolutePath();
 
         } catch (IOException e) {
-            ssync_log.error("Backup failed: " + e.getMessage());
-            ssync_log.error(e);
+            ser_sync_log.error("Backup failed: " + e.getMessage());
+            ser_sync_log.error(e);
             return null;
         }
     }

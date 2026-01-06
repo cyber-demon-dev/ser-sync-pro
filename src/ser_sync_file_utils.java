@@ -3,7 +3,7 @@ import java.io.File;
 /**
  * File and directory utilities for serato-sync.
  */
-public class ssync_file_utils {
+public class ser_sync_file_utils {
 
     /**
      * Deletes all files in a directory (not subdirectories).

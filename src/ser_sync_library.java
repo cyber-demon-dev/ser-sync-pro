@@ -5,25 +5,25 @@ import java.util.*;
  * Builds and manages Serato crate library.
  * Maps filesystem structure to crate hierarchy.
  */
-public class ssync_library {
+public class ser_sync_library {
 
-    private Map<ssync_crate, String> crateFileName = new HashMap<>();
-    private ssync_crate root;
-    private List<ssync_crate> crates = new ArrayList<>();
-    private List<ssync_crate> subCrates = new ArrayList<>();
-    private ssync_track_index trackIndex;
+    private Map<ser_sync_crate, String> crateFileName = new HashMap<>();
+    private ser_sync_crate root;
+    private List<ser_sync_crate> crates = new ArrayList<>();
+    private List<ser_sync_crate> subCrates = new ArrayList<>();
+    private ser_sync_track_index trackIndex;
 
-    public static ssync_library createFrom(ssync_media_library fsLibrary) {
+    public static ser_sync_library createFrom(ser_sync_media_library fsLibrary) {
         return createFrom(fsLibrary, null, null);
     }
 
-    public static ssync_library createFrom(ssync_media_library fsLibrary, String parentCratePath) {
+    public static ser_sync_library createFrom(ser_sync_media_library fsLibrary, String parentCratePath) {
         return createFrom(fsLibrary, parentCratePath, null);
     }
 
-    public static ssync_library createFrom(ssync_media_library fsLibrary, String parentCratePath,
-            ssync_track_index index) {
-        ssync_library result = new ssync_library();
+    public static ser_sync_library createFrom(ser_sync_media_library fsLibrary, String parentCratePath,
+            ser_sync_track_index index) {
+        ser_sync_library result = new ser_sync_library();
         result.trackIndex = index;
 
         // If parentCratePath is specified, use it as prefix for all crate names
@@ -33,7 +33,7 @@ public class ssync_library {
         return result;
     }
 
-    private SortedSet<String> buildLibrary(ssync_media_library fsLibrary, int level, String crateName,
+    private SortedSet<String> buildLibrary(ser_sync_media_library fsLibrary, int level, String crateName,
             boolean includeSubcrateTracks) {
         SortedSet<String> all = new TreeSet<String>();
 
@@ -41,7 +41,7 @@ public class ssync_library {
         all.addAll(fsLibrary.getTracks());
 
         // Build for every sub-directory
-        for (ssync_media_library child : fsLibrary.getChildren()) {
+        for (ser_sync_media_library child : fsLibrary.getChildren()) {
             String crateNameNext = crateName.length() > 0 ? crateName + "%%" + child.getDirectory()
                     : child.getDirectory();
             SortedSet<String> children = buildLibrary(child, level + 1, crateNameNext, includeSubcrateTracks);
@@ -51,7 +51,7 @@ public class ssync_library {
             }
         }
 
-        ssync_crate crate = new ssync_crate();
+        ser_sync_crate crate = new ser_sync_crate();
 
         // Set database reference for path encoding lookup
         if (trackIndex != null && trackIndex.getDatabase() != null) {
@@ -83,32 +83,32 @@ public class ssync_library {
         return all;
     }
 
-    public void writeTo(String seratoLibraryPath, boolean clearLibraryBeforeSync) throws ssync_exception {
+    public void writeTo(String seratoLibraryPath, boolean clearLibraryBeforeSync) throws ser_sync_exception {
         if (clearLibraryBeforeSync) {
-            ssync_file_utils.deleteAllFilesInDirectory(seratoLibraryPath + "/Crates");
-            ssync_file_utils.deleteAllFilesInDirectory(seratoLibraryPath + "/Subcrates");
-            ssync_file_utils.deleteFile(seratoLibraryPath + "/database V2");
+            ser_sync_file_utils.deleteAllFilesInDirectory(seratoLibraryPath + "/Crates");
+            ser_sync_file_utils.deleteAllFilesInDirectory(seratoLibraryPath + "/Subcrates");
+            ser_sync_file_utils.deleteFile(seratoLibraryPath + "/database V2");
         }
 
         // Write parent crates
-        for (ssync_crate crate : crates) {
+        for (ser_sync_crate crate : crates) {
             try {
                 File crateFile = new File(seratoLibraryPath + "/Subcrates/" + crateFileName.get(crate));
                 crateFile.getParentFile().mkdirs();
                 crate.writeTo(crateFile);
-            } catch (ssync_exception e) {
-                throw new ssync_exception("Error serializing crate '" + crateFileName.get(crate) + "'", e);
+            } catch (ser_sync_exception e) {
+                throw new ser_sync_exception("Error serializing crate '" + crateFileName.get(crate) + "'", e);
             }
         }
 
         // Write sub-crates
-        for (ssync_crate crate : subCrates) {
+        for (ser_sync_crate crate : subCrates) {
             try {
                 File crateFile = new File(seratoLibraryPath + "/Subcrates/" + crateFileName.get(crate));
                 crateFile.getParentFile().mkdirs();
                 crate.writeTo(crateFile);
-            } catch (ssync_exception e) {
-                throw new ssync_exception("Error serializing subcrate '" + crateFileName.get(crate) + "'", e);
+            } catch (ser_sync_exception e) {
+                throw new ser_sync_exception("Error serializing subcrate '" + crateFileName.get(crate) + "'", e);
             }
         }
     }
@@ -123,10 +123,10 @@ public class ssync_library {
 
     public int getTotalTracksWritten() {
         int total = 0;
-        for (ssync_crate crate : crates) {
+        for (ser_sync_crate crate : crates) {
             total += crate.getTrackCount();
         }
-        for (ssync_crate crate : subCrates) {
+        for (ser_sync_crate crate : subCrates) {
             total += crate.getTrackCount();
         }
         return total;
