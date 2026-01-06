@@ -37,7 +37,7 @@ class ssync_log_window_handler {
 
     private ssync_log_window_handler() {
         if (window == null) {
-            window = new ssync_log_window("ssync_pro logging window", 650, 350);
+            window = new ssync_log_window("ssync-pro logging window", 650, 350);
         }
     }
 

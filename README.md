@@ -1,4 +1,4 @@
-# ssync_pro
+# ssync-pro
 
 Serato crate synchronization tool - automatically sync your filesystem folders to Serato crates.
 
@@ -17,7 +17,7 @@ Based on [serato-sync](https://github.com/ralekseenkov/serato-sync-old/) by Roma
 
 ## Quick Start
 
-1. Download `ssync_pro.jar`
+1. Download `ssync-pro.jar`
 2. Create `ssync.properties` in the same folder:
 
 ```properties
@@ -26,7 +26,7 @@ music.library.filesystem=/path/to/your/music
 music.library.ssync=/Volumes/DriveName/_Serato_
 ```
 
-1. Run: `java -jar ssync_pro.jar`
+1. Run: `java -jar ssync-pro.jar`
 
 ## Configuration Options
 
@@ -58,12 +58,12 @@ brew install openjdk@11 ant
 ant all
 ```
 
-Output: `distr/ssync_pro/ssync_pro.jar`
+Output: `distr/ssync-pro/ssync-pro.jar`
 
 ## Project Structure
 
 ```
-ssync_pro/
+ssync-pro/
 ├── src/           # Source files
 ├── build.xml      # Ant build script
 ├── out/           # Compiled classes (generated)

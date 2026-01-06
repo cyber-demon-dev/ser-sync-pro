@@ -1,16 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project name="ssync_pro" default="all" basedir=".">
+<project name="ssync-pro" default="all" basedir=".">
     
     <description>
-        ssync_pro - Serato crate synchronization tool
+        ssync-pro - Serato crate synchronization tool
         Build script for compiling and packaging the application
     </description>
     
     <!-- Properties -->
     <property name="src.dir" value="src"/>
-    <property name="build.dir" value="out/production/ssync_pro"/>
-    <property name="dist.dir" value="distr/ssync_pro"/>
-    <property name="jar.name" value="ssync_pro.jar"/>
+    <property name="build.dir" value="out/production/ssync-pro"/>
+    <property name="dist.dir" value="distr/ssync-pro"/>
+    <property name="jar.name" value="ssync-pro.jar"/>
+    <property name="props.template" value="ssync.properties.template"/>
     <property name="main.class" value="ssync_main"/>
     
     <!-- Compiler settings -->
@@ -45,6 +46,7 @@
                 <attribute name="Build-Date" value="${TODAY}"/>
             </manifest>
         </jar>
+        <copy file="${props.template}" tofile="${dist.dir}/ssync.properties"/>
     </target>
     
     <!-- Run target -->

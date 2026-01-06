@@ -3,7 +3,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 /**
- * Logging utility for ssync_pro.
+ * Logging utility for ssync-pro.
  * Supports GUI and command-line modes, with optional file logging.
  */
 public class ssync_log {
@@ -12,7 +12,7 @@ public class ssync_log {
     private static boolean GUI_MODE = true;
     private static ssync_log_window_handler WINDOW_HANDLER;
     private static PrintWriter FILE_WRITER;
-    private static final String LOG_FILE = "ssync_pro.log";
+    private static final String LOG_FILE = "ssync-pro.log";
 
     public static void info(String message) {
         initGui();
@@ -92,7 +92,7 @@ public class ssync_log {
     private static void initLogFile() {
         try {
             FILE_WRITER = new PrintWriter(new FileWriter(LOG_FILE, false));
-            FILE_WRITER.println(getTimestamp() + " [INFO] ssync_pro started");
+            FILE_WRITER.println(getTimestamp() + " [INFO] ssync-pro started");
             FILE_WRITER.flush();
         } catch (IOException e) {
             // Can't write log file - continue without it
@@ -108,7 +108,7 @@ public class ssync_log {
 
     private static void closeLogFile() {
         if (FILE_WRITER != null) {
-            FILE_WRITER.println(getTimestamp() + " [INFO] ssync_pro finished");
+            FILE_WRITER.println(getTimestamp() + " [INFO] ssync-pro finished");
             FILE_WRITER.close();
         }
     }
