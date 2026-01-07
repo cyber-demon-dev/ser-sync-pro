@@ -21,6 +21,19 @@ public class ser_sync_main {
         // Set mode (GUI vs command line)
         ser_sync_log.setMode(config.isGuiMode());
 
+        // Check Serato library exists
+        String seratoPath = config.getSeratoLibraryPath();
+
+        // Backup Serato folder
+        if (config.isBackupEnabled()) {
+            String backupPath = ser_sync_backup.createBackup(seratoPath);
+            if (backupPath == null) {
+                ser_sync_log.error("Backup failed. Aborting sync for safety.");
+                ser_sync_log.fatalError();
+                return;
+            }
+        }
+
         // Load media library
         ser_sync_log.info("Scanning media library " + config.getMusicLibraryPath() + "...");
         ser_sync_media_library fsLibrary = ser_sync_media_library.readFrom(config.getMusicLibraryPath());
@@ -33,8 +46,6 @@ public class ser_sync_main {
         ser_sync_log.info("Found " + fsLibrary.getTotalNumberOfTracks() + " tracks in " +
                 fsLibrary.getTotalNumberOfDirectories() + " directories");
 
-        // Check Serato library exists
-        String seratoPath = config.getSeratoLibraryPath();
         ser_sync_log.info("Writing files into serato library " + seratoPath + "...");
         if (!new File(seratoPath).isDirectory()) {
             boolean createFolder = ser_sync_log.confirm(
@@ -56,14 +67,15 @@ public class ser_sync_main {
             }
         }
 
-        // Backup Serato folder
-        if (config.isBackupEnabled()) {
-            String backupPath = ser_sync_backup.createBackup(seratoPath);
-            if (backupPath == null) {
-                ser_sync_log.error("Backup failed. Aborting sync for safety.");
-                ser_sync_log.fatalError();
-                return;
-            }
+        // Load Serato database for path normalization
+        ser_sync_database database = ser_sync_database.readFrom(seratoPath + "/database V2");
+        if (database == null) {
+            ser_sync_log.info("No existing Serato database found. Skipping path normalization.");
+        }
+
+        // Fix broken paths in existing crates if enabled
+        if (config.isFixBrokenPathsEnabled()) {
+            ser_sync_crate_fixer.fixBrokenPaths(seratoPath, fsLibrary, database);
         }
 
         // Validate parent crate path

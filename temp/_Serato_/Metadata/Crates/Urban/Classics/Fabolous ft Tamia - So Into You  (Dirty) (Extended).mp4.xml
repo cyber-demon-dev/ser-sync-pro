@@ -1,0 +1,124 @@
+<SSLMetadata>
+    <Name>So Into You (Dirty) (Extended)</Name>
+    <Artist>Fabolous ft Tamia</Artist>
+    <Genre>Hip Hop/R&amp;B</Genre>
+    <Length>04:23.64</Length>
+    <Size>108.8MB</Size>
+    <ByteSize>114046991</ByteSize>
+    <Bitrate>256kbps</Bitrate>
+    <Samplerate>44.1k</Samplerate>
+    <BPM>91.10</BPM>
+    <Comments>5A - 5</Comments>
+    <Grouping>5</Grouping>
+    <Year>2003</Year>
+    <Key>5A</Key>
+    <GaindB>-0.035000</GaindB>
+    <AutoGain>-1.035000</AutoGain>
+    <AutoGainAdj>0.000000</AutoGainAdj>
+    <Label>0xffdd99</Label>
+    <Markers>
+        <Marker type="0" index="0" />
+        <Marker type="0" index="1" />
+        <Marker type="0" index="2" />
+        <Marker type="0" index="3" />
+        <Marker type="0" index="4" />
+        <Marker type="0" index="5" />
+        <Marker type="0" index="6" />
+        <Marker type="0" index="7" />
+        <Marker type="0" index="8" />
+        <Marker type="0" index="9" />
+        <Marker type="0" index="10" />
+        <Marker type="0" index="11" />
+        <Marker type="0" index="12" />
+        <Marker type="0" index="13" />
+        <Marker type="0" index="14" />
+        <Marker type="0" index="15" />
+        <Marker type="0" index="16" />
+        <Marker type="0" index="17" />
+        <Marker type="0" index="18" />
+        <Marker type="0" index="19" />
+        <Marker type="0" index="20" />
+        <Marker type="0" index="21" />
+        <Marker type="0" index="22" />
+        <Marker type="0" index="23" />
+        <Marker type="0" index="24" />
+        <Marker type="0" index="25" />
+        <Marker type="0" index="26" />
+        <Marker type="0" index="27" />
+        <Marker type="0" index="28" />
+        <Marker type="0" index="29" />
+        <Marker type="0" index="30" />
+        <Marker type="0" index="31" />
+    </Markers>
+    <Loops>
+        <Loop type="3" index="0">
+            <Position>-1</Position>
+            <Color>0</Color>
+            <LpPos>-1</LpPos>
+            <LpEnable>0</LpEnable>
+            <LpLocked>0</LpLocked>
+        </Loop>
+        <Loop type="3" index="1">
+            <Position>-1</Position>
+            <Color>0</Color>
+            <LpPos>-1</LpPos>
+            <LpEnable>0</LpEnable>
+            <LpLocked>0</LpLocked>
+        </Loop>
+        <Loop type="3" index="2">
+            <Position>-1</Position>
+            <Color>0</Color>
+            <LpPos>-1</LpPos>
+            <LpEnable>0</LpEnable>
+            <LpLocked>0</LpLocked>
+        </Loop>
+        <Loop type="3" index="3">
+            <Position>-1</Position>
+            <Color>0</Color>
+            <LpPos>-1</LpPos>
+            <LpEnable>0</LpEnable>
+            <LpLocked>0</LpLocked>
+        </Loop>
+        <Loop type="3" index="4">
+            <Position>-1</Position>
+            <Color>0</Color>
+            <LpPos>-1</LpPos>
+            <LpEnable>0</LpEnable>
+            <LpLocked>0</LpLocked>
+        </Loop>
+        <Loop type="3" index="5">
+            <Position>-1</Position>
+            <Color>0</Color>
+            <LpPos>-1</LpPos>
+            <LpEnable>0</LpEnable>
+            <LpLocked>0</LpLocked>
+        </Loop>
+        <Loop type="3" index="6">
+            <Position>-1</Position>
+            <Color>0</Color>
+            <LpPos>-1</LpPos>
+            <LpEnable>0</LpEnable>
+            <LpLocked>0</LpLocked>
+        </Loop>
+        <Loop type="3" index="7">
+            <Position>-1</Position>
+            <Color>0</Color>
+            <LpPos>-1</LpPos>
+            <LpEnable>0</LpEnable>
+            <LpLocked>0</LpLocked>
+        </Loop>
+        <Loop type="3" index="8">
+            <Position>-1</Position>
+            <Color>0</Color>
+            <LpPos>-1</LpPos>
+            <LpEnable>0</LpEnable>
+            <LpLocked>0</LpLocked>
+        </Loop>
+    </Loops>
+    <BeatGrid>
+        <BeatGridMarker>
+            <Position>0.192188</Position>
+            <BPM>91.099998</BPM>
+        </BeatGridMarker>
+    </BeatGrid>
+</SSLMetadata>

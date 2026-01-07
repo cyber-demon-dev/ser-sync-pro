@@ -159,7 +159,15 @@ public class ser_sync_crate {
 
             // Handle blocks until we hit tracks
             for (;;) {
-                String type = in.readString(4);
+                byte[] typeBytes = new byte[4];
+                int read = in.read(typeBytes);
+                if (read < 4) {
+                    // EOF reached before any tracks found.
+                    // This implies an empty crate or one ending after metadata.
+                    return result;
+                }
+                String type = new String(typeBytes);
+
                 if ("otrk".equals(type)) {
                     break;
                 }
@@ -173,7 +181,7 @@ public class ser_sync_crate {
                     in.skipExactString("tvcw");
                     in.readIntegerValue();
                     in.skipExactByte((byte) 0);
-                    in.skipExactByte((byte) '0');
+                    in.read(); // Skip final byte (usually '0' but can vary in newer versions)
                 } else if ("osrt".equals(type)) {
                     in.readIntegerValue();
                     in.skipExactString("tvcn");
@@ -201,6 +209,10 @@ public class ser_sync_crate {
                 result.addTrack(trackPath);
             }
 
+        } catch (Exception e) {
+            ser_sync_log.error("Error reading crate file: " + inFile.getAbsolutePath());
+            ser_sync_log.error("Parser failure: " + e.getMessage());
+            throw new ser_sync_exception("Failed to read crate: " + inFile.getName(), e);
         } finally {
             try {
                 in.close();

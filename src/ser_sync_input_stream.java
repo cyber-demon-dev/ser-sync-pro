@@ -112,7 +112,8 @@ public class ser_sync_input_stream extends DataInputStream {
                 return true;
             }
             if (read != data.length) {
-                throw new ser_sync_exception("Expected a single byte '" + expected + "', but was unable to read anything");
+                throw new ser_sync_exception(
+                        "Expected a single byte '" + expected + "', but was unable to read anything");
             }
         } catch (IOException e) {
             throw new ser_sync_exception(e);

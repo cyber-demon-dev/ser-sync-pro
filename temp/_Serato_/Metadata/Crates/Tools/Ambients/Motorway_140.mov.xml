@@ -1,0 +1,112 @@
+<SSLMetadata>
+    <Name>Motorway_140</Name>
+    <Length>00:06.83</Length>
+    <Size>14.7MB</Size>
+    <ByteSize>15428127</ByteSize>
+    <Samplerate>44.1k</Samplerate>
+    <BPM>0.00</BPM>
+    <Label>0xffffff</Label>
+    <GaindB>0.000000</GaindB>
+    <AutoGain>82.000000</AutoGain>
+    <AutoGainAdj>0.000000</AutoGainAdj>
+    <Markers>
+        <Marker type="0" index="0" />
+        <Marker type="0" index="1" />
+        <Marker type="0" index="2" />
+        <Marker type="0" index="3" />
+        <Marker type="0" index="4" />
+        <Marker type="0" index="5" />
+        <Marker type="0" index="6" />
+        <Marker type="0" index="7" />
+        <Marker type="0" index="8" />
+        <Marker type="0" index="9" />
+        <Marker type="0" index="10" />
+        <Marker type="0" index="11" />
+        <Marker type="0" index="12" />
+        <Marker type="0" index="13" />
+        <Marker type="0" index="14" />
+        <Marker type="0" index="15" />
+        <Marker type="0" index="16" />
+        <Marker type="0" index="17" />
+        <Marker type="0" index="18" />
+        <Marker type="0" index="19" />
+        <Marker type="0" index="20" />
+        <Marker type="0" index="21" />
+        <Marker type="0" index="22" />
+        <Marker type="0" index="23" />
+        <Marker type="0" index="24" />
+        <Marker type="0" index="25" />
+        <Marker type="0" index="26" />
+        <Marker type="0" index="27" />
+        <Marker type="0" index="28" />
+        <Marker type="0" index="29" />
+        <Marker type="0" index="30" />
+        <Marker type="0" index="31" />
+    </Markers>
+    <Loops>
+        <Loop type="3" index="0">
+            <Position>-1</Position>
+            <Color>0</Color>
+            <LpPos>-1</LpPos>
+            <LpEnable>0</LpEnable>
+            <LpLocked>0</LpLocked>
+        </Loop>
+        <Loop type="3" index="1">
+            <Position>-1</Position>
+            <Color>0</Color>
+            <LpPos>-1</LpPos>
+            <LpEnable>0</LpEnable>
+            <LpLocked>0</LpLocked>
+        </Loop>
+        <Loop type="3" index="2">
+            <Position>-1</Position>
+            <Color>0</Color>
+            <LpPos>-1</LpPos>
+            <LpEnable>0</LpEnable>
+            <LpLocked>0</LpLocked>
+        </Loop>
+        <Loop type="3" index="3">
+            <Position>-1</Position>
+            <Color>0</Color>
+            <LpPos>-1</LpPos>
+            <LpEnable>0</LpEnable>
+            <LpLocked>0</LpLocked>
+        </Loop>
+        <Loop type="3" index="4">
+            <Position>-1</Position>
+            <Color>0</Color>
+            <LpPos>-1</LpPos>
+            <LpEnable>0</LpEnable>
+            <LpLocked>0</LpLocked>
+        </Loop>
+        <Loop type="3" index="5">
+            <Position>-1</Position>
+            <Color>0</Color>
+            <LpPos>-1</LpPos>
+            <LpEnable>0</LpEnable>
+            <LpLocked>0</LpLocked>
+        </Loop>
+        <Loop type="3" index="6">
+            <Position>-1</Position>
+            <Color>0</Color>
+            <LpPos>-1</LpPos>
+            <LpEnable>0</LpEnable>
+            <LpLocked>0</LpLocked>
+        </Loop>
+        <Loop type="3" index="7">
+            <Position>-1</Position>
+            <Color>0</Color>
+            <LpPos>-1</LpPos>
+            <LpEnable>0</LpEnable>
+            <LpLocked>0</LpLocked>
+        </Loop>
+        <Loop type="3" index="8">
+            <Position>-1</Position>
+            <Color>0</Color>
+            <LpPos>-1</LpPos>
+            <LpEnable>0</LpEnable>
+            <LpLocked>0</LpLocked>
+        </Loop>
+    </Loops>
+    <BeatGrid />
+</SSLMetadata>

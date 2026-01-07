@@ -40,7 +40,7 @@ public class ser_sync_config {
     }
 
     public String getSeratoLibraryPath() {
-        return getRequiredOption("music.library.ser-sync");
+        return getRequiredOption("music.library.database");
     }
 
     // ==================== Parent Crate ====================
@@ -63,23 +63,23 @@ public class ser_sync_config {
     // ==================== Sync Options ====================
 
     public boolean isClearLibraryBeforeSync() {
-        return getBooleanOption("music.library.ser-sync.clear-before-sync", false);
+        return getBooleanOption("music.library.database.clear-before-sync", false);
     }
 
     // ==================== Backup ====================
 
     public boolean isBackupEnabled() {
-        return getBooleanOption("backup.enabled", true);
+        return getBooleanOption("music.library.database.backup", true);
     }
 
     // ==================== Deduplication ====================
 
     public boolean isSkipExistingTracks() {
-        return getBooleanOption("skip.existing.tracks", true);
+        return getBooleanOption("crate.skip.existing.tracks", true);
     }
 
     public String getDedupMode() {
-        String mode = properties.getProperty("dedup.mode");
+        String mode = properties.getProperty("crate.dedupe.mode");
         if (mode == null || mode.trim().isEmpty()) {
             return ser_sync_track_index.MODE_PATH; // default
         }
@@ -92,6 +92,10 @@ public class ser_sync_config {
 
     public boolean isCrateSortingEnabled() {
         return getBooleanOption("crate.sorting.alphabetical", false);
+    }
+
+    public boolean isFixBrokenPathsEnabled() {
+        return getBooleanOption("crate.fix.broken.paths", false);
     }
 
     // ==================== Helper Methods ====================
