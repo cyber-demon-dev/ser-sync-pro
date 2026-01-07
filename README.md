@@ -20,16 +20,8 @@ Based on [serato-sync](https://github.com/ralekseenkov/serato-sync-old/) by Roma
 
 ## Quick Start
 
-1. Download `ser-sync-pro.jar`
-2. Create `ser-sync.properties` in the same folder:
-
-```properties
-mode=gui
-music.library.filesystem=/path/to/your/music
-music.library.ser-sync=/Volumes/DriveName/_Serato_
-```
-
-1. Run: `java -jar ser-sync-pro.jar`
+1. Download `ser-sync-pro.jar` or 'distr/ser-sync-pro/' directory.
+2. Create or Edit the existing `ser-sync.properties` in the same directory as `ser-sync-pro.jar` or 'distr/ser-sync-pro/':
 
 ## Configuration Options
 
@@ -46,7 +38,9 @@ music.library.ser-sync=/Volumes/DriveName/_Serato_
 | `harddrive.dupe.scan.enabled` | Log duplicate files on disk | `false` |
 | `crate.sorting.alphabetical` | Sort crates A–Z in Serato | `false` |
 
-## Building from Source
+1. Run: `java -jar ser-sync-pro.jar`
+
+## Requirements, Building from Source
 
 ### 1. Install Dependencies
 

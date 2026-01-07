@@ -10,7 +10,7 @@ music.library.ser-sync=/Volumes/Current/_Serato_
 # Backup before sync (default: true)
 backup.enabled=true
 
-# Skip tracks that already exist in Serato Database/Crate Structur, keeps existing metadata (default: true)
+# Skip tracks that already exist in Serato Database/Crate Structure, keeps existing metadata (default: true)
 skip.existing.tracks=true
 
 # Deduplication mode: path, filename, or off (default: filename)
