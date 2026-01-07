@@ -132,6 +132,27 @@ public class ser_sync_library {
         return total;
     }
 
+    /**
+     * Returns all crate names (without .crate extension) for use in neworder.pref
+     * generation.
+     */
+    public List<String> getAllCrateNames() {
+        List<String> names = new ArrayList<>();
+        for (ser_sync_crate crate : crates) {
+            String fileName = crateFileName.get(crate);
+            if (fileName != null && fileName.endsWith(".crate")) {
+                names.add(fileName.substring(0, fileName.length() - 6));
+            }
+        }
+        for (ser_sync_crate crate : subCrates) {
+            String fileName = crateFileName.get(crate);
+            if (fileName != null && fileName.endsWith(".crate")) {
+                names.add(fileName.substring(0, fileName.length() - 6));
+            }
+        }
+        return names;
+    }
+
     private String formatSize(long bytes) {
         if (bytes < 1024 * 1024) {
             return String.format("%.1fKB", bytes / 1024.0);

@@ -22,3 +22,8 @@ crate.parent.path=Current
 # Scan for duplicate files on hard drive (default: true)
 # Identical files (same name and size) in different folders will be logged to ser-sync-dupe-files.log, nothing is deleted or removed.
 harddrive.dupe.scan.enabled=true
+
+# Automatically sort crates alphabetically in Serato (default: false)
+# This will create a neworder.pref file in your _Serato_ folder.
+crate.sorting.alphabetical=false
+

@@ -1,6 +1,7 @@
 import java.io.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Scanner;
 
 /**
  * Logging utility for ser-sync-pro.
@@ -82,6 +83,20 @@ public class ser_sync_log {
         } else {
             closeLogFile();
             System.exit(0);
+        }
+    }
+
+    public static boolean confirm(String message) {
+        initGui();
+        if (GUI_MODE) {
+            return WINDOW_HANDLER.confirm(message);
+        } else {
+            System.out.println(message + " [y/n]: ");
+            System.out.flush();
+            try (Scanner scanner = new Scanner(System.in)) {
+                String input = scanner.nextLine().trim().toLowerCase();
+                return input.equals("y") || input.equals("yes");
+            }
         }
     }
 

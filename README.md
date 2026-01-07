@@ -1,6 +1,6 @@
 # ser-sync-pro
 
-Serato crate synchronization tool - automatically sync your filesystem folders to Serato crates.
+Serato crate synchronization tool — automatically sync your filesystem folders to Serato crates.
 
 ## License
 
@@ -14,6 +14,9 @@ Based on [serato-sync](https://github.com/ralekseenkov/serato-sync-old/) by Roma
 - **Smart Deduplication**: Prevents duplicate tracks using Unicode-aware filename matching
 - **Pre-Sync Backup**: Automatically backs up `_Serato_` folder with preserved timestamps
 - **Parent Crate Support**: Add synced folders as subcrates under existing Serato crates
+- **Alphabetical Crate Sorting**: Automatically sort crates A–Z in Serato
+- **Duplicate File Scanner**: Logs duplicate files (same name + size) to `ser-sync-dupe-files.log`
+- **Auto-Create Missing Folders**: Prompts to create `_Serato_` or parent crate if missing
 
 ## Quick Start
 
@@ -37,8 +40,11 @@ music.library.ser-sync=/Volumes/DriveName/_Serato_
 | `music.library.ser-sync` | Path to `_Serato_` folder | Required |
 | `music.library.ser-sync.clear-before-sync` | Clear existing crates first | `false` |
 | `crate.parent.path` | Parent crate for synced folders | None |
+| `skip.existing.tracks` | Skip tracks already in Serato | `true` |
 | `dedup.mode` | `filename`, `path`, or `off` | `filename` |
 | `backup.enabled` | Create backup before sync | `true` |
+| `harddrive.dupe.scan.enabled` | Log duplicate files on disk | `false` |
+| `crate.sorting.alphabetical` | Sort crates A–Z in Serato | `false` |
 
 ## Building from Source
 

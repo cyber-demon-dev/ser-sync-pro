@@ -90,6 +90,10 @@ public class ser_sync_config {
         return getBooleanOption("harddrive.dupe.scan.enabled", false);
     }
 
+    public boolean isCrateSortingEnabled() {
+        return getBooleanOption("crate.sorting.alphabetical", false);
+    }
+
     // ==================== Helper Methods ====================
 
     private boolean getBooleanOption(String name, boolean defaultValue) {

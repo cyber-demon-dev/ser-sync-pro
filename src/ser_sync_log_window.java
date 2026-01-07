@@ -61,4 +61,10 @@ class ser_sync_log_window_handler {
     public void success() {
         // No popup - just exit (main window shows the details)
     }
+
+    public boolean confirm(String message) {
+        int result = JOptionPane.showConfirmDialog(window, message, "ser-sync-pro",
+                JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+        return result == JOptionPane.YES_OPTION;
+    }
 }

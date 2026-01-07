@@ -37,10 +37,23 @@ public class ser_sync_main {
         String seratoPath = config.getSeratoLibraryPath();
         ser_sync_log.info("Writing files into serato library " + seratoPath + "...");
         if (!new File(seratoPath).isDirectory()) {
-            ser_sync_log.error("Unable to detect your Serato library. It doesn't exist.");
-            ser_sync_log.error("Are you sure you specified the right path in the config file?");
-            ser_sync_log.fatalError();
-            return;
+            boolean createFolder = ser_sync_log.confirm(
+                    "Serato library folder '" + seratoPath + "' does not exist.\n\n" +
+                            "Would you like to create it and continue with the sync?");
+            if (createFolder) {
+                boolean created = new File(seratoPath).mkdirs();
+                if (created) {
+                    ser_sync_log.info("Created Serato library folder: " + seratoPath);
+                } else {
+                    ser_sync_log.error("Failed to create Serato library folder: " + seratoPath);
+                    ser_sync_log.fatalError();
+                    return;
+                }
+            } else {
+                ser_sync_log.info("Sync halted by user.");
+                ser_sync_log.fatalError();
+                return;
+            }
         }
 
         // Backup Serato folder
@@ -60,10 +73,18 @@ public class ser_sync_main {
 
             File parentCrateFile = new File(seratoPath + "/Subcrates/" + parentCratePath + ".crate");
             if (!parentCrateFile.exists()) {
-                ser_sync_log.error("Parent crate '" + parentCratePath + "' does not exist in Serato.");
-                ser_sync_log.error("Please create the parent crate in Serato first, then re-run sync.");
-                ser_sync_log.fatalError();
-                return;
+                ser_sync_log
+                        .info("Parent crate '" + parentCratePath + "' does not exist. Creating it automatically...");
+                try {
+                    parentCrateFile.getParentFile().mkdirs();
+                    ser_sync_crate emptyCrate = new ser_sync_crate();
+                    emptyCrate.writeTo(parentCrateFile);
+                } catch (ser_sync_exception e) {
+                    ser_sync_log.error("Failed to create parent crate '" + parentCratePath + "'");
+                    ser_sync_log.error(e);
+                    ser_sync_log.fatalError();
+                    return;
+                }
             }
 
             // Check for duplicates
@@ -118,7 +139,12 @@ public class ser_sync_main {
             scanForHardDriveDuplicates(fsLibrary);
         }
 
-        ser_sync_log.info("Enjoy!");
+        ser_sync_log.info("Sync Complete");
+
+        // Sort crates if enabled
+        if (config.isCrateSortingEnabled()) {
+            ser_sync_pref_sorter.sort(seratoPath);
+        }
 
         ser_sync_log.success();
     }
