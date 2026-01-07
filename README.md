@@ -1,6 +1,6 @@
 # ser-sync-pro
 
-Serato crate synchronization tool — automatically sync your filesystem folders to Serato crates.
+Serato DJ crate synchronization tool — automatically sync your filesystem folders to Serato crates and more.
 
 ## License
 
