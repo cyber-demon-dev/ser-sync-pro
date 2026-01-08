@@ -17,7 +17,7 @@ crate.parent.path=Sync
 # This will search for missing files in your music library by filename and update the crate if a match is found.
 crate.fix.broken.paths=false
 
-# Skip tracks that already exist in Serato Database/Crate Structure, keeps existing metadata (default: true)
+# Skip tracks that match Serato Database/Crate Structure against file system, keeps existing metadata (default: true)
 crate.skip.existing.tracks=true
 
 # Deduplication mode: path, filename, or off (default: filename)

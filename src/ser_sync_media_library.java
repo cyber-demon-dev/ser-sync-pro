@@ -3,10 +3,14 @@ import java.io.IOException;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
+import java.util.concurrent.*;
+import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Represents a media library on the filesystem.
  * Recursively scans directories for supported audio/video files.
+ * Uses parallel processing for faster scanning on multi-core systems.
  */
 public class ser_sync_media_library implements Comparable<ser_sync_media_library> {
 
@@ -32,6 +36,10 @@ public class ser_sync_media_library implements Comparable<ser_sync_media_library
             Pattern.compile("(.*)\\.dv", Pattern.CASE_INSENSITIVE),
             Pattern.compile("(.*)\\.qtz", Pattern.CASE_INSENSITIVE)
     };
+
+    // Thread pool for parallel scanning
+    private static final int NUM_THREADS = Math.min(4, Runtime.getRuntime().availableProcessors());
+    private static final ForkJoinPool SCAN_POOL = new ForkJoinPool(NUM_THREADS);
 
     private String directory;
     private SortedSet<String> tracks = new TreeSet<String>();
@@ -91,21 +99,49 @@ public class ser_sync_media_library implements Comparable<ser_sync_media_library
         // Process audio/video files
         for (File file : all) {
             if (file.isFile() && isMedia(file)) {
-                // Use toRealPath() to get canonical path with proper Unicode encoding
-                // This matches how macOS/Serato originally indexed the file
                 try {
                     tracks.add(file.toPath().toRealPath().toString());
                 } catch (IOException e) {
-                    // Fallback to absolute path if toRealPath fails
                     tracks.add(file.getAbsolutePath());
                 }
             }
         }
 
-        // Process sub-directories
+        // Collect subdirectories for parallel processing
+        List<File> subdirs = new ArrayList<>();
         for (File file : all) {
             if (file.isDirectory()) {
-                String childDirectory = file.getName();
+                subdirs.add(file);
+            }
+        }
+
+        // Process subdirectories in parallel if there are multiple
+        if (subdirs.size() > 1) {
+            List<Future<ser_sync_media_library>> futures = new ArrayList<>();
+
+            for (File subdir : subdirs) {
+                String childDirectory = subdir.getName();
+                String childPath = path + "/" + childDirectory;
+
+                futures.add(SCAN_POOL.submit(() -> {
+                    ser_sync_media_library child = new ser_sync_media_library(childDirectory);
+                    child.collectAll(childPath);
+                    return child;
+                }));
+            }
+
+            // Collect results
+            for (Future<ser_sync_media_library> future : futures) {
+                try {
+                    children.add(future.get());
+                } catch (InterruptedException | ExecutionException e) {
+                    ser_sync_log.error("Error scanning directory: " + e.getMessage());
+                }
+            }
+        } else {
+            // Single or no subdirectory - process sequentially
+            for (File subdir : subdirs) {
+                String childDirectory = subdir.getName();
                 ser_sync_media_library child = new ser_sync_media_library(childDirectory);
                 child.collectAll(path + "/" + childDirectory);
                 children.add(child);

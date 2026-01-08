@@ -4,12 +4,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
+import java.util.concurrent.*;
 
 /**
- * scanning existing .crate files and fixing broken filepaths
+ * Scanning existing .crate files and fixing broken filepaths
  * by looking up files in the media library by filename.
+ * Uses parallel processing for faster crate scanning.
  */
 public class ser_sync_crate_fixer {
+
+    // Thread pool for parallel crate processing
+    private static final int NUM_THREADS = Math.min(4, Runtime.getRuntime().availableProcessors());
+    private static final ExecutorService CRATE_POOL = Executors.newFixedThreadPool(NUM_THREADS);
 
     /**
      * Fixes broken paths in all .crate files in the given Serato directory.
@@ -59,84 +65,26 @@ public class ser_sync_crate_fixer {
             return;
         }
 
-        // 3. First pass: collect all path fixes needed
-        Map<String, String> pathFixes = new HashMap<>(); // old path -> new path
-        Map<File, List<String>> crateUpdates = new HashMap<>(); // crate file -> new tracks list
+        // 3. First pass: collect all path fixes needed (using thread-safe collections)
+        Map<String, String> pathFixes = new ConcurrentHashMap<>(); // old path -> new path
+        Map<File, List<String>> crateUpdates = new ConcurrentHashMap<>(); // crate file -> new tracks list
+
+        // Process crates in parallel
+        List<Future<?>> futures = new ArrayList<>();
+        final String finalVolumeRoot = volumeRoot;
 
         for (File crateFile : crateFiles) {
-            ser_sync_crate crate;
+            futures.add(CRATE_POOL.submit(() -> {
+                processCrateFile(crateFile, libraryFiles, database, finalVolumeRoot, pathFixes, crateUpdates);
+            }));
+        }
 
+        // Wait for all crate processing to complete
+        for (Future<?> future : futures) {
             try {
-                crate = ser_sync_crate.readFrom(crateFile);
-            } catch (ser_sync_exception e) {
-                ser_sync_log.error("Failed to read crate: " + crateFile.getName());
-                continue;
-            }
-
-            List<String> originalTracks = new ArrayList<>(crate.getTracks());
-            List<String> newTracks = new ArrayList<>();
-            boolean tracksChanged = false;
-
-            for (String trackPath : originalTracks) {
-                // Check if file exists
-                File trackFile = new File(trackPath);
-                boolean exists = trackFile.exists();
-
-                // If path is relative and we know the volume root, try resolving it
-                String resolvedPath = trackPath;
-                if (!exists && !trackFile.isAbsolute() && volumeRoot != null) {
-                    File resolvedFile = new File(volumeRoot, trackPath);
-                    if (resolvedFile.exists()) {
-                        exists = true;
-                        resolvedPath = resolvedFile.getAbsolutePath();
-                    }
-                }
-
-                if (!exists) {
-                    // File is missing, try to find it in our library map
-                    String filename = trackFile.getName();
-                    String fixedPath = libraryFiles.get(filename);
-
-                    if (fixedPath != null && new File(fixedPath).exists()) {
-                        // Check if database has an existing path for this file
-                        String normalizedPath = fixedPath;
-                        if (database != null) {
-                            String dbPath = database.getOriginalPathByFilename(fixedPath);
-                            if (dbPath != null && new File(dbPath).exists()) {
-                                // Database path exists, use it
-                                normalizedPath = dbPath;
-                            } else if (dbPath != null) {
-                                // Database has old path but file moved - we need to update database
-                                pathFixes.put(dbPath, fixedPath);
-                                normalizedPath = fixedPath;
-                            }
-                        }
-
-                        // Also track the original broken path for database update
-                        if (!trackPath.equals(normalizedPath)) {
-                            pathFixes.put(trackPath, normalizedPath);
-                        }
-
-                        ser_sync_log.info("Fixed broken path in '" + crateFile.getName() + "':");
-                        ser_sync_log.info("  Broken: " + trackPath);
-                        ser_sync_log.info("   Found: " + normalizedPath);
-                        newTracks.add(normalizedPath);
-                        tracksChanged = true;
-                    } else {
-                        // Still broken or not found, keep original
-                        newTracks.add(trackPath);
-                    }
-                } else {
-                    // File exists, keep it (use resolved path if different)
-                    newTracks.add(resolvedPath);
-                    if (!trackPath.equals(resolvedPath)) {
-                        tracksChanged = true;
-                    }
-                }
-            }
-
-            if (tracksChanged) {
-                crateUpdates.put(crateFile, newTracks);
+                future.get();
+            } catch (InterruptedException | ExecutionException e) {
+                ser_sync_log.error("Error processing crate: " + e.getMessage());
             }
         }
 
@@ -186,6 +134,80 @@ public class ser_sync_crate_fixer {
             ser_sync_log.info("Fixed " + totalFixedCrates + " crate files.");
         } else {
             ser_sync_log.info("No broken paths found that could be fixed.");
+        }
+    }
+
+    /**
+     * Processes a single crate file to find and fix broken paths.
+     * Thread-safe - can be called from multiple threads.
+     */
+    private static void processCrateFile(File crateFile, Map<String, String> libraryFiles,
+            ser_sync_database database, String volumeRoot,
+            Map<String, String> pathFixes, Map<File, List<String>> crateUpdates) {
+
+        ser_sync_crate crate;
+        try {
+            crate = ser_sync_crate.readFrom(crateFile);
+        } catch (ser_sync_exception e) {
+            ser_sync_log.error("Failed to read crate: " + crateFile.getName());
+            return;
+        }
+
+        List<String> originalTracks = new ArrayList<>(crate.getTracks());
+        List<String> newTracks = new ArrayList<>();
+        boolean tracksChanged = false;
+
+        for (String trackPath : originalTracks) {
+            File trackFile = new File(trackPath);
+            boolean exists = trackFile.exists();
+
+            String resolvedPath = trackPath;
+            if (!exists && !trackFile.isAbsolute() && volumeRoot != null) {
+                File resolvedFile = new File(volumeRoot, trackPath);
+                if (resolvedFile.exists()) {
+                    exists = true;
+                    resolvedPath = resolvedFile.getAbsolutePath();
+                }
+            }
+
+            if (!exists) {
+                String filename = trackFile.getName();
+                String fixedPath = libraryFiles.get(filename);
+
+                if (fixedPath != null && new File(fixedPath).exists()) {
+                    String normalizedPath = fixedPath;
+                    if (database != null) {
+                        String dbPath = database.getOriginalPathByFilename(fixedPath);
+                        if (dbPath != null && new File(dbPath).exists()) {
+                            normalizedPath = dbPath;
+                        } else if (dbPath != null) {
+                            pathFixes.put(dbPath, fixedPath);
+                            normalizedPath = fixedPath;
+                        }
+                    }
+
+                    if (!trackPath.equals(normalizedPath)) {
+                        pathFixes.put(trackPath, normalizedPath);
+                    }
+
+                    ser_sync_log.info("Fixed broken path in '" + crateFile.getName() + "':");
+                    ser_sync_log.info("  Broken: " + trackPath);
+                    ser_sync_log.info("   Found: " + normalizedPath);
+                    newTracks.add(normalizedPath);
+                    tracksChanged = true;
+                } else {
+                    newTracks.add(trackPath);
+                }
+            } else {
+                newTracks.add(resolvedPath);
+                if (!trackPath.equals(resolvedPath)) {
+                    tracksChanged = true;
+                }
+            }
+        }
+
+        if (tracksChanged) {
+            crateUpdates.put(crateFile, newTracks);
         }
     }
 }

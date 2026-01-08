@@ -14,8 +14,15 @@ public class ser_sync_log {
     private static ser_sync_log_window_handler WINDOW_HANDLER;
     private static PrintWriter FILE_WRITER;
     private static PrintWriter DUPE_WRITER;
-    private static final String LOG_FILE = "ser-sync-pro.log";
+    private static String LOG_FILE = "ser-sync-pro.log";
     private static final String DUPE_FILE = "ser-sync-dupe-files.log";
+
+    /**
+     * Sets the log file name. Must be called before any logging methods.
+     */
+    public static synchronized void setLogFile(String filename) {
+        LOG_FILE = filename;
+    }
 
     public static void info(String message) {
         initGui();

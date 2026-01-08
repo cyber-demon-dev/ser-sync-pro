@@ -59,7 +59,10 @@ class ser_sync_log_window_handler {
     }
 
     public void success() {
-        // No popup - just exit (main window shows the details)
+        JOptionPane.showMessageDialog(window,
+                "Sync complete! You can now review the logs.\n\nClose the main window when finished.",
+                "Success", JOptionPane.INFORMATION_MESSAGE);
+        // Don't exit - keep window open for log review
     }
 
     public boolean confirm(String message) {

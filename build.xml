@@ -3,16 +3,21 @@
     
     <description>
         ser-sync-pro - Serato crate synchronization tool
-        Build script for compiling and packaging the application
+        session-fixer - Standalone session path fixer
+        Build script for compiling and packaging both applications
     </description>
     
     <!-- Properties -->
     <property name="src.dir" value="src"/>
     <property name="build.dir" value="out/production/ser-sync-pro"/>
     <property name="dist.dir" value="distr/ser-sync-pro"/>
+    <property name="session.dist.dir" value="distr/session-fixer"/>
     <property name="jar.name" value="ser-sync-pro.jar"/>
+    <property name="session.jar.name" value="session-fixer.jar"/>
     <property name="props.template" value="ser-sync.properties.template"/>
+    <property name="session.props.template" value="session-fixer.properties.template"/>
     <property name="main.class" value="ser_sync_main"/>
+    <property name="session.main.class" value="session_fixer_main"/>
     
     <!-- Compiler settings -->
     <property name="java.source" value="11"/>
@@ -22,6 +27,7 @@
     <target name="clean" description="Remove all generated files">
         <delete dir="${build.dir}"/>
         <delete dir="${dist.dir}"/>
+        <delete dir="${session.dist.dir}"/>
     </target>
     
     <!-- Compile target -->
@@ -36,8 +42,8 @@
         </javac>
     </target>
     
-    <!-- Package target -->
-    <target name="jar" depends="compile" description="Create JAR file">
+    <!-- Package ser-sync-pro -->
+    <target name="jar" depends="compile" description="Create ser-sync-pro JAR file">
         <mkdir dir="${dist.dir}"/>
         <jar destfile="${dist.dir}/${jar.name}" basedir="${build.dir}">
             <manifest>
@@ -49,12 +55,30 @@
         <copy file="${props.template}" tofile="${dist.dir}/ser-sync.properties"/>
     </target>
     
-    <!-- Run target -->
-    <target name="run" depends="jar" description="Run the application">
+    <!-- Package session-fixer -->
+    <target name="session-fixer-jar" depends="compile" description="Create session-fixer JAR file">
+        <mkdir dir="${session.dist.dir}"/>
+        <jar destfile="${session.dist.dir}/${session.jar.name}" basedir="${build.dir}">
+            <manifest>
+                <attribute name="Main-Class" value="${session.main.class}"/>
+                <attribute name="Built-By" value="${user.name}"/>
+                <attribute name="Build-Date" value="${TODAY}"/>
+            </manifest>
+        </jar>
+        <copy file="${session.props.template}" tofile="${session.dist.dir}/session-fixer.properties"/>
+    </target>
+    
+    <!-- Run ser-sync-pro -->
+    <target name="run" depends="jar" description="Run ser-sync-pro">
         <java jar="${dist.dir}/${jar.name}" fork="true"/>
     </target>
     
-    <!-- Default target -->
-    <target name="all" depends="clean, jar" description="Clean and build everything"/>
+    <!-- Run session-fixer -->
+    <target name="session-fixer-run" depends="session-fixer-jar" description="Run session-fixer">
+        <java jar="${session.dist.dir}/${session.jar.name}" fork="true"/>
+    </target>
+    
+    <!-- Build all applications -->
+    <target name="all" depends="clean, jar, session-fixer-jar" description="Clean and build everything"/>
     
 </project>
