@@ -1,4 +1,5 @@
 import javax.swing.*;
+import java.awt.*;
 
 /**
  * GUI log window for serato-sync.
@@ -8,13 +9,37 @@ import javax.swing.*;
 public class ser_sync_log_window extends JFrame {
 
     private JTextArea textArea;
+    private JProgressBar progressBar;
+    private JLabel progressLabel;
 
     public ser_sync_log_window(String title, int width, int height) {
         super(title);
         setSize(width, height);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        // Main panel with BorderLayout
+        JPanel mainPanel = new JPanel(new BorderLayout());
+
+        // Text area for logs
         textArea = new JTextArea();
+        textArea.setEditable(false);
         JScrollPane pane = new JScrollPane(textArea);
-        getContentPane().add(pane);
+        mainPanel.add(pane, BorderLayout.CENTER);
+
+        // Progress panel at bottom
+        JPanel progressPanel = new JPanel(new BorderLayout(5, 5));
+        progressPanel.setBorder(BorderFactory.createEmptyBorder(5, 10, 10, 10));
+
+        progressLabel = new JLabel(" ");
+        progressBar = new JProgressBar(0, 100);
+        progressBar.setStringPainted(true);
+        progressBar.setVisible(false);
+
+        progressPanel.add(progressLabel, BorderLayout.NORTH);
+        progressPanel.add(progressBar, BorderLayout.CENTER);
+        mainPanel.add(progressPanel, BorderLayout.SOUTH);
+
+        getContentPane().add(mainPanel);
         setVisible(true);
     }
 
@@ -22,8 +47,26 @@ public class ser_sync_log_window extends JFrame {
      * Appends data to the text area.
      */
     public void showInfo(String data) {
-        textArea.append(data);
-        this.getContentPane().validate();
+        SwingUtilities.invokeLater(() -> {
+            textArea.append(data);
+            textArea.setCaretPosition(textArea.getDocument().getLength());
+        });
+    }
+
+    /**
+     * Updates the progress bar and label.
+     */
+    public void setProgress(String message, int percent) {
+        SwingUtilities.invokeLater(() -> {
+            if (message == null || message.isEmpty()) {
+                progressBar.setVisible(false);
+                progressLabel.setText(" ");
+            } else {
+                progressBar.setVisible(true);
+                progressBar.setValue(percent);
+                progressLabel.setText(message);
+            }
+        });
     }
 }
 
@@ -37,7 +80,7 @@ class ser_sync_log_window_handler {
 
     private ser_sync_log_window_handler() {
         if (window == null) {
-            window = new ser_sync_log_window("ser-sync-pro logging window", 650, 350);
+            window = new ser_sync_log_window("ser-sync-pro logging window", 700, 400);
         }
     }
 
@@ -52,6 +95,10 @@ class ser_sync_log_window_handler {
         window.showInfo(message + "\n");
     }
 
+    public void setProgress(String message, int percent) {
+        window.setProgress(message, percent);
+    }
+
     public void fatalError() {
         JOptionPane.showMessageDialog(window,
                 "Error occurred. Please inspect the main window with logs for details.",
@@ -59,6 +106,7 @@ class ser_sync_log_window_handler {
     }
 
     public void success() {
+        window.setProgress("", 0); // Clear progress bar
         JOptionPane.showMessageDialog(window,
                 "Sync complete! You can now review the logs.\n\nClose the main window when finished.",
                 "Success", JOptionPane.INFORMATION_MESSAGE);

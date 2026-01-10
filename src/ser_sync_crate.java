@@ -49,16 +49,7 @@ public class ser_sync_crate {
         String key = normalizeForDedup(trackPath);
         if (!normalizedPaths.contains(key)) {
             normalizedPaths.add(key);
-
-            // If we have a database, try to use its path encoding
-            String pathToAdd = trackPath;
-            if (database != null) {
-                String dbPath = database.getOriginalPathByFilename(trackPath);
-                if (dbPath != null) {
-                    pathToAdd = dbPath;
-                }
-            }
-            tracks.add(pathToAdd);
+            tracks.add(trackPath);
         }
     }
 
@@ -144,7 +135,7 @@ public class ser_sync_crate {
         ser_sync_input_stream in;
 
         try {
-            in = new ser_sync_input_stream(new FileInputStream(inFile));
+            in = new ser_sync_input_stream(new BufferedInputStream(new FileInputStream(inFile)));
         } catch (FileNotFoundException e) {
             throw new ser_sync_exception(e);
         }
@@ -184,9 +175,19 @@ public class ser_sync_crate {
                     in.read(); // Skip final byte (usually '0' but can vary in newer versions)
                 } else if ("osrt".equals(type)) {
                     in.readIntegerValue();
-                    in.skipExactString("tvcn");
-                    int tvcnValue = in.readIntegerValue();
-                    result.setSorting(in.readStringUTF16(tvcnValue));
+                    // Peek at next 4 bytes to determine format:
+                    // - Full format: tvcn + sorting name + brev
+                    // - Short format: brev only (no sorting name)
+                    byte[] peekBytes = new byte[4];
+                    in.mark(4);
+                    in.read(peekBytes);
+                    in.reset();
+                    String nextType = new String(peekBytes);
+                    if ("tvcn".equals(nextType)) {
+                        in.skipExactString("tvcn");
+                        int tvcnValue = in.readIntegerValue();
+                        result.setSorting(in.readStringUTF16(tvcnValue));
+                    }
                     in.skipExactString("brev");
                     result.setSortingRev(in.readLongValue(5));
                 }
@@ -283,7 +284,8 @@ public class ser_sync_crate {
 
     /**
      * Normalizes track path for Serato format.
-     * Uses raw filesystem encoding to match how Serato originally indexed files.
+     * IMPORTANT: Serato's database V2 uses NFD (decomposed) Unicode encoding.
+     * We must use NFD to match, otherwise Serato creates duplicate DB entries.
      */
     private String getUniformTrackName(String name) {
         // Forward slashes only
@@ -292,8 +294,9 @@ public class ser_sync_crate {
         name = name.replaceAll("^[a-zA-Z]:\\/", "");
         // Remove macOS /Volumes/DriveName/ prefix
         name = name.replaceAll("^/Volumes/[^/]+/", "");
-        // No Unicode normalization - use raw path as returned by filesystem
-        // This matches how Serato originally indexed the files
+        // Normalize to NFD (decomposed) to match Serato's database encoding
+        // e.g., 'ó' (U+00F3) becomes 'o' + combining accent (U+0301)
+        name = Normalizer.normalize(name, Normalizer.Form.NFD);
         return name;
     }
 

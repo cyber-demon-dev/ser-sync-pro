@@ -90,8 +90,13 @@ public class ser_sync_library {
             ser_sync_file_utils.deleteFile(seratoLibraryPath + "/database V2");
         }
 
+        int total = crates.size() + subCrates.size();
+        int current = 0;
+
         // Write parent crates
         for (ser_sync_crate crate : crates) {
+            current++;
+            ser_sync_log.progress("Writing crates", current, total);
             try {
                 File crateFile = new File(seratoLibraryPath + "/Subcrates/" + crateFileName.get(crate));
                 crateFile.getParentFile().mkdirs();
@@ -103,6 +108,8 @@ public class ser_sync_library {
 
         // Write sub-crates
         for (ser_sync_crate crate : subCrates) {
+            current++;
+            ser_sync_log.progress("Writing crates", current, total);
             try {
                 File crateFile = new File(seratoLibraryPath + "/Subcrates/" + crateFileName.get(crate));
                 crateFile.getParentFile().mkdirs();
@@ -111,6 +118,8 @@ public class ser_sync_library {
                 throw new ser_sync_exception("Error serializing subcrate '" + crateFileName.get(crate) + "'", e);
             }
         }
+
+        ser_sync_log.progressComplete("Writing crates");
     }
 
     public int getTotalNumberOfCrates() {

@@ -1,6 +1,7 @@
 # Build output
 out/
 temp/
+pvt/
 
 # IDE
 .idea/
@@ -10,4 +11,6 @@ temp/
 .DS_Store
 
 # Logs
-.log
+logs/
+*.log
+*.command

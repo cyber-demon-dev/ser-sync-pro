@@ -1,20 +1,25 @@
 import java.io.File;
 import java.io.FilenameFilter;
+import java.text.Normalizer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Scanning existing .crate files and fixing broken filepaths
+ * scanning existing .crate files and fixing broken filepaths
  * by looking up files in the media library by filename.
- * Uses parallel processing for faster crate scanning.
  */
 public class ser_sync_crate_fixer {
 
     // Thread pool for parallel crate processing
-    private static final int NUM_THREADS = Math.min(4, Runtime.getRuntime().availableProcessors());
+    private static final int NUM_THREADS = Runtime.getRuntime().availableProcessors();
     private static final ExecutorService CRATE_POOL = Executors.newFixedThreadPool(NUM_THREADS);
 
     /**
@@ -45,7 +50,8 @@ public class ser_sync_crate_fixer {
 
         for (String path : allTracks) {
             File f = new File(path);
-            String filename = f.getName();
+            // Normalize filename to NFC for consistent matching
+            String filename = Normalizer.normalize(f.getName().toLowerCase(), Normalizer.Form.NFC);
             libraryFiles.put(filename, path);
         }
 
@@ -69,13 +75,17 @@ public class ser_sync_crate_fixer {
         Map<String, String> pathFixes = new ConcurrentHashMap<>(); // old path -> new path
         Map<File, List<String>> crateUpdates = new ConcurrentHashMap<>(); // crate file -> new tracks list
 
-        // Process crates in parallel
+        // Process crates in parallel with progress tracking
         List<Future<?>> futures = new ArrayList<>();
         final String finalVolumeRoot = volumeRoot;
+        final int totalCrates = crateFiles.length;
+        final AtomicInteger processedCount = new AtomicInteger(0);
 
         for (File crateFile : crateFiles) {
             futures.add(CRATE_POOL.submit(() -> {
                 processCrateFile(crateFile, libraryFiles, database, finalVolumeRoot, pathFixes, crateUpdates);
+                int done = processedCount.incrementAndGet();
+                ser_sync_log.progress("Checking crates for broken paths", done, totalCrates);
             }));
         }
 
@@ -88,13 +98,20 @@ public class ser_sync_crate_fixer {
             }
         }
 
+        ser_sync_log.progressComplete("Checking crates");
+
         // 4. Update database V2 file with all path fixes
         if (!pathFixes.isEmpty()) {
+            ser_sync_log.info("Updating database V2 with " + pathFixes.size() + " path fixes...");
             String databasePath = seratoPath + "/database V2";
             int dbUpdated = ser_sync_database_fixer.updatePaths(databasePath, pathFixes);
             if (dbUpdated > 0) {
                 ser_sync_log.info("Updated " + dbUpdated + " paths in database V2");
+            } else {
+                ser_sync_log.info("No database paths were updated (paths not found in database)");
             }
+        } else {
+            ser_sync_log.info("No broken paths need fixing.");
         }
 
         // 5. Now update all crate files
@@ -171,18 +188,23 @@ public class ser_sync_crate_fixer {
             }
 
             if (!exists) {
-                String filename = trackFile.getName();
+                // Normalize to NFC for matching (database may use NFD for accented chars)
+                String filename = Normalizer.normalize(trackFile.getName().toLowerCase(), Normalizer.Form.NFC);
                 String fixedPath = libraryFiles.get(filename);
 
                 if (fixedPath != null && new File(fixedPath).exists()) {
                     String normalizedPath = fixedPath;
                     if (database != null) {
                         String dbPath = database.getOriginalPathByFilename(fixedPath);
-                        if (dbPath != null && new File(dbPath).exists()) {
-                            normalizedPath = dbPath;
-                        } else if (dbPath != null) {
-                            pathFixes.put(dbPath, fixedPath);
-                            normalizedPath = fixedPath;
+                        if (dbPath != null) {
+                            // Check existence with volumeRoot (dbPath is relative)
+                            File dbFile = volumeRoot != null ? new File(volumeRoot, dbPath) : new File(dbPath);
+                            if (dbFile.exists()) {
+                                normalizedPath = dbPath;
+                            } else {
+                                pathFixes.put(dbPath, fixedPath);
+                                normalizedPath = fixedPath;
+                            }
                         }
                     }
 
@@ -190,9 +212,8 @@ public class ser_sync_crate_fixer {
                         pathFixes.put(trackPath, normalizedPath);
                     }
 
-                    ser_sync_log.info("Fixed broken path in '" + crateFile.getName() + "':");
-                    ser_sync_log.info("  Broken: " + trackPath);
-                    ser_sync_log.info("   Found: " + normalizedPath);
+                    // Don't log individual fixes - too many from parallel threads causes GUI
+                    // slowdown
                     newTracks.add(normalizedPath);
                     tracksChanged = true;
                 } else {
@@ -209,5 +230,251 @@ public class ser_sync_crate_fixer {
         if (tracksChanged) {
             crateUpdates.put(crateFile, newTracks);
         }
+    }
+
+    /**
+     * Replaces a path prefix in all crate files and database V2.
+     * Also renames crate files that contain the old prefix in their name.
+     * 
+     * @param seratoPath Path to _Serato_ folder
+     * @param oldPrefix  Old path prefix to replace (e.g., "Crates/New")
+     * @param newPrefix  New path prefix (e.g., "Crates/Base")
+     * @return Number of crates updated
+     */
+    public static int replacePathPrefix(String seratoPath, String oldPrefix, String newPrefix) {
+        if (oldPrefix == null || newPrefix == null || oldPrefix.equals(newPrefix)) {
+            return 0;
+        }
+
+        ser_sync_log.info("Replacing path prefix: '" + oldPrefix + "' -> '" + newPrefix + "'");
+
+        File subcratesDir = new File(seratoPath + "/Subcrates");
+        if (!subcratesDir.exists() || !subcratesDir.isDirectory()) {
+            ser_sync_log.error("Subcrates directory not found: " + subcratesDir);
+            return 0;
+        }
+
+        File[] crateFiles = subcratesDir.listFiles((dir, name) -> name.endsWith(".crate"));
+        if (crateFiles == null || crateFiles.length == 0) {
+            return 0;
+        }
+
+        int updatedCrates = 0;
+        int renamedCrates = 0;
+        Map<String, String> pathFixes = new HashMap<>();
+
+        // Convert prefix for crate filename matching (use %% separator)
+        String oldCratePrefix = oldPrefix.replace("/", "%%");
+        String newCratePrefix = newPrefix.replace("/", "%%");
+
+        for (File crateFile : crateFiles) {
+            ser_sync_log.progress("Replacing path prefixes", updatedCrates + 1, crateFiles.length);
+
+            try {
+                ser_sync_crate crate = ser_sync_crate.readFrom(crateFile);
+                List<String> originalTracks = new ArrayList<>(crate.getTracks());
+                List<String> newTracks = new ArrayList<>();
+                boolean hasChanges = false;
+
+                for (String track : originalTracks) {
+                    if (track.contains(oldPrefix)) {
+                        String newTrack = track.replace(oldPrefix, newPrefix);
+                        newTracks.add(newTrack);
+                        pathFixes.put(track, newTrack);
+                        hasChanges = true;
+                    } else {
+                        newTracks.add(track);
+                    }
+                }
+
+                if (hasChanges) {
+                    // Write updated crate
+                    ser_sync_crate newCrate = new ser_sync_crate();
+                    newCrate.setVersion(crate.getVersion());
+                    newCrate.setSorting(crate.getSorting());
+                    newCrate.setSortingRev(crate.getSortingRev());
+                    for (String col : crate.getColumns()) {
+                        newCrate.addColumn(col);
+                    }
+                    newCrate.addTracks(newTracks);
+                    newCrate.writeTo(crateFile);
+                    updatedCrates++;
+                }
+
+                // Check if crate file itself needs renaming
+                String crateName = crateFile.getName();
+                if (crateName.contains(oldCratePrefix)) {
+                    String newCrateName = crateName.replace(oldCratePrefix, newCratePrefix);
+                    File newCrateFile = new File(crateFile.getParent(), newCrateName);
+
+                    // If target exists, merge or delete old
+                    if (newCrateFile.exists()) {
+                        // Delete the old file - the new one already has the tracks
+                        crateFile.delete();
+                        ser_sync_log.info("Deleted duplicate crate: " + crateName);
+                    } else {
+                        crateFile.renameTo(newCrateFile);
+                        renamedCrates++;
+                    }
+                }
+
+            } catch (ser_sync_exception e) {
+                ser_sync_log.error("Error processing crate: " + crateFile.getName() + " - " + e.getMessage());
+            }
+        }
+
+        ser_sync_log.progressComplete("Replacing path prefixes");
+
+        // Update database V2 with path fixes
+        if (!pathFixes.isEmpty()) {
+            ser_sync_log.info("Updating database V2 with " + pathFixes.size() + " path replacements...");
+            String databasePath = seratoPath + "/database V2";
+            int dbUpdated = ser_sync_database_fixer.updatePaths(databasePath, pathFixes);
+            ser_sync_log.info("Updated " + dbUpdated + " paths in database V2");
+        }
+
+        ser_sync_log.info("Path replacement complete: " + updatedCrates + " crates updated, " + renamedCrates
+                + " crates renamed");
+        return updatedCrates;
+    }
+
+    /**
+     * Automatically detects renamed directories by comparing broken crate paths
+     * to actual file locations in the media library.
+     * 
+     * @param seratoPath Path to _Serato_ folder
+     * @param library    The scanned media library
+     * @return Number of directory renames detected and fixed
+     */
+    public static int detectAndFixRenamedDirectories(String seratoPath, ser_sync_media_library library) {
+        ser_sync_log.info("Detecting renamed directories...");
+
+        // Determine volume root
+        File seratoDir = new File(seratoPath);
+        String volumeRoot = null;
+        if (seratoDir.getName().equalsIgnoreCase("_Serato_")) {
+            volumeRoot = seratoDir.getParent();
+        }
+
+        // Build filename -> absolute path map from library
+        Map<String, String> libraryFiles = new HashMap<>();
+        List<String> allTracks = new ArrayList<>();
+        library.flattenTracks(allTracks);
+        for (String track : allTracks) {
+            File f = new File(track);
+            String filename = Normalizer.normalize(f.getName().toLowerCase(), Normalizer.Form.NFC);
+            libraryFiles.put(filename, track);
+        }
+
+        // Scan crates for broken paths and detect directory renames
+        Map<String, String> directoryRenames = new HashMap<>(); // oldDir -> newDir
+        Map<String, Integer> renameCount = new HashMap<>(); // pattern -> count
+
+        File subcratesDir = new File(seratoPath + "/Subcrates");
+        if (!subcratesDir.exists()) {
+            return 0;
+        }
+
+        File[] crateFiles = subcratesDir.listFiles((dir, name) -> name.endsWith(".crate"));
+        if (crateFiles == null) {
+            return 0;
+        }
+
+        for (File crateFile : crateFiles) {
+            try {
+                ser_sync_crate crate = ser_sync_crate.readFrom(crateFile);
+                for (String trackPath : crate.getTracks()) {
+                    File trackFile = new File(trackPath);
+                    boolean exists = trackFile.exists();
+
+                    // Try with volume root for relative paths
+                    if (!exists && volumeRoot != null && !trackPath.startsWith("/")) {
+                        exists = new File(volumeRoot, trackPath).exists();
+                    }
+
+                    if (!exists) {
+                        // Find by filename
+                        String filename = Normalizer.normalize(trackFile.getName().toLowerCase(), Normalizer.Form.NFC);
+                        String fixedPath = libraryFiles.get(filename);
+
+                        if (fixedPath != null) {
+                            // Compare paths to detect directory rename
+                            // Note: trackPath is relative (from crate), fixedPath is absolute (from
+                            // filesystem)
+                            // We need to normalize both to relative format for comparison
+                            String oldDir = trackFile.getParent();
+                            String newDir = new File(fixedPath).getParent();
+
+                            // Strip volume root from newDir to make it relative like oldDir
+                            if (volumeRoot != null && newDir != null && newDir.startsWith(volumeRoot)) {
+                                newDir = newDir.substring(volumeRoot.length());
+                                if (newDir.startsWith("/")) {
+                                    newDir = newDir.substring(1);
+                                }
+                            }
+
+                            if (oldDir != null && newDir != null && !oldDir.equals(newDir)) {
+                                // Find the differing component
+                                String[] oldParts = oldDir.split("/");
+                                String[] newParts = newDir.split("/");
+
+                                // Find first differing segment (skip empty segments from leading /)
+                                int diffIndex = -1;
+                                for (int i = 0; i < Math.min(oldParts.length, newParts.length); i++) {
+                                    if (oldParts[i].isEmpty() && newParts[i].isEmpty()) {
+                                        continue; // Skip empty segments
+                                    }
+                                    if (!oldParts[i].equals(newParts[i])) {
+                                        diffIndex = i;
+                                        break;
+                                    }
+                                }
+
+                                // Skip if no difference found
+                                if (diffIndex < 0) {
+                                    continue;
+                                }
+
+                                // Build prefix up to and including differing segment
+                                StringBuilder oldPrefix = new StringBuilder();
+                                StringBuilder newPrefix = new StringBuilder();
+                                for (int i = 0; i <= diffIndex && i < oldParts.length && i < newParts.length; i++) {
+                                    if (i > 0) {
+                                        oldPrefix.append("/");
+                                        newPrefix.append("/");
+                                    }
+                                    oldPrefix.append(oldParts[i]);
+                                    newPrefix.append(newParts[i]);
+                                }
+
+                                String key = oldPrefix.toString() + "|" + newPrefix.toString();
+                                renameCount.merge(key, 1, Integer::sum);
+
+                                // If we've seen this pattern enough times, it's likely a directory rename
+                                if (renameCount.get(key) >= 3 && !directoryRenames.containsKey(oldPrefix.toString())) {
+                                    directoryRenames.put(oldPrefix.toString(), newPrefix.toString());
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (ser_sync_exception e) {
+                // Skip problematic crates
+            }
+        }
+
+        // Apply detected renames
+        int totalFixed = 0;
+        for (Map.Entry<String, String> rename : directoryRenames.entrySet()) {
+            ser_sync_log.info("Detected directory rename: " + rename.getKey() + " -> " + rename.getValue());
+            int fixed = replacePathPrefix(seratoPath, rename.getKey(), rename.getValue());
+            totalFixed += fixed;
+        }
+
+        if (directoryRenames.isEmpty()) {
+            ser_sync_log.info("No directory renames detected.");
+        }
+
+        return totalFixed;
     }
 }

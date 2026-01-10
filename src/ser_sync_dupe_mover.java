@@ -1,0 +1,184 @@
+import java.io.*;
+import java.nio.file.*;
+import java.text.SimpleDateFormat;
+import java.util.*;
+
+/**
+ * Scans for duplicate files and moves the oldest copies to a timestamped
+ * folder.
+ * Preserves the original folder structure within the dupes folder.
+ * 
+ * Output structure:
+ * ser-sync-pro/dupes/<timestamp>/
+ * ├── dupes.log
+ * └── <relative-path>/filename
+ */
+public class ser_sync_dupe_mover {
+
+    private static final String DUPES_FOLDER = "ser-sync-pro/dupes";
+    private static List<String> logEntries = new ArrayList<>();
+    private static Map<String, String> movedToKeptMap = new HashMap<>(); // moved path -> kept path
+    private static int totalGroupsFound = 0;
+    private static int totalFilesMoved = 0;
+
+    /**
+     * Scans media library for duplicates and moves oldest copies to dupes folder.
+     * 
+     * @param musicLibraryRoot Root path of the music library
+     * @param library          The scanned media library
+     * @return Map of moved file paths to their kept replacement paths (for database
+     *         updates)
+     */
+    public static Map<String, String> scanAndMoveDuplicates(String musicLibraryRoot, ser_sync_media_library library) {
+        ser_sync_log.info("Scanning for duplicates to move...");
+
+        // Reset state
+        logEntries.clear();
+        movedToKeptMap.clear();
+        totalGroupsFound = 0;
+        totalFilesMoved = 0;
+
+        // Flatten all tracks
+        List<String> allTracks = new ArrayList<>();
+        library.flattenTracks(allTracks);
+
+        // Group by filename + size
+        Map<String, List<String>> groups = new HashMap<>();
+        for (String path : allTracks) {
+            File f = new File(path);
+            String key = f.getName().toLowerCase() + "|" + f.length();
+            groups.computeIfAbsent(key, k -> new ArrayList<>()).add(path);
+        }
+
+        // Find duplicate groups
+        List<Map.Entry<String, List<String>>> dupeGroups = new ArrayList<>();
+        for (Map.Entry<String, List<String>> entry : groups.entrySet()) {
+            if (entry.getValue().size() > 1) {
+                dupeGroups.add(entry);
+            }
+        }
+
+        if (dupeGroups.isEmpty()) {
+            ser_sync_log.info("No duplicates found.");
+            return movedToKeptMap;
+        }
+
+        totalGroupsFound = dupeGroups.size();
+        ser_sync_log.info("Found " + totalGroupsFound + " duplicate groups.");
+
+        // Create timestamped folder
+        String timestamp = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date());
+        File libraryRoot = new File(musicLibraryRoot);
+        File dupesRoot = new File(libraryRoot.getParentFile(), DUPES_FOLDER + "/" + timestamp);
+
+        if (!dupesRoot.mkdirs()) {
+            ser_sync_log.error("Failed to create dupes folder: " + dupesRoot.getAbsolutePath());
+            return movedToKeptMap;
+        }
+
+        // Process each duplicate group
+        for (Map.Entry<String, List<String>> entry : dupeGroups) {
+            processDuplicateGroup(entry.getKey(), entry.getValue(), musicLibraryRoot, dupesRoot);
+        }
+
+        // Write log file with header at top
+        File logFile = new File(dupesRoot, "dupes.log");
+        writeLogFile(logFile, timestamp);
+
+        ser_sync_log.info("Moved " + totalFilesMoved + " duplicate files to: " + dupesRoot.getAbsolutePath());
+        ser_sync_log.info("See " + logFile.getAbsolutePath() + " for details.");
+
+        return movedToKeptMap;
+    }
+
+    /**
+     * Processes a single duplicate group - keeps newest, moves older files.
+     */
+    private static void processDuplicateGroup(String groupKey, List<String> paths,
+            String libraryRoot, File dupesRoot) {
+
+        // Sort by modification time (newest first)
+        paths.sort((a, b) -> {
+            long timeA = new File(a).lastModified();
+            long timeB = new File(b).lastModified();
+            return Long.compare(timeB, timeA); // Descending (newest first)
+        });
+
+        String newestPath = paths.get(0);
+        File newestFile = new File(newestPath);
+        String newestDate = new SimpleDateFormat("yyyy-MM-dd").format(new Date(newestFile.lastModified()));
+
+        logEntries.add("Duplicate group: " + groupKey);
+        logEntries.add("  KEPT:  " + newestPath + " (" + newestDate + ")");
+
+        // Move all older files
+        for (int i = 1; i < paths.size(); i++) {
+            String oldPath = paths.get(i);
+            File oldFile = new File(oldPath);
+            String oldDate = new SimpleDateFormat("yyyy-MM-dd").format(new Date(oldFile.lastModified()));
+
+            // Calculate relative path from library root
+            String relativePath = getRelativePath(oldPath, libraryRoot);
+            File destFile = new File(dupesRoot, relativePath);
+
+            // Create parent directories
+            destFile.getParentFile().mkdirs();
+
+            // Move the file
+            try {
+                Files.move(oldFile.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                logEntries.add("  MOVED: " + oldPath + " (" + oldDate + ")");
+                logEntries.add("      -> " + destFile.getAbsolutePath());
+                movedToKeptMap.put(oldPath, newestPath); // Track: moved file -> kept file
+                totalFilesMoved++;
+            } catch (IOException e) {
+                logEntries.add("  ERROR: Failed to move " + oldPath + ": " + e.getMessage());
+                ser_sync_log.error("Failed to move file: " + oldPath + " - " + e.getMessage());
+            }
+        }
+
+        logEntries.add("");
+    }
+
+    /**
+     * Gets the relative path from library root.
+     */
+    private static String getRelativePath(String filePath, String libraryRoot) {
+        // Normalize paths
+        String normalizedFile = filePath.replace("\\", "/");
+        String normalizedRoot = libraryRoot.replace("\\", "/");
+
+        if (!normalizedRoot.endsWith("/")) {
+            normalizedRoot += "/";
+        }
+
+        if (normalizedFile.startsWith(normalizedRoot)) {
+            return normalizedFile.substring(normalizedRoot.length());
+        }
+
+        // If not relative, use just the filename
+        return new File(filePath).getName();
+    }
+
+    /**
+     * Writes the complete log file with header at top.
+     */
+    private static void writeLogFile(File logFile, String timestamp) {
+        try (PrintWriter writer = new PrintWriter(new FileWriter(logFile))) {
+            // Write header first
+            writer.println("=== Duplicate File Scan Report ===");
+            writer.println("Date: " + timestamp.replace("_", " "));
+            writer.println("Total duplicate groups found: " + totalGroupsFound);
+            writer.println("Total files moved: " + totalFilesMoved);
+            writer.println("=====================================");
+            writer.println();
+
+            // Write all log entries
+            for (String entry : logEntries) {
+                writer.println(entry);
+            }
+        } catch (IOException e) {
+            ser_sync_log.error("Failed to write dupes log: " + e.getMessage());
+        }
+    }
+}

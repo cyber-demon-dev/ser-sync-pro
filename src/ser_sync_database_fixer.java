@@ -64,8 +64,18 @@ public class ser_sync_database_fixer {
             // Read entire file
             byte[] data = readFile(dbFile);
             int updatedCount = 0;
+            int totalPaths = pathMappings.size();
+            int processed = 0;
+            int progressStep = Math.max(1, totalPaths / 20); // 5% increments
+            int nextProgressAt = progressStep;
 
             for (Map.Entry<String, String> entry : pathMappings.entrySet()) {
+                processed++;
+                if (processed >= nextProgressAt) {
+                    ser_sync_log.progress("Updating database V2", processed, totalPaths);
+                    nextProgressAt += progressStep;
+                }
+
                 // Normalize paths to match database format (relative, no volume prefix)
                 String oldPath = normalizePathForDatabase(entry.getKey());
                 String newPath = normalizePathForDatabase(entry.getValue());
@@ -79,6 +89,8 @@ public class ser_sync_database_fixer {
                     updatedCount++;
                 }
             }
+
+            ser_sync_log.progressComplete("Updating database V2");
 
             if (updatedCount > 0) {
                 writeFile(dbFile, data);

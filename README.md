@@ -16,8 +16,10 @@ Based on [serato-sync](https://github.com/ralekseenkov/serato-sync-old/) by Roma
 - **Parent Crate Support**: Add synced folders as subcrates under existing Serato crates
 - **Alphabetical Crate Sorting**: Automatically sort crates A–Z in Serato via `neworder.pref`
 - **Duplicate File Scanner**: Logs duplicate files (same name + size) to `ser-sync-dupe-files.log`
+- **Duplicate File Mover**: Moves oldest duplicates to `ser-sync-pro/dupes/<timestamp>/` with preserved folder structure
 - **Auto-Create Missing Folders**: Prompts to create `_Serato_` or parent crate if missing
 - **Broken Filepath Fixer**: Automatically repairs broken track paths in existing crates and database V2
+- **Timestamped Logs**: All logs saved to `logs/ser-sync-pro-<timestamp>.log`
 
 ## Quick Start
 
@@ -46,6 +48,7 @@ Based on [serato-sync](https://github.com/ralekseenkov/serato-sync-old/) by Roma
 | `crate.dedupe.mode` | `filename`, `path`, or `off` | `filename` |
 | `crate.sorting.alphabetical` | Sort crates A–Z in Serato | `false` |
 | `harddrive.dupe.scan.enabled` | Log duplicate files on disk | `false` |
+| `harddrive.dupe.move.enabled` | Move oldest duplicates to `ser-sync-pro/dupes/` | `false` |
 
 ## Building from Source
 
@@ -86,7 +89,7 @@ ser-sync-pro/
 
 ## How It Works
 
-1. **Backup**: Creates timestamped backup of `_Serato_` folder
+1. **Backup**: Creates timestamped backup in `ser-sync-pro/backup/` folder
 2. **Scan**: Reads your music library directory structure
 3. **Fix Paths** (optional): Repairs broken filepaths in existing crates and updates database V2
 4. **Deduplicate**: Skips tracks already in Serato database

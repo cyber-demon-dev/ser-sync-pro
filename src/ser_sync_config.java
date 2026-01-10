@@ -90,12 +90,36 @@ public class ser_sync_config {
         return getBooleanOption("harddrive.dupe.scan.enabled", false);
     }
 
+    public boolean isDupeMoveEnabled() {
+        return getBooleanOption("harddrive.dupe.move.enabled", false);
+    }
+
     public boolean isCrateSortingEnabled() {
         return getBooleanOption("crate.sorting.alphabetical", false);
     }
 
     public boolean isFixBrokenPathsEnabled() {
         return getBooleanOption("crate.fix.broken.paths", false);
+    }
+
+    // ==================== Path Replacement ====================
+
+    /**
+     * Gets the old path prefix to replace (e.g., "Crates/New").
+     * Returns null if not configured.
+     */
+    public String getPathReplaceOld() {
+        String value = properties.getProperty("crate.path.replace.old");
+        return (value != null && !value.trim().isEmpty()) ? value.trim() : null;
+    }
+
+    /**
+     * Gets the new path prefix to use (e.g., "Crates/Base").
+     * Returns null if not configured.
+     */
+    public String getPathReplaceNew() {
+        String value = properties.getProperty("crate.path.replace.new");
+        return (value != null && !value.trim().isEmpty()) ? value.trim() : null;
     }
 
     // ==================== Helper Methods ====================

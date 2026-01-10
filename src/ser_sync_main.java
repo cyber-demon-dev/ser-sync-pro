@@ -46,6 +46,31 @@ public class ser_sync_main {
         ser_sync_log.info("Found " + fsLibrary.getTotalNumberOfTracks() + " tracks in " +
                 fsLibrary.getTotalNumberOfDirectories() + " directories");
 
+        // Move duplicate files BEFORE building crates (so crates don't point to moved
+        // files)
+        if (config.isHardDriveDupeScanEnabled()) {
+            if (config.isDupeMoveEnabled()) {
+                java.util.Map<String, String> movedToKept = ser_sync_dupe_mover.scanAndMoveDuplicates(
+                        config.getMusicLibraryPath(), fsLibrary);
+                if (!movedToKept.isEmpty()) {
+                    // Update database V2 to point moved paths to kept paths
+                    String databasePath = seratoPath + "/database V2";
+                    int dbUpdated = ser_sync_database_fixer.updatePaths(databasePath, movedToKept);
+                    if (dbUpdated > 0) {
+                        ser_sync_log.info("Updated " + dbUpdated + " paths in database V2 for moved duplicates");
+                    }
+
+                    // Rescan library to get fresh state after files moved
+                    // This ensures broken path fixer can find files at their current locations
+                    ser_sync_log.info("Rescanning media library after duplicate removal...");
+                    fsLibrary = ser_sync_media_library.readFrom(config.getMusicLibraryPath());
+                    ser_sync_log.info("Found " + fsLibrary.getTotalNumberOfTracks() + " tracks remaining.");
+                }
+            } else {
+                // Log-only mode runs after crates are built (doesn't affect anything)
+            }
+        }
+
         ser_sync_log.info("Writing files into serato library " + seratoPath + "...");
         if (!new File(seratoPath).isDirectory()) {
             boolean createFolder = ser_sync_log.confirm(
@@ -71,11 +96,6 @@ public class ser_sync_main {
         ser_sync_database database = ser_sync_database.readFrom(seratoPath + "/database V2");
         if (database == null) {
             ser_sync_log.info("No existing Serato database found. Skipping path normalization.");
-        }
-
-        // Fix broken paths in existing crates if enabled
-        if (config.isFixBrokenPathsEnabled()) {
-            ser_sync_crate_fixer.fixBrokenPaths(seratoPath, fsLibrary, database);
         }
 
         // Validate parent crate path
@@ -121,6 +141,16 @@ public class ser_sync_main {
             }
         }
 
+        // Manual path prefix replacement (if configured)
+        // For directory renames, set crate.path.replace.old and crate.path.replace.new
+        // in config
+        String oldPrefix = config.getPathReplaceOld();
+        String newPrefix = config.getPathReplaceNew();
+        if (oldPrefix != null && newPrefix != null) {
+            ser_sync_log.info("Path replacement: " + oldPrefix + " -> " + newPrefix);
+            ser_sync_crate_fixer.replacePathPrefix(seratoPath, oldPrefix, newPrefix);
+        }
+
         // Load track index for deduplication
         ser_sync_track_index trackIndex = null;
         if (config.isSkipExistingTracks()) {
@@ -139,6 +169,11 @@ public class ser_sync_main {
             return;
         }
 
+        // Fix broken paths in crates AFTER writing them (so fixes aren't overwritten)
+        if (config.isFixBrokenPathsEnabled()) {
+            ser_sync_crate_fixer.fixBrokenPaths(seratoPath, fsLibrary, database);
+        }
+
         // Summary
         ser_sync_log.info("Wrote " + crateLibrary.getTotalNumberOfCrates() + " crates and " +
                 crateLibrary.getTotalNumberOfSubCrates() + " subcrates");
@@ -146,8 +181,8 @@ public class ser_sync_main {
             ser_sync_log.info("Skipped " + trackIndex.getSkippedCount() + " duplicate tracks");
         }
 
-        // Scan for hard drive duplicates if enabled
-        if (config.isHardDriveDupeScanEnabled()) {
+        // Log-only duplicate scan (if move disabled, we still want to log them)
+        if (config.isHardDriveDupeScanEnabled() && !config.isDupeMoveEnabled()) {
             scanForHardDriveDuplicates(fsLibrary);
         }
 

@@ -11,6 +11,9 @@ public class ser_sync_database {
     // Track info storage: path -> size
     private Map<String, String> tracksByPath = new HashMap<>();
     private Map<String, String> tracksByFilename = new HashMap<>();
+    // Additional index: just filename (lowercase, NFC normalized) -> original path
+    // for O(1) lookup
+    private Map<String, String> tracksByFilenameOnly = new HashMap<>();
 
     private int trackCount = 0;
 
@@ -18,7 +21,8 @@ public class ser_sync_database {
      * Reads and parses the database V2 file.
      * 
      * @param databasePath Path to the database V2 file
-     * @return ser_sync_database instance with parsed tracks, or null if file doesn't
+     * @return ser_sync_database instance with parsed tracks, or null if file
+     *         doesn't
      *         exist
      */
     public static ser_sync_database readFrom(String databasePath) {
@@ -164,6 +168,8 @@ public class ser_sync_database {
             String filename = getFilename(path);
             String filenameKey = filename + (size != null ? "|" + size : "");
             tracksByFilename.put(filenameKey, path);
+            // Index by filename only (for fast path lookup without size)
+            tracksByFilenameOnly.put(filename, path);
 
             trackCount++;
         }
@@ -250,12 +256,7 @@ public class ser_sync_database {
      */
     public String getOriginalPathByFilename(String trackPath) {
         String filename = getFilename(trackPath);
-        // Try with and without size - we just need the path
-        for (Map.Entry<String, String> entry : tracksByFilename.entrySet()) {
-            if (entry.getKey().startsWith(filename + "|") || entry.getKey().equals(filename)) {
-                return entry.getValue();
-            }
-        }
-        return null;
+        // O(1) lookup using the filename-only index
+        return tracksByFilenameOnly.get(filename);
     }
 }

@@ -7,7 +7,7 @@ import java.nio.file.*;
  */
 public class ser_sync_backup {
 
-    private static final String BACKUP_FOLDER_NAME = "ser-sync-backup";
+    private static final String BACKUP_FOLDER_NAME = "ser-sync-pro/backup";
 
     /**
      * Creates a backup of the Serato folder.

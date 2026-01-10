@@ -84,6 +84,34 @@ public class ser_sync_media_library implements Comparable<ser_sync_media_library
         }
     }
 
+    /**
+     * Removes the specified tracks from this library and all children.
+     * Used to remove moved duplicate files before building crates.
+     * 
+     * @param pathsToRemove List of absolute file paths to remove
+     * @return Number of tracks removed
+     */
+    public int removeTracks(java.util.List<String> pathsToRemove) {
+        int removed = 0;
+        java.util.Set<String> toRemove = new java.util.HashSet<>(pathsToRemove);
+
+        // Remove from this level
+        java.util.Iterator<String> it = tracks.iterator();
+        while (it.hasNext()) {
+            if (toRemove.contains(it.next())) {
+                it.remove();
+                removed++;
+            }
+        }
+
+        // Remove from children recursively
+        for (ser_sync_media_library child : children) {
+            removed += child.removeTracks(pathsToRemove);
+        }
+
+        return removed;
+    }
+
     public static ser_sync_media_library readFrom(String mediaLibraryPath) {
         ser_sync_media_library result = new ser_sync_media_library(".");
         result.collectAll(mediaLibraryPath);
