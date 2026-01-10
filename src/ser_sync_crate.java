@@ -49,7 +49,21 @@ public class ser_sync_crate {
         String key = normalizeForDedup(trackPath);
         if (!normalizedPaths.contains(key)) {
             normalizedPaths.add(key);
-            tracks.add(trackPath);
+            // If database is set, try to use Serato's original filename encoding
+            // to prevent duplicate entries from encoding mismatches
+            String trackToAdd = trackPath;
+            if (database != null) {
+                String seratoFilename = database.getSeratoFilename(trackPath);
+                if (seratoFilename != null) {
+                    // Replace filesystem filename with Serato's encoded filename
+                    java.io.File f = new java.io.File(trackPath);
+                    String dir = f.getParent();
+                    if (dir != null) {
+                        trackToAdd = dir + java.io.File.separator + seratoFilename;
+                    }
+                }
+            }
+            tracks.add(trackToAdd);
         }
     }
 
@@ -61,17 +75,32 @@ public class ser_sync_crate {
 
     /**
      * Adds tracks with deduplication filtering.
+     * Uses Serato's filename encoding from database when available.
      */
     public void addTracksFiltered(Collection<String> trackPaths, ser_sync_track_index index) {
         if (index == null) {
             tracks.addAll(trackPaths);
             return;
         }
+        ser_sync_database database = index.getDatabase();
+
         for (String track : trackPaths) {
             File f = new File(track);
             String size = formatSize(f.length());
             if (!index.shouldSkipTrack(track, size)) {
-                tracks.add(track);
+                // Try to use Serato's original filename encoding to match database
+                String trackToAdd = track;
+                if (database != null) {
+                    String seratoFilename = database.getSeratoFilename(track);
+                    if (seratoFilename != null) {
+                        // Replace filesystem filename with Serato's encoded filename
+                        String dir = f.getParent();
+                        if (dir != null) {
+                            trackToAdd = dir + File.separator + seratoFilename;
+                        }
+                    }
+                }
+                tracks.add(trackToAdd);
             }
         }
     }
@@ -284,8 +313,8 @@ public class ser_sync_crate {
 
     /**
      * Normalizes track path for Serato format.
-     * IMPORTANT: Serato's database V2 uses NFD (decomposed) Unicode encoding.
-     * We must use NFD to match, otherwise Serato creates duplicate DB entries.
+     * Does NOT modify Unicode encoding - we preserve exact bytes from
+     * database/filesystem.
      */
     private String getUniformTrackName(String name) {
         // Forward slashes only
@@ -294,9 +323,7 @@ public class ser_sync_crate {
         name = name.replaceAll("^[a-zA-Z]:\\/", "");
         // Remove macOS /Volumes/DriveName/ prefix
         name = name.replaceAll("^/Volumes/[^/]+/", "");
-        // Normalize to NFC (composed) to match deduplication lookups
-        // e.g., 'o' + combining accent (U+0301) becomes 'ó' (U+00F3)
-        name = Normalizer.normalize(name, Normalizer.Form.NFC);
+        // DO NOT normalize Unicode - preserve exact bytes to match database
         return name;
     }
 

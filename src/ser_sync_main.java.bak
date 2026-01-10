@@ -141,6 +141,16 @@ public class ser_sync_main {
             }
         }
 
+        // Manual path prefix replacement (if configured)
+        // For directory renames, set crate.path.replace.old and crate.path.replace.new
+        // in config
+        String oldPrefix = config.getPathReplaceOld();
+        String newPrefix = config.getPathReplaceNew();
+        if (oldPrefix != null && newPrefix != null) {
+            ser_sync_log.info("Path replacement: " + oldPrefix + " -> " + newPrefix);
+            ser_sync_crate_fixer.replacePathPrefix(seratoPath, oldPrefix, newPrefix);
+        }
+
         // Load track index for deduplication
         ser_sync_track_index trackIndex = null;
         if (config.isSkipExistingTracks()) {

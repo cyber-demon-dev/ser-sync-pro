@@ -14,6 +14,9 @@ public class ser_sync_database {
     // Additional index: just filename (lowercase, NFC normalized) -> original path
     // for O(1) lookup
     private Map<String, String> tracksByFilenameOnly = new HashMap<>();
+    // Raw filename index: normalized lookup key -> raw filename (preserving Serato
+    // encoding)
+    private Map<String, String> rawFilenamesByNormalizedName = new HashMap<>();
 
     private int trackCount = 0;
 
@@ -171,6 +174,10 @@ public class ser_sync_database {
             // Index by filename only (for fast path lookup without size)
             tracksByFilenameOnly.put(filename, path);
 
+            // Store raw filename (preserving exact encoding) for matching later
+            String rawFilename = getRawFilename(path);
+            rawFilenamesByNormalizedName.put(filename, rawFilename);
+
             trackCount++;
         }
     }
@@ -212,6 +219,17 @@ public class ser_sync_database {
         path = Normalizer.normalize(path, Normalizer.Form.NFC);
         int lastSlash = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
         return lastSlash >= 0 ? path.substring(lastSlash + 1).toLowerCase() : path.toLowerCase();
+    }
+
+    /**
+     * Extracts raw filename from path WITHOUT any normalization.
+     * Preserves exact Serato encoding for later matching.
+     */
+    private static String getRawFilename(String path) {
+        if (path == null)
+            return "";
+        int lastSlash = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
+        return lastSlash >= 0 ? path.substring(lastSlash + 1) : path;
     }
 
     /**
@@ -261,19 +279,15 @@ public class ser_sync_database {
     }
 
     /**
-     * Gets the original filename with Serato's encoding.
-     * This extracts just the filename portion from the database path.
+     * Gets the original filename with Serato's exact encoding.
+     * Use this when writing to crates to match existing database entries.
      * 
      * @param trackPath Path from filesystem (to match by filename)
-     * @return Original filename from database, or null if not found
+     * @return Original filename from database (preserving encoding), or null if not
+     *         found
      */
-    public String getOriginalFilename(String trackPath) {
-        String originalPath = getOriginalPathByFilename(trackPath);
-        if (originalPath == null) {
-            return null;
-        }
-        // Extract filename from original path (preserving encoding)
-        int lastSlash = Math.max(originalPath.lastIndexOf('/'), originalPath.lastIndexOf('\\'));
-        return lastSlash >= 0 ? originalPath.substring(lastSlash + 1) : originalPath;
+    public String getSeratoFilename(String trackPath) {
+        String normalizedKey = getFilename(trackPath);
+        return rawFilenamesByNormalizedName.get(normalizedKey);
     }
 }

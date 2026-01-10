@@ -2,6 +2,7 @@
 out/
 temp/
 pvt/
+scripts/
 
 # IDE
 .idea/

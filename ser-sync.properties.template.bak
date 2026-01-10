@@ -36,3 +36,11 @@ harddrive.dupe.scan.enabled=true
 # Only works when harddrive.dupe.scan.enabled=true
 harddrive.dupe.move.enabled=true
 
+# Path prefix replacement (for directory renames)
+# Use this to bulk-replace paths when you've renamed a folder.
+# Example: if you renamed "New" to "Base", set:
+#   crate.path.replace.old=Crates/New
+#   crate.path.replace.new=Crates/Base
+# Remove or comment out after running once.
+#crate.path.replace.old=Crates/New
+#crate.path.replace.new=Crates/Base
