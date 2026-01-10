@@ -259,4 +259,21 @@ public class ser_sync_database {
         // O(1) lookup using the filename-only index
         return tracksByFilenameOnly.get(filename);
     }
+
+    /**
+     * Gets the original filename with Serato's encoding.
+     * This extracts just the filename portion from the database path.
+     * 
+     * @param trackPath Path from filesystem (to match by filename)
+     * @return Original filename from database, or null if not found
+     */
+    public String getOriginalFilename(String trackPath) {
+        String originalPath = getOriginalPathByFilename(trackPath);
+        if (originalPath == null) {
+            return null;
+        }
+        // Extract filename from original path (preserving encoding)
+        int lastSlash = Math.max(originalPath.lastIndexOf('/'), originalPath.lastIndexOf('\\'));
+        return lastSlash >= 0 ? originalPath.substring(lastSlash + 1) : originalPath;
+    }
 }

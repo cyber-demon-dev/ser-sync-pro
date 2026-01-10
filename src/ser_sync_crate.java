@@ -294,9 +294,9 @@ public class ser_sync_crate {
         name = name.replaceAll("^[a-zA-Z]:\\/", "");
         // Remove macOS /Volumes/DriveName/ prefix
         name = name.replaceAll("^/Volumes/[^/]+/", "");
-        // Normalize to NFD (decomposed) to match Serato's database encoding
-        // e.g., 'ó' (U+00F3) becomes 'o' + combining accent (U+0301)
-        name = Normalizer.normalize(name, Normalizer.Form.NFD);
+        // Normalize to NFC (composed) to match deduplication lookups
+        // e.g., 'o' + combining accent (U+0301) becomes 'ó' (U+00F3)
+        name = Normalizer.normalize(name, Normalizer.Form.NFC);
         return name;
     }
 

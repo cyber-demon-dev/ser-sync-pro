@@ -194,16 +194,24 @@ public class ser_sync_crate_fixer {
 
                 if (fixedPath != null && new File(fixedPath).exists()) {
                     String normalizedPath = fixedPath;
+
+                    // Try to preserve Serato's original filename encoding
+                    // Only update the directory path, keep filename exactly as stored in database
                     if (database != null) {
-                        String dbPath = database.getOriginalPathByFilename(fixedPath);
-                        if (dbPath != null) {
-                            // Check existence with volumeRoot (dbPath is relative)
-                            File dbFile = volumeRoot != null ? new File(volumeRoot, dbPath) : new File(dbPath);
-                            if (dbFile.exists()) {
-                                normalizedPath = dbPath;
-                            } else {
-                                pathFixes.put(dbPath, fixedPath);
-                                normalizedPath = fixedPath;
+                        String originalFilename = database.getOriginalFilename(fixedPath);
+                        if (originalFilename != null) {
+                            // Get parent directory from the new filesystem location
+                            String newDir = new File(fixedPath).getParent();
+                            if (newDir != null) {
+                                // Strip volume root to make relative path
+                                if (volumeRoot != null && newDir.startsWith(volumeRoot)) {
+                                    newDir = newDir.substring(volumeRoot.length());
+                                    if (newDir.startsWith("/")) {
+                                        newDir = newDir.substring(1);
+                                    }
+                                }
+                                // Combine new directory with original filename encoding
+                                normalizedPath = newDir + "/" + originalFilename;
                             }
                         }
                     }
