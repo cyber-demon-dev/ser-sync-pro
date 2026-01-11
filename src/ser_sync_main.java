@@ -213,7 +213,7 @@ public class ser_sync_main {
 
         if (dupeCount > 0) {
             ser_sync_log.info("Found " + dupeCount
-                    + " duplicate file groups on hard drive. See logs/" + "ser-sync-dupe-files.log" + " for details.");
+                    + " duplicate file groups on hard drive. See logs/ser-sync-dupe-files-*.log for details.");
         } else {
             ser_sync_log.info("No hard drive duplicates found.");
         }

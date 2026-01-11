@@ -15,7 +15,7 @@ Based on [serato-sync](https://github.com/ralekseenkov/serato-sync-old/) by Roma
 - **Pre-Sync Backup**: Automatically backs up `_Serato_` folder with preserved timestamps
 - **Parent Crate Support**: Add synced folders as subcrates under existing Serato crates
 - **Alphabetical Crate Sorting**: Automatically sort crates A–Z in Serato via `neworder.pref`
-- **Duplicate File Scanner**: Logs duplicate files (same name + size) to `logs/ser-sync-dupe-files.log`
+- **Duplicate File Scanner**: Logs duplicate files (same name + size) to `logs/ser-sync-dupe-files-<timestamp>.log`
 - **Duplicate File Mover**: Moves oldest duplicates to `ser-sync-pro/dupes/<timestamp>/` with preserved folder structure
 - **Auto-Create Missing Folders**: Prompts to create `_Serato_` or parent crate if missing
 - **Broken Filepath Fixer**: Automatically repairs broken track paths in existing crates and database V2
