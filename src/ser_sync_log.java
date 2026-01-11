@@ -217,7 +217,7 @@ public class ser_sync_log {
             FILE_WRITER = new PrintWriter(new FileWriter(logPath, false));
             FILE_WRITER.println(getTimestamp() + " [INFO] ser-sync-pro started");
             FILE_WRITER.flush();
-            DUPE_WRITER = new PrintWriter(new FileWriter(DUPE_FILE, false));
+            DUPE_WRITER = new PrintWriter(new FileWriter("logs/" + DUPE_FILE, false));
         } catch (IOException e) {
             // Can't write log file - continue without it
         }
