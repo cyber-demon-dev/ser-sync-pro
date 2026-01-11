@@ -111,7 +111,7 @@ public class ser_sync_crate_fixer {
                 ser_sync_log.info("No database paths were updated (paths not found in database)");
             }
         } else {
-            ser_sync_log.info("No broken paths need fixing.");
+            ser_sync_log.info("No broken paths found to update in database V2.");
         }
 
         // 5. Now update all crate files
@@ -150,7 +150,7 @@ public class ser_sync_crate_fixer {
         if (totalFixedCrates > 0) {
             ser_sync_log.info("Fixed " + totalFixedCrates + " crate files.");
         } else {
-            ser_sync_log.info("No broken paths found that could be fixed.");
+            ser_sync_log.info("No broken paths found to update the .crate files.");
         }
     }
 
@@ -228,8 +228,24 @@ public class ser_sync_crate_fixer {
                     newTracks.add(trackPath);
                 }
             } else {
-                newTracks.add(resolvedPath);
-                if (!trackPath.equals(resolvedPath)) {
+                // The file exists.
+                // We must compare the trackPath (from crate) with the resolvedPath (from
+                // filesystem).
+                // However, resolvedPath is absolute (e.g. /Volumes/...) while trackPath might
+                // be relative (Serato style).
+
+                String normalizedResolved = ser_sync_crate.getUniformTrackName(resolvedPath);
+                String normalizedOriginal = ser_sync_crate.getUniformTrackName(trackPath);
+
+                // If they normalize to the same string (handling separators, volume prefixes,
+                // etc.),
+                // we keep the original trackPath.
+                if (normalizedOriginal.equals(normalizedResolved)) {
+                    newTracks.add(trackPath);
+                } else {
+                    // They are genuinely different (filename casing, different folder, etc.)
+                    // Use resolvedPath (ser_sync_crate.writeTo will handle relativization for us)
+                    newTracks.add(resolvedPath);
                     tracksChanged = true;
                 }
             }

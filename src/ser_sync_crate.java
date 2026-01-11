@@ -316,7 +316,7 @@ public class ser_sync_crate {
      * Does NOT modify Unicode encoding - we preserve exact bytes from
      * database/filesystem.
      */
-    private String getUniformTrackName(String name) {
+    public static String getUniformTrackName(String name) {
         // Forward slashes only
         name = name.replaceAll("\\\\", "/");
         // Remove Windows drive
@@ -333,5 +333,53 @@ public class ser_sync_crate {
         } catch (FileNotFoundException e) {
             throw new ser_sync_exception("Error writing to file " + outFile.getName(), e);
         }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
+        ser_sync_crate that = (ser_sync_crate) o;
+
+        // Compare versions and sorting
+        if (getSortingRev() != that.getSortingRev() ||
+                !Objects.equals(getVersion(), that.getVersion()) ||
+                !Objects.equals(getSorting(), that.getSorting()) ||
+                !Objects.equals(getColumns(), that.getColumns())) {
+            return false;
+        }
+
+        // Compare tracks using NORMALIZED paths
+        // In-memory crates often have absolute paths, while on-disk crates have
+        // relative.
+        // We must normalize both to ensure "smart write" works correctly.
+        if (getTrackCount() != that.getTrackCount()) {
+            return false;
+        }
+
+        Iterator<String> idx1 = getTracks().iterator();
+        Iterator<String> idx2 = that.getTracks().iterator();
+
+        while (idx1.hasNext()) {
+            String t1 = getUniformTrackName(idx1.next());
+            String t2 = getUniformTrackName(idx2.next());
+            if (!t1.equals(t2)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        // Hash code must also use normalized tracks to be consistent with equals
+        List<String> normalizedTracks = new ArrayList<>(getTrackCount());
+        for (String t : getTracks()) {
+            normalizedTracks.add(getUniformTrackName(t));
+        }
+        return Objects.hash(getVersion(), getSorting(), getSortingRev(), getColumns(), normalizedTracks);
     }
 }

@@ -165,8 +165,9 @@ public class ser_sync_main {
         }
 
         // Summary
-        ser_sync_log.info("Wrote " + crateLibrary.getTotalNumberOfCrates() + " crates and " +
-                crateLibrary.getTotalNumberOfSubCrates() + " subcrates");
+        // Summary log removed as it is now handled by ser_sync_library
+        // ser_sync_log.info("Wrote " + crateLibrary.getTotalNumberOfCrates() + "
+        // crates...");
         if (trackIndex != null && trackIndex.getSkippedCount() > 0) {
             ser_sync_log.info("Skipped " + trackIndex.getSkippedCount() + " duplicate tracks");
         }
