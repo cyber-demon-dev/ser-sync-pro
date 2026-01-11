@@ -36,3 +36,9 @@ harddrive.dupe.scan.enabled=true
 # Only works when harddrive.dupe.scan.enabled=true
 harddrive.dupe.move.enabled=true
 
+# Duplicate detection strategy (default: off)
+# - name-and-size: Files must have identical name AND size (strict, faster)
+# - name-only: Files with same name but different sizes (handles different versions)
+# - off: Disable duplicate detection
+harddrive.dupe.detection.mode=off
+

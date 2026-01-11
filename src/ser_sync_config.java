@@ -94,6 +94,14 @@ public class ser_sync_config {
         return getBooleanOption("harddrive.dupe.move.enabled", false);
     }
 
+    public String getDupeDetectionMode() {
+        String mode = properties.getProperty("harddrive.dupe.detection.mode");
+        if (mode == null || mode.trim().isEmpty()) {
+            return "off"; // default
+        }
+        return mode.trim().toLowerCase();
+    }
+
     public boolean isCrateSortingEnabled() {
         return getBooleanOption("crate.sorting.alphabetical", false);
     }

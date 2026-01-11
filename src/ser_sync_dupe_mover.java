@@ -26,10 +26,22 @@ public class ser_sync_dupe_mover {
      * 
      * @param musicLibraryRoot Root path of the music library
      * @param library          The scanned media library
+     * @param detectionMode    Detection strategy: "name-and-size", "name-only", or
+     *                         "off"
      * @return Map of moved file paths to their kept replacement paths (for database
      *         updates)
      */
-    public static Map<String, String> scanAndMoveDuplicates(String musicLibraryRoot, ser_sync_media_library library) {
+    public static Map<String, String> scanAndMoveDuplicates(String musicLibraryRoot,
+            ser_sync_media_library library,
+            String detectionMode) {
+        ser_sync_log.info("Duplicate detection mode: " + detectionMode);
+
+        // If detection is off, skip scanning
+        if ("off".equals(detectionMode)) {
+            ser_sync_log.info("Duplicate detection is disabled.");
+            return new HashMap<>();
+        }
+
         ser_sync_log.info("Scanning for duplicates to move...");
 
         // Reset state
@@ -41,20 +53,38 @@ public class ser_sync_dupe_mover {
         // Flatten all tracks
         List<String> allTracks = new ArrayList<>();
         library.flattenTracks(allTracks);
+        ser_sync_log.info("Total tracks scanned: " + allTracks.size());
 
-        // Group by filename + size
+        // Group by filename + size (or just filename)
         Map<String, List<String>> groups = new HashMap<>();
         for (String path : allTracks) {
             File f = new File(path);
-            String key = f.getName().toLowerCase() + "|" + f.length();
+            String key;
+            if ("name-only".equals(detectionMode)) {
+                key = f.getName().toLowerCase();
+            } else if ("name-and-size".equals(detectionMode)) {
+                key = f.getName().toLowerCase() + "|" + f.length();
+            } else {
+                // Invalid mode, default to name-and-size
+                ser_sync_log.error("Invalid detection mode '" + detectionMode + "', defaulting to name-and-size");
+                key = f.getName().toLowerCase() + "|" + f.length();
+            }
             groups.computeIfAbsent(key, k -> new ArrayList<>()).add(path);
         }
+
+        ser_sync_log.info("Total unique filename+size combinations: " + groups.size());
 
         // Find duplicate groups
         List<Map.Entry<String, List<String>>> dupeGroups = new ArrayList<>();
         for (Map.Entry<String, List<String>> entry : groups.entrySet()) {
             if (entry.getValue().size() > 1) {
                 dupeGroups.add(entry);
+                // Debug: log each duplicate group found
+                ser_sync_log.info("Duplicate group found: " + entry.getKey() +
+                        " (" + entry.getValue().size() + " files)");
+                for (String path : entry.getValue()) {
+                    ser_sync_log.info("  - " + path);
+                }
             }
         }
 
@@ -71,8 +101,16 @@ public class ser_sync_dupe_mover {
         File libraryRoot = new File(musicLibraryRoot);
         File dupesRoot = new File(libraryRoot.getParentFile(), DUPES_FOLDER + "/" + timestamp);
 
-        if (!dupesRoot.mkdirs()) {
-            ser_sync_log.error("Failed to create dupes folder: " + dupesRoot.getAbsolutePath());
+        // Create dupes folder (parent directories may already exist)
+        if (!dupesRoot.exists()) {
+            if (!dupesRoot.mkdirs()) {
+                ser_sync_log.error("Failed to create dupes folder: " + dupesRoot.getAbsolutePath());
+                return movedToKeptMap;
+            }
+        } else {
+            // This should never happen with timestamped folders, but check anyway
+            ser_sync_log.error("Dupes folder already exists: " + dupesRoot.getAbsolutePath());
+            ser_sync_log.error("This should not happen with timestamped folders. Aborting.");
             return movedToKeptMap;
         }
 
