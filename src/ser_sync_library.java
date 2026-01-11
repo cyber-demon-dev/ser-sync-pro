@@ -92,34 +92,67 @@ public class ser_sync_library {
 
         int total = crates.size() + subCrates.size();
         int current = 0;
+        int updatedCount = 0;
+        int skippedCount = 0;
 
         // Write parent crates
         for (ser_sync_crate crate : crates) {
             current++;
-            ser_sync_log.progress("Writing crates", current, total);
-            try {
-                File crateFile = new File(seratoLibraryPath + "/Subcrates/" + crateFileName.get(crate));
-                crateFile.getParentFile().mkdirs();
-                crate.writeTo(crateFile);
-            } catch (ser_sync_exception e) {
-                throw new ser_sync_exception("Error serializing crate '" + crateFileName.get(crate) + "'", e);
+            ser_sync_log.progress("Processing crates", current, total);
+            if (writeCrateSmart(crate, seratoLibraryPath, crateFileName.get(crate))) {
+                updatedCount++;
+            } else {
+                skippedCount++;
             }
         }
 
         // Write sub-crates
         for (ser_sync_crate crate : subCrates) {
             current++;
-            ser_sync_log.progress("Writing crates", current, total);
-            try {
-                File crateFile = new File(seratoLibraryPath + "/Subcrates/" + crateFileName.get(crate));
-                crateFile.getParentFile().mkdirs();
-                crate.writeTo(crateFile);
-            } catch (ser_sync_exception e) {
-                throw new ser_sync_exception("Error serializing subcrate '" + crateFileName.get(crate) + "'", e);
+            ser_sync_log.progress("Processing crates", current, total);
+            if (writeCrateSmart(crate, seratoLibraryPath, crateFileName.get(crate))) {
+                updatedCount++;
+            } else {
+                skippedCount++;
             }
         }
 
         ser_sync_log.progressComplete("Writing crates");
+
+        if (updatedCount > 0) {
+            ser_sync_log.info("Updated " + updatedCount + " crates (Skipped " + skippedCount + " unchanged).");
+        } else {
+            ser_sync_log.info("No crate files needed updating (Skipped " + skippedCount + " unchanged).");
+        }
+    }
+
+    /**
+     * Writes crate to disk only if content has changed.
+     * Returns true if written, false if skipped.
+     */
+    private boolean writeCrateSmart(ser_sync_crate crate, String seratoLibraryPath, String fileName)
+            throws ser_sync_exception {
+        File crateFile = new File(seratoLibraryPath + "/Subcrates/" + fileName);
+
+        // Check if exists and matches
+        if (crateFile.exists()) {
+            try {
+                ser_sync_crate existing = ser_sync_crate.readFrom(crateFile);
+                if (existing.equals(crate)) {
+                    return false; // No change needed
+                }
+            } catch (Exception e) {
+                // If we can't read the existing one (corrupt, old version?), force update
+            }
+        }
+
+        try {
+            crateFile.getParentFile().mkdirs();
+            crate.writeTo(crateFile);
+            return true;
+        } catch (ser_sync_exception e) {
+            throw new ser_sync_exception("Error serializing crate '" + fileName + "'", e);
+        }
     }
 
     public int getTotalNumberOfCrates() {

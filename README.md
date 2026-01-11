@@ -11,11 +11,13 @@ Based on [serato-sync](https://github.com/ralekseenkov/serato-sync-old/) by Roma
 ## Features
 
 - **Folder → Crate Mapping**: Mirror your directory structure directly to Serato crates
+- **Smart Crate Writing**: Only updates `.crate` files if content has changed, preserving disk I/O
+- **Robust Path Normalization**: Intelligently handles Unicode (NFC/NFD) and absolute/relative path differences
 - **Smart Deduplication**: Prevents duplicate tracks using Unicode-aware filename matching
 - **Pre-Sync Backup**: Automatically backs up `_Serato_` folder with preserved timestamps
 - **Parent Crate Support**: Add synced folders as subcrates under existing Serato crates
 - **Alphabetical Crate Sorting**: Automatically sort crates A–Z in Serato via `neworder.pref`
-- **Duplicate File Scanner**: Logs duplicate files (same name + size) to `ser-sync-dupe-files.log`
+- **Duplicate File Scanner**: Logs duplicate files (same name + size) to `logs/ser-sync-dupe-files-<timestamp>.log`
 - **Duplicate File Mover**: Moves oldest duplicates to `ser-sync-pro/dupes/<timestamp>/` with preserved folder structure
 - **Auto-Create Missing Folders**: Prompts to create `_Serato_` or parent crate if missing
 - **Broken Filepath Fixer**: Automatically repairs broken track paths in existing crates and database V2
@@ -125,5 +127,5 @@ ser-sync-pro/
 2. **Scan**: Reads your music library directory structure
 3. **Fix Paths** (optional): Repairs broken filepaths in existing crates and updates database V2
 4. **Deduplicate**: Skips tracks already in Serato database
-5. **Build Crates**: Creates `.crate` files mirroring your folder structure
+5. **Build Crates**: Creates `.crate` files mirroring your folder structure (updates only if changed)
 6. **Sort** (optional): Generates `neworder.pref` for alphabetical crate ordering

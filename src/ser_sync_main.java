@@ -165,8 +165,9 @@ public class ser_sync_main {
         }
 
         // Summary
-        ser_sync_log.info("Wrote " + crateLibrary.getTotalNumberOfCrates() + " crates and " +
-                crateLibrary.getTotalNumberOfSubCrates() + " subcrates");
+        // Summary log removed as it is now handled by ser_sync_library
+        // ser_sync_log.info("Wrote " + crateLibrary.getTotalNumberOfCrates() + "
+        // crates...");
         if (trackIndex != null && trackIndex.getSkippedCount() > 0) {
             ser_sync_log.info("Skipped " + trackIndex.getSkippedCount() + " duplicate tracks");
         }
@@ -213,7 +214,7 @@ public class ser_sync_main {
 
         if (dupeCount > 0) {
             ser_sync_log.info("Found " + dupeCount
-                    + " duplicate file groups on hard drive. See ser-sync-dupe-files.log for details.");
+                    + " duplicate file groups on hard drive. See logs/ser-sync-dupe-files-*.log for details.");
         } else {
             ser_sync_log.info("No hard drive duplicates found.");
         }
