@@ -15,16 +15,16 @@ crate.parent.path=Current
 
 # Automatically fix broken filepaths in .crate files (default: false)
 # This will search for missing files in your music library by filename and update the crate if a match is found.
-crate.fix.broken.paths=true
+database.fix.broken.paths=true
 
 # Skip tracks that match Serato Database/Crate Structure against file system, keeps existing metadata (default: true)
-crate.skip.existing.tracks=true
+database.skip.existing.tracks=true
 
 # Deduplication mode: path, filename, or off (default: filename)
-crate.dedupe.mode=filename
+database.dupe.detection.mode=filename
 
 # Automatically sort crates alphabetically in Serato (default: false)
-# This will create a neworder.pref file in your _Serato_ folder.
+# This will reset the neworder.pref file in your _Serato_ folder.
 crate.sorting.alphabetical=true
 
 # Scan for duplicate files on hard drive (default: true)

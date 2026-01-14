@@ -46,9 +46,9 @@ Based on [serato-sync](https://github.com/ralekseenkov/serato-sync-old/) by Roma
 | `music.library.database.backup` | Create backup before sync | `true` |
 | `music.library.database.clear-before-sync` | Clear existing crates first | `false` |
 | `crate.parent.path` | Parent crate for synced folders | None |
-| `crate.fix.broken.paths` | Fix broken filepaths in crates & database | `false` |
-| `crate.skip.existing.tracks` | Skip tracks already in Serato | `true` |
-| `crate.dedupe.mode` | `filename`, `path`, or `off` | `filename` |
+| `database.fix.broken.paths` | Fix broken filepaths in crates & database | `false` |
+| `database.skip.existing.tracks` | Skip tracks already in Serato | `true` |
+| `database.dupe.detection.mode` | `filename`, `path`, or `off` | `filename` |
 | `crate.sorting.alphabetical` | Sort crates A–Z in Serato | `false` |
 | `harddrive.dupe.scan.enabled` | Log duplicate files on disk | `false` |
 | `harddrive.dupe.move.enabled` | Move oldest duplicates to `ser-sync-pro/dupes/` | `false` |

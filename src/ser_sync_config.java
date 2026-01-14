@@ -75,11 +75,11 @@ public class ser_sync_config {
     // ==================== Deduplication ====================
 
     public boolean isSkipExistingTracks() {
-        return getBooleanOption("crate.skip.existing.tracks", true);
+        return getBooleanOption("database.skip.existing.tracks", true);
     }
 
     public String getDedupMode() {
-        String mode = properties.getProperty("crate.dedupe.mode");
+        String mode = properties.getProperty("database.dupe.detection.mode");
         if (mode == null || mode.trim().isEmpty()) {
             return ser_sync_track_index.MODE_PATH; // default
         }
@@ -107,7 +107,7 @@ public class ser_sync_config {
     }
 
     public boolean isFixBrokenPathsEnabled() {
-        return getBooleanOption("crate.fix.broken.paths", false);
+        return getBooleanOption("database.fix.broken.paths", false);
     }
 
     // ==================== Helper Methods ====================
