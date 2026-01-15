@@ -1,0 +1,2 @@
+# Python dependencies for S3 Smart Sync
+boto3>=1.28.0
