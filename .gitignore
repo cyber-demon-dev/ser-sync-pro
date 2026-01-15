@@ -15,5 +15,7 @@ scripts/
 logs/
 *.log
 *.command
+
+# Guides
 CODEBASE_GUIDE.md
-SERATO_DATABASE_LAYOUT.md
+DATABASE_GUIDE.md
