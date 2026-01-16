@@ -10,7 +10,7 @@ import java.util.*;
  * - "oent" markers for track entries (instead of "otrk")
  * - "adat" blocks with field ID / length / value triplets
  */
-public class ser_sync_session {
+public class session_fixer_parser {
 
     private String version;
     private List<SessionEntry> entries = new ArrayList<>();
@@ -45,7 +45,7 @@ public class ser_sync_session {
     private static final int FIELD_END_TIME = 0x1D;
     private static final int FIELD_DECK = 0x3F;
 
-    public ser_sync_session() {
+    public session_fixer_parser() {
     }
 
     public String getVersion() {
@@ -108,8 +108,8 @@ public class ser_sync_session {
     /**
      * Reads session from file.
      */
-    public static ser_sync_session readFrom(File inFile) throws ser_sync_exception {
-        ser_sync_session result = new ser_sync_session();
+    public static session_fixer_parser readFrom(File inFile) throws ser_sync_exception {
+        session_fixer_parser result = new session_fixer_parser();
 
         try {
             // Read entire file into memory for parsing and reconstruction

@@ -89,7 +89,7 @@ The project uses Apache Ant for building. Available targets:
 
 ```text
 ser-sync-pro/
-├── src/                            # Java source files
+├── src/                            # Main sync tool Java source files
 │   ├── Main.java                   # Legacy entry point (redirects to ser_sync_main)
 │   ├── ser_sync_backup.java        # Handles timestamped backups of the _Serato_ folder
 │   ├── ser_sync_config.java        # Loads and manages configuration from ser-sync.properties
@@ -109,12 +109,16 @@ ser-sync-pro/
 │   ├── ser_sync_media_library.java # Scans the filesystem for supported media files
 │   ├── ser_sync_output_stream.java # Helper for writing Serato's big-endian format
 │   ├── ser_sync_pref_sorter.java   # Manages alphabetical crate sorting via neworder.pref
-│   ├── ser_sync_session.java       # Parses and updates Serato .session history files
-│   ├── ser_sync_session_fixer.java  # Repairs broken paths in history sessions
-│   ├── ser_sync_track_index.java   # Unified index for track lookups and deduplication
-│   ├── session_fixer_config.java   # Configuration loader for the session-fixer tool
-│   ├── session_fixer_main.java     # Entry point for the standalone session-fixer tool
-│   └── ...
+│   └── ser_sync_track_index.java   # Unified index for track lookups and deduplication
+├── session-fixer/                  # Session-fixer standalone tool (silo)
+│   ├── src/                        # Session-fixer source files
+│   │   ├── session_fixer_main.java         # Entry point
+│   │   ├── session_fixer_config.java       # Configuration loader
+│   │   ├── session_fixer_core_logic.java   # Path fixing logic
+│   │   └── session_fixer_parser.java       # .session file parser
+│   ├── CODEBASE_GUIDE.md           # Developer documentation
+│   ├── README.md                   # User documentation
+│   └── session-fixer.properties.template
 ├── build.xml                       # Ant build script
 ├── out/                            # Compiled classes (generated)
 ├── distr/                          # Distribution artifacts (generated)

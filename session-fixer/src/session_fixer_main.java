@@ -109,11 +109,11 @@ public class session_fixer_main {
         // Step 3: Clean up short sessions (before path fixing to save time)
         int minDuration = config.getMinSessionDuration();
         if (minDuration > 0) {
-            ser_sync_session_fixer.deleteShortSessions(seratoPath, minDuration);
+            session_fixer_core_logic.deleteShortSessions(seratoPath, minDuration);
         }
 
         // Step 4: Fix session paths (checking all libraries in order)
-        ser_sync_session_fixer.fixBrokenPaths(seratoPath, libraries, null);
+        session_fixer_core_logic.fixBrokenPaths(seratoPath, libraries, null);
 
         ser_sync_log.info("");
         ser_sync_log.info("=== Session Path Fixer Complete ===");

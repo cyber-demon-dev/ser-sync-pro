@@ -14,13 +14,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Scans and fixes broken file paths in Serato session files.
- * Similar to ser_sync_crate_fixer but operates on History/Sessions/*.session
- * files.
+ * Operates on History/Sessions/*.session files.
  * 
  * Supports scanning multiple music libraries in order - first match wins.
  * Logs unfixable paths for user review.
  */
-public class ser_sync_session_fixer {
+public class session_fixer_core_logic {
 
     /**
      * Fixes broken paths in all .session files in the given Serato directory.
@@ -88,10 +87,10 @@ public class ser_sync_session_fixer {
         int totalBrokenPaths = 0;
 
         for (File sessionFile : sessionFiles) {
-            ser_sync_session session;
+            session_fixer_parser session;
 
             try {
-                session = ser_sync_session.readFrom(sessionFile);
+                session = session_fixer_parser.readFrom(sessionFile);
             } catch (ser_sync_exception e) {
                 ser_sync_log.error("Failed to read session: " + sessionFile.getName());
                 continue;
@@ -195,10 +194,10 @@ public class ser_sync_session_fixer {
         for (File sessionFile : sessionFiles) {
             executor.submit(() -> {
                 int currentCount = processedCount.incrementAndGet();
-                ser_sync_session session;
+                session_fixer_parser session;
 
                 try {
-                    session = ser_sync_session.readFrom(sessionFile);
+                    session = session_fixer_parser.readFrom(sessionFile);
                 } catch (ser_sync_exception e) {
                     return;
                 }
@@ -274,7 +273,7 @@ public class ser_sync_session_fixer {
 
         for (File sessionFile : sessionFiles) {
             try {
-                ser_sync_session session = ser_sync_session.readFrom(sessionFile);
+                session_fixer_parser session = session_fixer_parser.readFrom(sessionFile);
                 int durationSec = session.getSessionDurationSeconds();
 
                 if (durationSec > 0 && durationSec < minDurationSec) {
