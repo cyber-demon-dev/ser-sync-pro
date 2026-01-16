@@ -14,6 +14,7 @@ Usage:
 import argparse
 import os
 import sys
+import subprocess
 from pathlib import Path
 
 
@@ -55,6 +56,7 @@ from s3_client import S3Client
 from diff_engine import DiffEngine
 from archive_handler import ArchiveHandler
 from logger import Logger
+from config import parse_config, create_sample_config, DEFAULT_CONFIG_PATH
 
 
 # Default database location
@@ -363,6 +365,214 @@ def cmd_restore_status(args):
         archive_handler.clear_log()
 
 
+def cmd_moves(args):
+    """Execute only server-side moves (rename detection)."""
+    source_path = os.path.abspath(args.source)
+    bucket_name = args.bucket
+    prefix = args.prefix or ""
+    dry_run = args.dry_run
+    
+    # Initialize logger
+    logger = Logger(source_path, "moves")
+    logger.start()
+    
+    def log(msg):
+        logger.log(msg)
+    
+    log(f"S3 Smart Sync - Moves Only")
+    log(f"{'=' * 50}")
+    log(f"Source: {source_path}")
+    log(f"Bucket: s3://{bucket_name}/{prefix}")
+    log(f"Dry run: {dry_run}")
+    log("")
+    
+    # Validate source
+    if not os.path.isdir(source_path):
+        log(f"Error: Source path does not exist: {source_path}")
+        logger.close()
+        sys.exit(1)
+    
+    # Initialize components
+    db_path = get_db_path(source_path)
+    db = Database(db_path)
+    db.connect()
+    
+    scanner = Scanner(source_path)
+    s3 = S3Client(bucket_name, prefix)
+    
+    try:
+        # Load previous state
+        log("[1/4] Loading previous state...")
+        previous_records = db.get_all_records()
+        log(f"      Found {len(previous_records)} previously tracked files")
+        
+        # Scan current local files
+        log("[2/4] Scanning local files...")
+        current_files = scanner.scan_to_dict()
+        log(f"      Found {len(current_files)} local files")
+        
+        # List S3 objects
+        log("[3/4] Listing S3 objects...")
+        s3_objects = s3.list_objects()
+        log(f"      Found {len(s3_objects)} objects in S3")
+        
+        # Compute moves only (no uploads/deletes)
+        log("[4/4] Detecting renames...")
+        engine = DiffEngine(current_files, previous_records, s3_objects, delete_orphans=False)
+        plan = engine.compute_plan()
+        
+        move_count = len(plan.moves)
+        log(f"      Found {move_count} rename(s) to process")
+        
+        if not plan.moves:
+            log("\n✓ No renames detected.")
+            # Still update database with current state
+            if not dry_run:
+                records = [
+                    FileRecord(
+                        path=f.path,
+                        inode=f.inode,
+                        size=f.size,
+                        mtime=f.mtime,
+                        synced=True
+                    )
+                    for f in current_files.values()
+                ]
+                db.bulk_upsert(records)
+            logger.close()
+            return
+        
+        log("")
+        if dry_run:
+            log("=== DRY RUN MODE ===")
+            log("")
+        
+        # Initialize archive handler
+        archive_handler = ArchiveHandler(source_path)
+        
+        # Execute moves
+        log(f"--- Server-Side Moves ({move_count}) ---")
+        for old_key, new_key in plan.moves:
+            if dry_run:
+                log(f"  [MOVE] {old_key} -> {new_key}")
+            else:
+                result = s3.move_object(old_key, new_key, archive_handler)
+                log(f"  [MOVE] {old_key} -> {new_key} ({result})", also_print=False)
+        
+        # Update database
+        if not dry_run:
+            log("")
+            log("Updating local database...")
+            records = [
+                FileRecord(
+                    path=f.path,
+                    inode=f.inode,
+                    size=f.size,
+                    mtime=f.mtime,
+                    synced=True
+                )
+                for f in current_files.values()
+            ]
+            db.bulk_upsert(records)
+            current_paths = {f.path for f in current_files.values()}
+            db.delete_missing_paths(current_paths)
+            
+            # Save archive log if needed
+            if archive_handler.has_pending():
+                archive_handler.save_log()
+                log(f"\n⚠ Some objects are archived. Run restore command first.")
+        
+        log("")
+        log("✓ Moves complete!")
+        
+    finally:
+        db.close()
+        logger.close()
+
+
+def cmd_batch(args):
+    """Execute batch sync for all targets in config file."""
+    config_path = args.config
+    moves_only = args.moves_only
+    dry_run = args.dry_run
+    
+    print(f"S3 Smart Sync - Batch Mode")
+    print(f"{'=' * 50}")
+    print(f"Config: {config_path}")
+    print(f"Moves only: {moves_only}")
+    print(f"Dry run: {dry_run}")
+    print()
+    
+    # Parse config
+    try:
+        targets = parse_config(config_path)
+    except FileNotFoundError as e:
+        print(f"Error: {e}")
+        print(f"\nCreate a config file at {DEFAULT_CONFIG_PATH}")
+        print("Or run: python main.py batch --init")
+        sys.exit(1)
+    
+    if not targets:
+        print("No sync targets found in config file.")
+        sys.exit(1)
+    
+    print(f"Found {len(targets)} sync target(s)")
+    print()
+    
+    # Process each target
+    for i, target in enumerate(targets, 1):
+        print(f"[{i}/{len(targets)}] {target.local_path} -> {target.get_s3_uri()}")
+        print("-" * 50)
+        
+        # Skip if local path doesn't exist
+        if not os.path.isdir(target.local_path):
+            print(f"  ⚠ Skipping: local path does not exist")
+            print()
+            continue
+        
+        # Step 1: Run moves (smart rename detection)
+        print("  Step 1: Detecting and executing renames...")
+        moves_args = argparse.Namespace(
+            source=target.local_path,
+            bucket=target.bucket,
+            prefix=target.prefix,
+            dry_run=dry_run
+        )
+        cmd_moves(moves_args)
+        
+        # Step 2: Run aws s3 sync (unless moves-only)
+        if not moves_only:
+            print("  Step 2: Running aws s3 sync...")
+            cmd = target.get_aws_sync_command(delete=True)
+            
+            if dry_run:
+                cmd.append("--dryrun")
+            
+            print(f"  Command: {' '.join(cmd)}")
+            
+            result = subprocess.run(cmd, capture_output=False)
+            if result.returncode != 0:
+                print(f"  ⚠ aws s3 sync returned non-zero exit code: {result.returncode}")
+        
+        print()
+    
+    print("✓ Batch complete!")
+
+
+def cmd_init(args):
+    """Create a sample config file."""
+    config_path = args.config or DEFAULT_CONFIG_PATH
+    
+    if os.path.exists(config_path):
+        print(f"Config file already exists: {config_path}")
+        print("Delete it first if you want to create a new one.")
+        sys.exit(1)
+    
+    create_sample_config(config_path)
+    print(f"Created sample config file: {config_path}")
+    print("Edit this file to add your sync targets.")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="S3 Smart Sync - Bandwidth-efficient S3 sync with rename detection"
@@ -402,6 +612,31 @@ def main():
     restore_status_parser.add_argument('bucket', help='S3 bucket name')
     restore_status_parser.add_argument('--prefix', '-p', help='S3 prefix (folder)', default='')
     restore_status_parser.set_defaults(func=cmd_restore_status)
+    
+    # Moves command (rename detection only)
+    moves_parser = subparsers.add_parser('moves', help='Execute server-side moves only (rename detection)')
+    moves_parser.add_argument('source', help='Local source directory')
+    moves_parser.add_argument('bucket', help='S3 bucket name')
+    moves_parser.add_argument('--prefix', '-p', help='S3 prefix (folder)', default='')
+    moves_parser.add_argument('--dry-run', '-n', action='store_true',
+                              help='Show what would be done without making changes')
+    moves_parser.set_defaults(func=cmd_moves)
+    
+    # Batch command
+    batch_parser = subparsers.add_parser('batch', help='Batch sync from config file')
+    batch_parser.add_argument('--config', '-c', default=DEFAULT_CONFIG_PATH,
+                              help=f'Config file path (default: {DEFAULT_CONFIG_PATH})')
+    batch_parser.add_argument('--moves-only', '-m', action='store_true',
+                              help='Only run move detection, skip aws s3 sync')
+    batch_parser.add_argument('--dry-run', '-n', action='store_true',
+                              help='Show what would be done without making changes')
+    batch_parser.set_defaults(func=cmd_batch)
+    
+    # Init command
+    init_parser = subparsers.add_parser('init', help='Create sample config file')
+    init_parser.add_argument('--config', '-c', default=None,
+                             help=f'Config file path (default: {DEFAULT_CONFIG_PATH})')
+    init_parser.set_defaults(func=cmd_init)
     
     args = parser.parse_args()
     

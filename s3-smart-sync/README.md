@@ -2,135 +2,236 @@
 
 A bandwidth-efficient S3 sync tool that detects local file/folder renames and performs **server-side moves** instead of re-uploading.
 
-## Features
+## What This Tool Does
 
-- **Smart Rename Detection**: Uses inode tracking to detect when files/folders are renamed locally
-- **Server-Side Moves**: Renames trigger S3 copy+delete operations (zero upload bandwidth)
-- **Mirror Mode**: Optional `--delete` flag to remove S3 files not found locally
-- **Dry Run**: Preview what would happen without making changes
+When you rename or move a file locally, normal `aws s3 sync` will:
+
+1. Delete the old file from S3
+2. Re-upload the entire file to the new location
+
+**S3 Smart Sync** instead:
+
+1. Detects the rename using filesystem inodes
+2. Tells S3 to copy the file to the new location (server-side, no upload)
+3. Deletes the old S3 object
+
+This saves bandwidth and time, especially for large files.
+
+---
 
 ## Requirements
 
-- macOS (comes with Python pre-installed)
-- AWS account with S3 bucket
-- AWS credentials (Access Key ID + Secret Access Key)
+- macOS (tested on macOS 12+)
+- AWS CLI installed and configured
+- An existing S3 bucket
+- Basic Terminal knowledge
 
-## Installation (First Time Setup)
+---
 
-### Step 1: Verify Python is installed
+## Installation
 
-Open Terminal and run:
+### Step 1: Open Terminal
+
+Press `Cmd + Space`, type `Terminal`, and press Enter.
+
+### Step 2: Verify Python is installed
 
 ```bash
 python3 --version
 ```
 
-You should see something like `Python 3.11.4`. If not, install Python from [python.org](https://www.python.org/downloads/).
+You should see something like `Python 3.11.4`. If you get "command not found", install Python from [python.org](https://www.python.org/downloads/).
 
-### Step 2: Install dependencies
-
-Navigate to the s3-smart-sync folder and install required packages:
+### Step 3: Verify AWS CLI is installed
 
 ```bash
-cd /Users/culprit/git/ser-sync-pro/s3-smart-sync
+aws --version
+```
+
+If not installed, run:
+
+```bash
+brew install awscli
+```
+
+If you don't have Homebrew, install it first:
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+### Step 4: Install Python dependencies
+
+Navigate to the s3-smart-sync folder:
+
+```bash
+cd /path/to/s3-smart-sync
 pip3 install -r requirements.txt
 ```
 
-### Step 3: Configure AWS credentials
+### Step 5: Configure AWS credentials
 
-Create your AWS credentials file:
-
-```bash
-mkdir -p ~/.aws
-nano ~/.aws/credentials
-```
-
-Paste this (replace with your actual keys):
-
-```ini
-[default]
-aws_access_key_id = YOUR_ACCESS_KEY_HERE
-aws_secret_access_key = YOUR_SECRET_KEY_HERE
-```
-
-Save: `Ctrl+O`, `Enter`, `Ctrl+X`
-
-> **Where to get AWS keys?**  
-> AWS Console → IAM → Users → Your User → Security credentials → Create access key
-
-## Usage
-
-### Sync a directory to S3
+If you haven't already configured AWS CLI:
 
 ```bash
-# Basic sync (won't delete orphaned S3 files)
-python main.py sync /path/to/local/folder my-bucket
-
-# With prefix (folder in bucket)
-python main.py sync /path/to/local/folder my-bucket --prefix backups/volume1
-
-# Mirror mode (delete S3 files not found locally)
-python main.py sync /path/to/local/folder my-bucket --delete
-
-# Dry run (preview changes)
-python main.py sync /path/to/local/folder my-bucket --dry-run
+aws configure
 ```
 
-### Check sync status
+Enter your Access Key ID, Secret Access Key, and preferred region when prompted.
+
+---
+
+## First-Time Setup (Important!)
+
+Before using batch mode, you need to initialize the tracking database. **Do this once per volume:**
 
 ```bash
-python main.py status /path/to/local/folder
+# Step 1: Make sure S3 matches your local files (standard sync)
+aws s3 sync ~/music/. s3://your-bucket-name --delete
+
+# Step 2: Initialize the database (creates .s3-smart-sync.db)
+cd /path/to/s3-smart-sync
+python3 main.py moves ~/music/. your-bucket-name
 ```
 
-### Restore archived objects (Glacier/Deep Archive)
+After this, the database knows about all your files and can detect future renames.
 
-If sync encounters archived objects (Intelligent-Tiering Archive, Glacier, Deep Archive), they are logged automatically.
+---
+
+## Quick Start (Daily Use)
+
+### Option A: Single Volume
 
 ```bash
-# Initiate restore (default: bulk tier, 12-48 hours)
-python main.py restore /path/to/local/folder my-bucket
+cd /path/to/s3-smart-sync
 
-# Use faster tier (more expensive)
-python main.py restore /path/to/local/folder my-bucket --tier standard  # 3-5 hours
-python main.py restore /path/to/local/folder my-bucket --tier expedited # 1-5 minutes
-
-# Check restore progress
-python main.py restore-status /path/to/local/folder my-bucket
-
-# After restore completes, run sync again
-python main.py sync /path/to/local/folder my-bucket
+# Detect and execute renames, then sync
+python3 main.py moves ~/music/. my-bucket
+aws s3 sync ~/music/. s3://my-bucket --delete
 ```
+
+### Option B: Multiple Volumes (Batch Mode)
+
+Create a config file:
+
+```bash
+python3 main.py init
+```
+
+Edit `~/.s3-smart-sync.conf`:
+
+```properties
+# Format: local_path | bucket | prefix | excludes (comma-separated)
+~/music/.                | bucket-culprit-music          |        | *.m4p, .*, */.*
+/Volumes/Storage/.       | bucket-culprit-crates-storage |        | *.m4p, .*, */.*
+/Volumes/Vault/.         | bucket-culprit-crates-vault   |        | *.m4p, .*, */.*
+/Volumes/Current/.       | bucket-culprit-crates-current |        | *.m4p, .*, */.*
+```
+
+Run all syncs with one command:
+
+```bash
+python3 main.py batch
+```
+
+---
+
+## Command Reference
+
+| Command | What It Does |
+|---------|--------------|
+| `python3 main.py batch` | Run moves + aws s3 sync for all targets in config |
+| `python3 main.py batch --dry-run` | Preview what would happen |
+| `python3 main.py batch --moves-only` | Only detect/execute renames, skip uploads |
+| `python3 main.py moves <path> <bucket>` | Rename detection for single volume |
+| `python3 main.py init` | Create sample config file |
+| `python3 main.py status <path>` | Show pending changes |
+
+---
 
 ## How It Works
 
-1. **First Run**: Scans local files and records their inodes in a SQLite database
-2. **Subsequent Runs**:
-   - Scans local files again
-   - Compares inodes: same inode + different path = **rename** (server-side move)
-   - New inodes = **upload**
-   - Missing inodes (with `--delete`) = **delete from S3**
+### The Hybrid Workflow
 
-## Architecture
+```text
+┌─────────────────────────────────────────────────────────────┐
+│  Step 1: Smart Rename Detection (moves command)            │
+│  ─────────────────────────────────────────────              │
+│  • Scans local files and compares inodes to database        │
+│  • Detects renames: same inode + different path             │
+│  • Executes server-side S3 moves (copy+delete, no upload)   │
+│  • Updates local SQLite database                            │
+└─────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────┐
+│  Step 2: Standard Sync (aws s3 sync)                        │
+│  ─────────────────────────────────────────────              │
+│  • Uploads new files                                        │
+│  • Uploads modified files                                   │
+│  • Deletes orphaned S3 files (with --delete)                │
+│  • Applies exclude patterns                                 │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Database Location
+
+A hidden SQLite database is created in each synced folder:
+
+```text
+/Volumes/Current/
+├── .s3-smart-sync.db    ← Tracks file inodes (hidden file)
+├── logs/                 ← Sync logs
+└── [your files...]
+```
+
+> **Note:** If you delete `.s3-smart-sync.db`, the next run will treat it as a fresh start — no renames will be detected until the database is rebuilt.
+
+---
+
+## Logging
+
+All operations are logged to timestamped files:
+
+```text
+/path/to/source/logs/
+├── s3-sync-moves-2026-01-15_09-12-15.log
+├── s3-sync-sync-2026-01-15_09-15-22.log
+└── ...
+```
+
+---
+
+## Troubleshooting
+
+### "Config file not found"
+
+Run `python3 main.py init` to create the config file, then edit `~/.s3-smart-sync.conf`.
+
+### "Local path does not exist"
+
+Make sure the volume is mounted. External drives must be connected.
+
+### "No renames detected" on first run
+
+This is expected! The first run creates the database. Renames are detected on subsequent runs.
+
+### Missing dependencies
+
+```bash
+pip3 install -r requirements.txt
+```
+
+---
+
+## File Structure
 
 | File | Purpose |
 |------|---------|
 | `main.py` | CLI entry point |
+| `config.py` | Config file parser for batch mode |
 | `scanner.py` | Walks local filesystem, captures inodes |
 | `db.py` | SQLite for inode tracking |
 | `s3_client.py` | boto3 wrapper with move/upload/delete |
 | `diff_engine.py` | Computes sync plan from state differences |
 | `archive_handler.py` | Tracks archived objects needing restore |
-| `logger.py` | Timestamped logging to `logs/` folder |
-
-## Logging
-
-All sync operations are logged to timestamped files in the `logs/` folder:
-
-```
-/path/to/source/
-├── logs/
-│   ├── s3-sync-sync-2026-01-15_09-12-15.log
-│   └── s3-sync-restore-2026-01-16_14-30-00.log
-├── archive_restore_needed.log  (only if archived files found)
-└── .s3-smart-sync.db
-```
+| `logger.py` | Timestamped logging |

@@ -3,7 +3,7 @@ S3 Smart Sync - Diff Engine
 Compares local state vs previous state to detect renames, uploads, and deletions.
 """
 
-from typing import Dict, List, Tuple, NamedTuple
+from typing import Dict, List, Tuple, NamedTuple, Optional
 from dataclasses import dataclass
 from db import FileRecord
 from scanner import ScannedFile
@@ -14,8 +14,8 @@ class SyncAction:
     """Represents an action to take during sync."""
     action_type: str  # 'upload', 'delete', 'move'
     path: str
-    old_path: str | None = None  # For moves
-    local_abs_path: str | None = None  # For uploads
+    old_path: Optional[str] = None  # For moves
+    local_abs_path: Optional[str] = None  # For uploads
 
 
 class SyncPlan:
