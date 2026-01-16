@@ -162,7 +162,7 @@ public class ser_sync_main {
 
         // Fix broken paths in crates AFTER writing them (so fixes aren't overwritten)
         if (config.isFixBrokenPathsEnabled()) {
-            ser_sync_crate_fixer.fixBrokenPaths(seratoPath, fsLibrary, database);
+            ser_sync_crate_fixer.fixBrokenPaths(seratoPath, fsLibrary, database, config.getDupeMoveMode());
         }
 
         // Summary

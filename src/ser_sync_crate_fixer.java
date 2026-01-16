@@ -27,11 +27,14 @@ public class ser_sync_crate_fixer {
      * Updates the database V2 file first to prevent duplicates, then updates
      * crates.
      * 
-     * @param seratoPath Path to the _Serato_ folder
-     * @param library    The scanned media library to use for lookups
-     * @param database   The Serato database for path normalization (may be null)
+     * @param seratoPath   Path to the _Serato_ folder
+     * @param library      The scanned media library to use for lookups
+     * @param database     The Serato database for path normalization (may be null)
+     * @param dupeMoveMode "keep-newest", "keep-oldest", or "false" - controls which
+     *                     duplicate entry to fix based on date added
      */
-    public static void fixBrokenPaths(String seratoPath, ser_sync_media_library library, ser_sync_database database) {
+    public static void fixBrokenPaths(String seratoPath, ser_sync_media_library library,
+            ser_sync_database database, String dupeMoveMode) {
         ser_sync_log.info("Checking for broken filepaths in crates...");
 
         // Determine volume root from seratoPath (e.g. /Volumes/Name/_Serato_ ->
@@ -85,7 +88,8 @@ public class ser_sync_crate_fixer {
 
         for (File crateFile : crateFiles) {
             futures.add(CRATE_POOL.submit(() -> {
-                processCrateFile(crateFile, libraryFiles, database, finalVolumeRoot, pathFixes, crateUpdates);
+                processCrateFile(crateFile, libraryFiles, database, finalVolumeRoot, pathFixes, crateUpdates,
+                        seratoPath, dupeMoveMode);
                 int done = processedCount.incrementAndGet();
                 ser_sync_log.progress("Checking crates for broken paths", done, totalCrates);
             }));
@@ -162,7 +166,8 @@ public class ser_sync_crate_fixer {
      */
     private static void processCrateFile(File crateFile, Map<String, String> libraryFiles,
             ser_sync_database database, String volumeRoot,
-            Map<String, String> pathFixes, Map<File, List<String>> crateUpdates) {
+            Map<String, String> pathFixes, Map<File, List<String>> crateUpdates,
+            String seratoPath, String dupeMoveMode) {
 
         ser_sync_crate crate;
         try {
@@ -221,7 +226,21 @@ public class ser_sync_crate_fixer {
                     if (!trackPath.equals(normalizedPath)) {
                         // Use database path as key if available (for exact byte matching in database
                         // V2)
-                        String dbPath = (database != null) ? database.getOriginalPathByFilename(trackPath) : null;
+                        // When dupe move is enabled, use date preference to select which entry to fix
+                        String dbPath = null;
+                        if (database != null) {
+                            boolean usePreference = dupeMoveMode != null &&
+                                    !ser_sync_config.DUPE_MOVE_OFF.equals(dupeMoveMode);
+                            if (usePreference) {
+                                boolean keepNewest = ser_sync_config.DUPE_MOVE_KEEP_NEWEST.equals(dupeMoveMode);
+                                String dbFile = seratoPath + "/database V2";
+                                String trackFilename = new File(trackPath).getName();
+                                dbPath = ser_sync_database_entry_selector.getPathByDatePreference(dbFile, trackFilename,
+                                        keepNewest);
+                            } else {
+                                dbPath = database.getOriginalPathByFilename(trackPath);
+                            }
+                        }
                         String keyPath = (dbPath != null) ? dbPath : trackPath;
                         pathFixes.put(keyPath, normalizedPath);
                     }

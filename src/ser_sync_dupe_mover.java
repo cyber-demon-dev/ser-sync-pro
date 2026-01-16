@@ -87,7 +87,11 @@ public class ser_sync_dupe_mover {
             groups.computeIfAbsent(key, k -> new ArrayList<>()).add(path);
         }
 
-        ser_sync_log.info("Total unique filename+size combinations: " + groups.size());
+        if ("name-only".equals(detectionMode)) {
+            ser_sync_log.info("Total unique filenames: " + groups.size());
+        } else {
+            ser_sync_log.info("Total unique filename+size combinations: " + groups.size());
+        }
 
         // Find duplicate groups
         List<Map.Entry<String, List<String>>> dupeGroups = new ArrayList<>();
