@@ -58,6 +58,7 @@ public class ser_sync_crate_fixer {
         // 2. Scan for .crate files
         File subcratesDir = new File(seratoPath + "/Subcrates");
         if (!subcratesDir.exists() || !subcratesDir.isDirectory()) {
+            ser_sync_log.info("No Subcrates directory found, skipping path fixer.");
             return;
         }
 
@@ -67,7 +68,8 @@ public class ser_sync_crate_fixer {
             }
         });
 
-        if (crateFiles == null) {
+        if (crateFiles == null || crateFiles.length == 0) {
+            ser_sync_log.info("No crate files found to check.");
             return;
         }
 
@@ -217,7 +219,11 @@ public class ser_sync_crate_fixer {
                     }
 
                     if (!trackPath.equals(normalizedPath)) {
-                        pathFixes.put(trackPath, normalizedPath);
+                        // Use database path as key if available (for exact byte matching in database
+                        // V2)
+                        String dbPath = (database != null) ? database.getOriginalPathByFilename(trackPath) : null;
+                        String keyPath = (dbPath != null) ? dbPath : trackPath;
+                        pathFixes.put(keyPath, normalizedPath);
                     }
 
                     // Don't log individual fixes - too many from parallel threads causes GUI
@@ -247,6 +253,20 @@ public class ser_sync_crate_fixer {
                     // Use resolvedPath (ser_sync_crate.writeTo will handle relativization for us)
                     newTracks.add(resolvedPath);
                     tracksChanged = true;
+                }
+
+                // Check if database has a different path for this track.
+                // If so, add to pathFixes to update database and prevent Serato duplicates.
+                if (database != null) {
+                    String dbPath = database.getOriginalPathByFilename(trackPath);
+                    if (dbPath != null) {
+                        // Normalize both paths for accurate comparison
+                        String normalizedDbPath = ser_sync_crate.getUniformTrackName(dbPath);
+                        if (!normalizedDbPath.equals(normalizedOriginal)) {
+                            // Database has different path - update it to match crate
+                            pathFixes.put(dbPath, trackPath);
+                        }
+                    }
                 }
             }
         }

@@ -51,7 +51,8 @@ public class ser_sync_main {
         if (config.isHardDriveDupeScanEnabled()) {
             if (config.isDupeMoveEnabled()) {
                 java.util.Map<String, String> movedToKept = ser_sync_dupe_mover.scanAndMoveDuplicates(
-                        config.getMusicLibraryPath(), fsLibrary, config.getDupeDetectionMode());
+                        config.getMusicLibraryPath(), fsLibrary, config.getDupeDetectionMode(),
+                        config.getDupeMoveMode());
                 if (!movedToKept.isEmpty()) {
                     // Update database V2 to point moved paths to kept paths
                     String databasePath = seratoPath + "/database V2";

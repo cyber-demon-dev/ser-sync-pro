@@ -90,8 +90,36 @@ public class ser_sync_config {
         return getBooleanOption("harddrive.dupe.scan.enabled", false);
     }
 
+    // Dupe move mode constants - named by what we KEEP
+    public static final String DUPE_MOVE_KEEP_NEWEST = "keep-newest"; // moves older files
+    public static final String DUPE_MOVE_KEEP_OLDEST = "keep-oldest"; // moves newer files
+    public static final String DUPE_MOVE_OFF = "false";
+
+    /**
+     * Gets the duplicate move mode.
+     * 
+     * @return "keep-newest" (move older files), "keep-oldest" (move newer files),
+     *         or "false" (disabled)
+     */
+    public String getDupeMoveMode() {
+        String mode = properties.getProperty("harddrive.dupe.move.enabled");
+        if (mode == null || mode.trim().isEmpty()) {
+            return DUPE_MOVE_OFF;
+        }
+        mode = mode.trim().toLowerCase();
+        // Backward compatibility aliases
+        if ("true".equals(mode) || "oldest".equals(mode)) {
+            return DUPE_MOVE_KEEP_NEWEST; // original behavior: keep newest, move oldest
+        }
+        if ("newest".equals(mode)) {
+            return DUPE_MOVE_KEEP_OLDEST; // keep oldest, move newest
+        }
+        return mode;
+    }
+
     public boolean isDupeMoveEnabled() {
-        return getBooleanOption("harddrive.dupe.move.enabled", false);
+        String mode = getDupeMoveMode();
+        return DUPE_MOVE_KEEP_NEWEST.equals(mode) || DUPE_MOVE_KEEP_OLDEST.equals(mode);
     }
 
     public String getDupeDetectionMode() {

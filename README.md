@@ -18,7 +18,7 @@ Based on [serato-sync](https://github.com/ralekseenkov/serato-sync-old/) by Roma
 - **Parent Crate Support**: Add synced folders as subcrates under existing Serato crates
 - **Alphabetical Crate Sorting**: Automatically sort crates A–Z in Serato via `neworder.pref`
 - **Duplicate File Scanner**: Logs duplicate files (same name + size) to `logs/ser-sync-dupe-files-<timestamp>.log`
-- **Duplicate File Mover**: Moves oldest duplicates to `ser-sync-pro/dupes/<timestamp>/` with preserved folder structure
+- **Duplicate File Mover**: Moves duplicate files to `ser-sync-pro/dupes/<timestamp>/` (choose to keep newest or oldest)
 - **Auto-Create Missing Folders**: Prompts to create `_Serato_` or parent crate if missing
 - **Broken Filepath Fixer**: Automatically repairs broken track paths in existing crates and database V2
 - **Session Fixer**: Standalone tool to fix broken paths in Serato `.session` history files
@@ -51,7 +51,7 @@ Based on [serato-sync](https://github.com/ralekseenkov/serato-sync-old/) by Roma
 | `database.dupe.detection.mode` | `filename`, `path`, or `off` | `filename` |
 | `crate.sorting.alphabetical` | Sort crates A–Z in Serato | `false` |
 | `harddrive.dupe.scan.enabled` | Log duplicate files on disk | `false` |
-| `harddrive.dupe.move.enabled` | Move oldest duplicates to `ser-sync-pro/dupes/` | `false` |
+| `harddrive.dupe.move.enabled` | `keep-newest` (move older), `keep-oldest` (move newer), or `false` | `false` |
 | `harddrive.dupe.detection.mode` | Strategy: `name-only`, `name-and-size`, or `off` (default) | `off` |
 
 ## Building from Source

@@ -4,8 +4,11 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
- * Scans for duplicate files and moves the oldest copies to a timestamped
- * folder.
+ * Scans for duplicate files and moves duplicates to a timestamped folder.
+ * Supports two modes:
+ * - "oldest": Keep newest file, move older duplicates
+ * - "newest": Keep oldest file, move newer duplicates
+ * 
  * Preserves the original folder structure within the dupes folder.
  * 
  * Output structure:
@@ -20,20 +23,24 @@ public class ser_sync_dupe_mover {
     private static Map<String, String> movedToKeptMap = new HashMap<>(); // moved path -> kept path
     private static int totalGroupsFound = 0;
     private static int totalFilesMoved = 0;
+    private static String currentMoveMode = ser_sync_config.DUPE_MOVE_KEEP_NEWEST;
 
     /**
-     * Scans media library for duplicates and moves oldest copies to dupes folder.
+     * Scans media library for duplicates and moves copies to dupes folder.
      * 
      * @param musicLibraryRoot Root path of the music library
      * @param library          The scanned media library
      * @param detectionMode    Detection strategy: "name-and-size", "name-only", or
      *                         "off"
+     * @param moveMode         Move strategy: "oldest" (keep newest), "newest" (keep
+     *                         oldest)
      * @return Map of moved file paths to their kept replacement paths (for database
      *         updates)
      */
     public static Map<String, String> scanAndMoveDuplicates(String musicLibraryRoot,
             ser_sync_media_library library,
-            String detectionMode) {
+            String detectionMode,
+            String moveMode) {
         ser_sync_log.info("Duplicate detection mode: " + detectionMode);
 
         // If detection is off, skip scanning
@@ -49,6 +56,14 @@ public class ser_sync_dupe_mover {
         movedToKeptMap.clear();
         totalGroupsFound = 0;
         totalFilesMoved = 0;
+        currentMoveMode = moveMode;
+
+        // Log move strategy
+        if (ser_sync_config.DUPE_MOVE_KEEP_NEWEST.equals(moveMode)) {
+            ser_sync_log.info("Move strategy: Keep newest, move older files");
+        } else {
+            ser_sync_log.info("Move strategy: Keep oldest, move newer files");
+        }
 
         // Flatten all tracks
         List<String> allTracks = new ArrayList<>();
@@ -130,33 +145,40 @@ public class ser_sync_dupe_mover {
     }
 
     /**
-     * Processes a single duplicate group - keeps newest, moves older files.
+     * Processes a single duplicate group - keeps one file based on moveMode.
+     * - "oldest": Keep newest, move older files
+     * - "newest": Keep oldest, move newer files
      */
     private static void processDuplicateGroup(String groupKey, List<String> paths,
             String libraryRoot, File dupesRoot) {
 
-        // Sort by modification time (newest first)
+        // Sort by modification time based on move mode
+        boolean keepNewest = ser_sync_config.DUPE_MOVE_KEEP_NEWEST.equals(currentMoveMode);
         paths.sort((a, b) -> {
             long timeA = new File(a).lastModified();
             long timeB = new File(b).lastModified();
-            return Long.compare(timeB, timeA); // Descending (newest first)
+            if (keepNewest) {
+                return Long.compare(timeB, timeA); // Descending (newest first = keep newest)
+            } else {
+                return Long.compare(timeA, timeB); // Ascending (oldest first = keep oldest)
+            }
         });
 
-        String newestPath = paths.get(0);
-        File newestFile = new File(newestPath);
-        String newestDate = new SimpleDateFormat("yyyy-MM-dd").format(new Date(newestFile.lastModified()));
+        String keptPath = paths.get(0);
+        File keptFile = new File(keptPath);
+        String keptDate = new SimpleDateFormat("yyyy-MM-dd").format(new Date(keptFile.lastModified()));
 
         logEntries.add("Duplicate group: " + groupKey);
-        logEntries.add("  KEPT:  " + newestPath + " (" + newestDate + ")");
+        logEntries.add("  KEPT:  " + keptPath + " (" + keptDate + ")");
 
-        // Move all older files
+        // Move all other files (not the kept one)
         for (int i = 1; i < paths.size(); i++) {
-            String oldPath = paths.get(i);
-            File oldFile = new File(oldPath);
-            String oldDate = new SimpleDateFormat("yyyy-MM-dd").format(new Date(oldFile.lastModified()));
+            String movePath = paths.get(i);
+            File moveFile = new File(movePath);
+            String moveDate = new SimpleDateFormat("yyyy-MM-dd").format(new Date(moveFile.lastModified()));
 
             // Calculate relative path from library root
-            String relativePath = getRelativePath(oldPath, libraryRoot);
+            String relativePath = getRelativePath(movePath, libraryRoot);
             File destFile = new File(dupesRoot, relativePath);
 
             // Create parent directories
@@ -164,14 +186,14 @@ public class ser_sync_dupe_mover {
 
             // Move the file
             try {
-                Files.move(oldFile.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                logEntries.add("  MOVED: " + oldPath + " (" + oldDate + ")");
+                Files.move(moveFile.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                logEntries.add("  MOVED: " + movePath + " (" + moveDate + ")");
                 logEntries.add("      -> " + destFile.getAbsolutePath());
-                movedToKeptMap.put(oldPath, newestPath); // Track: moved file -> kept file
+                movedToKeptMap.put(movePath, keptPath); // Track: moved file -> kept file
                 totalFilesMoved++;
             } catch (IOException e) {
-                logEntries.add("  ERROR: Failed to move " + oldPath + ": " + e.getMessage());
-                ser_sync_log.error("Failed to move file: " + oldPath + " - " + e.getMessage());
+                logEntries.add("  ERROR: Failed to move " + movePath + ": " + e.getMessage());
+                ser_sync_log.error("Failed to move file: " + movePath + " - " + e.getMessage());
             }
         }
 

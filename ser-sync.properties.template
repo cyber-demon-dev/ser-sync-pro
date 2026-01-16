@@ -31,14 +31,17 @@ crate.sorting.alphabetical=true
 # Identical files (same name and size) in different folders will be logged to logs/ser-sync-dupe-files-<timestamp>.log, nothing is deleted or removed.
 harddrive.dupe.scan.enabled=true
 
-# Move oldest duplicate files to ser-sync-pro/dupes/ folder (default: false)
-# When enabled, oldest duplicates are moved (not deleted) preserving folder structure.
+# Move duplicate files: keep-newest, keep-oldest, or false (default: false)
+# - keep-newest: Keep the newest file (by modification date), move older duplicates
+# - keep-oldest: Keep the oldest file (by modification date), move newer duplicates
+# - false: Disable duplicate moving
 # Only works when harddrive.dupe.scan.enabled=true
-harddrive.dupe.move.enabled=true
+harddrive.dupe.move.enabled=keep-oldest
 
-# Duplicate detection strategy (default: off)
+# Duplicate detection strategy: name-and-size, name-only, or off (default: off)
 # - name-and-size: Files must have identical name AND size (strict, faster)
 # - name-only: Files with same name but different sizes (handles different versions)
 # - off: Disable duplicate detection
-harddrive.dupe.detection.mode=off
+# Only works when harddrive.dupe.scan.enabled=true
+harddrive.dupe.detection.mode=name-only
 
