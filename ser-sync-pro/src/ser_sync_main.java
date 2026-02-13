@@ -1,5 +1,8 @@
 import java.io.File;
 import java.io.IOException;
+import java.util.Properties;
+import javax.swing.SwingWorker;
+import javax.swing.UIManager;
 
 /**
  * Main entry point for serato-sync.
@@ -8,16 +11,77 @@ import java.io.IOException;
 public class ser_sync_main {
 
     public static void main(String[] args) {
-        // Load configuration
-        ser_sync_config config;
+        // Try to load config to check mode
+        ser_sync_config initialConfig;
         try {
-            config = new ser_sync_config();
+            initialConfig = new ser_sync_config();
         } catch (IOException e) {
-            ser_sync_log.error("Unable to load config file '" + ser_sync_config.CONFIG_FILE + "'");
-            ser_sync_log.fatalError();
-            return;
+            // No config file — default to GUI mode
+            initialConfig = null;
         }
 
+        boolean guiMode = (initialConfig == null) || initialConfig.isGuiMode();
+
+        if (guiMode) {
+            launchGui(initialConfig);
+        } else {
+            runSync(initialConfig);
+        }
+    }
+
+    /**
+     * GUI mode: Show the config window, wait for Start click, then sync.
+     */
+    private static void launchGui(ser_sync_config initialConfig) {
+        // Use cross-platform L&F so our dark theme colors render correctly
+        // (macOS Aqua L&F ignores setBackground on most components)
+        try {
+            UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
+        } catch (Exception e) {
+            // Fall back to default L&F
+        }
+
+        // macOS dark title bar
+        System.setProperty("apple.awt.application.appearance", "NSAppearanceNameDarkAqua");
+
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            ser_sync_pro_window window = new ser_sync_pro_window();
+
+            // Install the window as the log handler BEFORE any logging
+            ser_sync_log_window_handler handler = new ser_sync_log_window_handler(window);
+            ser_sync_log_window_handler.install(handler);
+            ser_sync_log.setMode(true);
+
+            // Load saved settings into controls
+            if (initialConfig != null) {
+                window.loadFromProperties(initialConfig.getProperties());
+            }
+
+            // When Start is clicked, run sync on background thread
+            window.setOnStartCallback(() -> {
+                SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
+                    @Override
+                    protected Void doInBackground() {
+                        Properties guiProps = window.collectProperties();
+                        ser_sync_config config = new ser_sync_config(guiProps);
+                        runSync(config);
+                        return null;
+                    }
+
+                    @Override
+                    protected void done() {
+                        window.syncFinished();
+                    }
+                };
+                worker.execute();
+            });
+        });
+    }
+
+    /**
+     * Core sync logic — used by both GUI and CLI modes.
+     */
+    private static void runSync(ser_sync_config config) {
         // Set mode (GUI vs command line)
         ser_sync_log.setMode(config.isGuiMode());
 
@@ -28,6 +92,8 @@ public class ser_sync_main {
         File seratoDir = new File(seratoPath);
         File volumeLogDir = new File(seratoDir.getParentFile(), "ser-sync-pro/logs");
         ser_sync_log.setLogDirectory(volumeLogDir.getAbsolutePath());
+
+        ser_sync_log.info("ser-sync-pro started");
 
         // Backup Serato folder
         if (config.isBackupEnabled()) {
@@ -171,9 +237,6 @@ public class ser_sync_main {
         }
 
         // Summary
-        // Summary log removed as it is now handled by ser_sync_library
-        // ser_sync_log.info("Wrote " + crateLibrary.getTotalNumberOfCrates() + "
-        // crates...");
         if (trackIndex != null && trackIndex.getSkippedCount() > 0) {
             ser_sync_log.info("Skipped " + trackIndex.getSkippedCount() + " duplicate tracks");
         }
