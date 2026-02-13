@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-- *(No unreleased changes yet)*
+- **Silo restructure**: Moved source files into `shared/src/` (9 shared), `ser-sync-pro/src/` (11 app-only), and `session-fixer/src/` (4, unchanged). Updated `build.xml` to compile from all three directories.
 
 ## Past Highlights (from Git history)
 
