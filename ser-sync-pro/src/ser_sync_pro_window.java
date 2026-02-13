@@ -164,14 +164,15 @@ public class ser_sync_pro_window extends ser_sync_log_window {
         textArea.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
         JScrollPane scrollPane = new JScrollPane(textArea);
+        scrollPane.setBackground(BG_DARK);
+        scrollPane.getViewport().setBackground(BG_LOG);
         scrollPane.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createTitledBorder(
                         BorderFactory.createLineBorder(BORDER_COLOR),
                         "Log Output",
                         TitledBorder.LEFT, TitledBorder.TOP,
-                        null, FG_LABEL),
-                BorderFactory.createEmptyBorder(2, 2, 2, 2)));
-        scrollPane.getViewport().setBackground(BG_LOG);
+                        new Font("SansSerif", Font.PLAIN, 12), FG_LABEL),
+                BorderFactory.createLineBorder(BG_DARKER, 2)));
 
         panel.add(scrollPane, BorderLayout.CENTER);
         return panel;
@@ -198,20 +199,22 @@ public class ser_sync_pro_window extends ser_sync_log_window {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 8));
         buttonPanel.setBackground(BG_DARK);
 
-        startButton = new JButton("\u25B6 Start");
+        startButton = new JButton("  Start  ");
         startButton.setBackground(ACCENT_GREEN);
         startButton.setForeground(Color.WHITE);
+        startButton.setOpaque(true);
         startButton.setFocusPainted(false);
-        startButton.setFont(new Font("SansSerif", Font.BOLD, 13));
-        startButton.setPreferredSize(new Dimension(120, 32));
+        startButton.setFont(new Font("SansSerif", Font.BOLD, 14));
+        startButton.setPreferredSize(new Dimension(140, 34));
         startButton.addActionListener(e -> onStartClicked());
 
-        cancelButton = new JButton("\u2715 Cancel");
+        cancelButton = new JButton("  Cancel  ");
         cancelButton.setBackground(BG_INPUT);
         cancelButton.setForeground(FG_TEXT);
+        cancelButton.setOpaque(true);
         cancelButton.setFocusPainted(false);
-        cancelButton.setFont(new Font("SansSerif", Font.BOLD, 13));
-        cancelButton.setPreferredSize(new Dimension(120, 32));
+        cancelButton.setFont(new Font("SansSerif", Font.BOLD, 14));
+        cancelButton.setPreferredSize(new Dimension(140, 34));
         cancelButton.setEnabled(false);
         cancelButton.addActionListener(e -> onCancelClicked());
 
