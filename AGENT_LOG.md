@@ -2,6 +2,29 @@
 
 <!-- Newest entries go at the top, below this comment. Do NOT delete old entries. -->
 
+## 2026-02-12 — Interactive GUI Config Window
+
+- **Task**: Add dark-themed config panel matching Music Timestamp Agent style
+- **Files Changed**:
+  - `ser-sync-pro/src/ser_sync_pro_window.java` [NEW] — Full config + log GUI window (467 lines)
+  - `shared/src/ser_sync_log_window.java` [MODIFIED] — Refactored: protected fields, handler injection
+  - `ser-sync-pro/src/ser_sync_config.java` [MODIFIED] — Added Properties-based constructor + getProperties()
+  - `ser-sync-pro/src/ser_sync_main.java` [MODIFIED] — GUI/CLI branching, SwingWorker, cross-platform L&F
+- **What Was Done**: Built interactive config window with path Browse buttons, sync option checkboxes, dupe management dropdowns, log output area, Start/Cancel buttons. Dark theme via Metal L&F. Settings load from and save back to `ser-sync.properties`. Base log window kept in `shared/` (Option A) so session-fixer is unaffected.
+- **New Concepts**: SwingWorker (background threading for Swing), Look and Feel (Metal vs Aqua)
+- **Docs to Update**: CHANGELOG, CODEBASE_GUIDE
+
+## 2026-02-12 — Logs to Volume + Collection.equals Bug Fix
+
+- **Task**: Move log output to volume; fix smart crate write always rewriting all crates
+- **Files Changed**:
+  - `shared/src/ser_sync_log.java` [MODIFIED] — Added `setLogDirectory()` and `LOG_DIR` field
+  - `ser-sync-pro/src/ser_sync_main.java` [MODIFIED] — Calls `setLogDirectory()` with volume path
+  - `ser-sync-pro/src/ser_sync_crate.java` [MODIFIED] — `getColumns()` returns `unmodifiableList()` instead of `unmodifiableCollection()`
+- **What Was Done**: Fixed root cause of smart crate write always rewriting: `Collections.unmodifiableCollection()` doesn't override `equals()`, falling back to identity comparison. One-line fix to `unmodifiableList()`. Also added configurable log directory so logs write to `<volume>/ser-sync-pro/logs/`.
+- **New Concepts**: None
+- **Docs to Update**: CHANGELOG
+
 ## 2026-02-12 — Silo Restructure (shared/src + ser-sync-pro/src)
 
 - **Task**: Restructure monolithic `src/` into three source directories mirroring the session-fixer silo pattern
