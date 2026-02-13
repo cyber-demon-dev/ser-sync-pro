@@ -24,6 +24,11 @@ public class ser_sync_main {
         // Check Serato library exists
         String seratoPath = config.getSeratoLibraryPath();
 
+        // Set log directory to volume (alongside backup and dupes)
+        File seratoDir = new File(seratoPath);
+        File volumeLogDir = new File(seratoDir.getParentFile(), "ser-sync-pro/logs");
+        ser_sync_log.setLogDirectory(volumeLogDir.getAbsolutePath());
+
         // Backup Serato folder
         if (config.isBackupEnabled()) {
             String backupPath = ser_sync_backup.createBackup(seratoPath);

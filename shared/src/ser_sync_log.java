@@ -16,12 +16,21 @@ public class ser_sync_log {
     private static PrintWriter DUPE_WRITER;
     private static String LOG_FILE = "ser-sync-pro.log";
     private static final String DUPE_FILE = "ser-sync-dupe-files.log";
+    private static String LOG_DIR = null; // null = use CWD-relative "logs/"
 
     /**
      * Sets the log file name. Must be called before any logging methods.
      */
     public static synchronized void setLogFile(String filename) {
         LOG_FILE = filename;
+    }
+
+    /**
+     * Sets the log directory path. If set, logs are written to this directory
+     * instead of CWD-relative "logs/". Must be called before any logging methods.
+     */
+    public static synchronized void setLogDirectory(String directory) {
+        LOG_DIR = directory;
     }
 
     public static void info(String message) {
@@ -204,20 +213,20 @@ public class ser_sync_log {
 
     private static void initLogFile() {
         try {
-            // Create logs directory if it doesn't exist
-            File logsDir = new File("logs");
+            // Use configured log directory or fall back to CWD-relative "logs/"
+            File logsDir = LOG_DIR != null ? new File(LOG_DIR) : new File("logs");
             if (!logsDir.exists()) {
                 logsDir.mkdirs();
             }
 
             // Create timestamped log filename
             String timestamp = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date());
-            String logPath = "logs/ser-sync-pro-" + timestamp + ".log";
+            String logPath = new File(logsDir, "ser-sync-pro-" + timestamp + ".log").getAbsolutePath();
 
             FILE_WRITER = new PrintWriter(new FileWriter(logPath, false));
             FILE_WRITER.println(getTimestamp() + " [INFO] ser-sync-pro started");
             FILE_WRITER.flush();
-            String dupeLogPath = "logs/ser-sync-dupe-files-" + timestamp + ".log";
+            String dupeLogPath = new File(logsDir, "ser-sync-dupe-files-" + timestamp + ".log").getAbsolutePath();
             DUPE_WRITER = new PrintWriter(new FileWriter(dupeLogPath, false));
         } catch (IOException e) {
             // Can't write log file - continue without it
