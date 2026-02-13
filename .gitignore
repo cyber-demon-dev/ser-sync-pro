@@ -19,6 +19,6 @@ logs/
 *.log
 *.command
 
-# Guides
-CODEBASE_GUIDE.md
-DATABASE_GUIDE.md
+# Guides (ignore auto-generated at root, track in md/)
+/CODEBASE_GUIDE.md
+/DATABASE_GUIDE.md
