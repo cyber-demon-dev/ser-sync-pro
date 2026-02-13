@@ -14,6 +14,7 @@ public class ser_sync_config {
 
     private Properties properties;
 
+    /** File-based constructor for CLI mode */
     public ser_sync_config() throws IOException {
         properties = new Properties();
 
@@ -25,6 +26,16 @@ public class ser_sync_config {
         }
         properties.load(in);
         in.close();
+    }
+
+    /** Properties-based constructor for GUI mode */
+    public ser_sync_config(Properties props) {
+        this.properties = props;
+    }
+
+    /** Returns the raw properties (for GUI pre-population) */
+    public Properties getProperties() {
+        return properties;
     }
 
     // ==================== Mode ====================
