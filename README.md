@@ -89,36 +89,33 @@ The project uses Apache Ant for building. Available targets:
 
 ```text
 ser-sync-pro/
-├── src/                            # Main sync tool Java source files
-│   ├── Main.java                   # Legacy entry point (redirects to ser_sync_main)
-│   ├── ser_sync_backup.java        # Handles timestamped backups of the _Serato_ folder
+├── shared/src/                     # Shared Java source files (used by both apps)
+│   ├── ser_sync_backup.java        # Timestamped backups of the _Serato_ folder
+│   ├── ser_sync_database.java      # Parses the Serato database V2 file
+│   ├── ser_sync_database_fixer.java # Updates track paths directly in database V2
+│   ├── ser_sync_exception.java     # Custom exception class
+│   ├── ser_sync_input_stream.java  # Helper for reading Serato's big-endian format
+│   ├── ser_sync_log.java           # Logging utility for console, GUI, and file output
+│   ├── ser_sync_log_window.java    # GUI component for real-time logging
+│   ├── ser_sync_media_library.java # Scans the filesystem for supported media files
+│   └── ser_sync_output_stream.java # Helper for writing Serato's big-endian format
+├── ser-sync-pro/src/               # Main sync tool source files (silo)
+│   ├── ser_sync_main.java          # Primary entry point for the sync application
 │   ├── ser_sync_config.java        # Loads and manages configuration from ser-sync.properties
 │   ├── ser_sync_crate.java         # Core logic for reading and writing Serato .crate files
 │   ├── ser_sync_crate_fixer.java   # Scans crates and repairs broken track paths
 │   ├── ser_sync_crate_scanner.java # Scans existing crates to index tracks for deduplication
-│   ├── ser_sync_database.java      # Parses the Serato database V2 file
-│   ├── ser_sync_database_fixer.java # Updates track paths directly in database V2
+│   ├── ser_sync_database_entry_selector.java # Date-based entry selection for path fixes
 │   ├── ser_sync_dupe_mover.java    # Scans for duplicate files and moves them to safety
-│   ├── ser_sync_exception.java     # Custom exception class for the project
 │   ├── ser_sync_file_utils.java    # General file system utility methods
-│   ├── ser_sync_input_stream.java  # Helper for reading Serato's big-endian format
 │   ├── ser_sync_library.java       # Builds the crate hierarchy mirroring the filesystem
-│   ├── ser_sync_log.java           # Logging utility for console, GUI, and file output
-│   ├── ser_sync_log_window.java    # GUI component for real-time logging
-│   ├── ser_sync_main.java          # Primary entry point for the sync application
-│   ├── ser_sync_media_library.java # Scans the filesystem for supported media files
-│   ├── ser_sync_output_stream.java # Helper for writing Serato's big-endian format
 │   ├── ser_sync_pref_sorter.java   # Manages alphabetical crate sorting via neworder.pref
 │   └── ser_sync_track_index.java   # Unified index for track lookups and deduplication
-├── session-fixer/                  # Session-fixer standalone tool (silo)
-│   ├── src/                        # Session-fixer source files
-│   │   ├── session_fixer_main.java         # Entry point
-│   │   ├── session_fixer_config.java       # Configuration loader
-│   │   ├── session_fixer_core_logic.java   # Path fixing logic
-│   │   └── session_fixer_parser.java       # .session file parser
-│   ├── CODEBASE_GUIDE.md           # Developer documentation
-│   ├── README.md                   # User documentation
-│   └── session-fixer.properties.template
+├── session-fixer/src/              # Session-fixer standalone tool (silo)
+│   ├── session_fixer_main.java     # Entry point
+│   ├── session_fixer_config.java   # Configuration loader
+│   ├── session_fixer_core_logic.java # Path fixing logic
+│   └── session_fixer_parser.java   # .session file parser
 ├── build.xml                       # Ant build script
 ├── out/                            # Compiled classes (generated)
 ├── distr/                          # Distribution artifacts (generated)

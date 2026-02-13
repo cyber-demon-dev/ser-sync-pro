@@ -8,7 +8,8 @@
     </description>
     
     <!-- Properties -->
-    <property name="src.dir" value="src"/>
+    <property name="shared.dir" value="shared/src"/>
+    <property name="src.dir" value="ser-sync-pro/src"/>
     <property name="build.dir" value="out/production/ser-sync-pro"/>
     <property name="dist.dir" value="distr/ser-sync-pro"/>
     <property name="session.dist.dir" value="distr/session-fixer"/>
@@ -33,7 +34,7 @@
     <!-- Compile target -->
     <target name="compile" description="Compile source files">
         <mkdir dir="${build.dir}"/>
-        <javac srcdir="${src.dir}:session-fixer/src" 
+        <javac srcdir="${shared.dir}:${src.dir}:session-fixer/src" 
                destdir="${build.dir}" 
                source="${java.source}" 
                target="${java.target}"
