@@ -353,9 +353,8 @@ public class ser_sync_crate {
 
         // Compare tracks using NORMALIZED paths
         // In-memory crates often have absolute paths, while on-disk crates have
-        // relative. Paths may also differ in Unicode encoding (NFC vs NFD)
-        // from filesystem vs database lookup.
-        // We normalize both structurally AND to NFC to ensure "smart write" works.
+        // relative.
+        // We must normalize both to ensure "smart write" works correctly.
         if (getTrackCount() != that.getTrackCount()) {
             return false;
         }
@@ -364,8 +363,8 @@ public class ser_sync_crate {
         Iterator<String> idx2 = that.getTracks().iterator();
 
         while (idx1.hasNext()) {
-            String t1 = Normalizer.normalize(getUniformTrackName(idx1.next()), Normalizer.Form.NFC);
-            String t2 = Normalizer.normalize(getUniformTrackName(idx2.next()), Normalizer.Form.NFC);
+            String t1 = getUniformTrackName(idx1.next());
+            String t2 = getUniformTrackName(idx2.next());
             if (!t1.equals(t2)) {
                 return false;
             }
@@ -379,7 +378,7 @@ public class ser_sync_crate {
         // Hash code must also use normalized tracks to be consistent with equals
         List<String> normalizedTracks = new ArrayList<>(getTrackCount());
         for (String t : getTracks()) {
-            normalizedTracks.add(Normalizer.normalize(getUniformTrackName(t), Normalizer.Form.NFC));
+            normalizedTracks.add(getUniformTrackName(t));
         }
         return Objects.hash(getVersion(), getSorting(), getSortingRev(), getColumns(), normalizedTracks);
     }
