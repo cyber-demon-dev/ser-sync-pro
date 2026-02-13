@@ -144,8 +144,8 @@ public class ser_sync_crate {
         columns.add(columnName);
     }
 
-    public Collection<String> getColumns() {
-        return !columns.isEmpty() ? Collections.unmodifiableCollection(columns) : Arrays.asList(DEFAULT_COLUMNS);
+    public List<String> getColumns() {
+        return !columns.isEmpty() ? Collections.unmodifiableList(columns) : Arrays.asList(DEFAULT_COLUMNS);
     }
 
     public Collection<String> getTracks() {
