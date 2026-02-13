@@ -15,7 +15,7 @@
     <property name="session.dist.dir" value="distr/session-fixer"/>
     <property name="jar.name" value="ser-sync-pro.jar"/>
     <property name="session.jar.name" value="session-fixer.jar"/>
-    <property name="props.template" value="ser-sync.properties.template"/>
+    <property name="props.template" value="ser-sync-pro/ser-sync.properties.template"/>
     <property name="session.props.template" value="session-fixer/session-fixer.properties.template"/>
     <property name="main.class" value="ser_sync_main"/>
     <property name="session.main.class" value="session_fixer_main"/>
