@@ -250,31 +250,17 @@ public class session_fixer_parser {
 
         // Convert paths to UTF-16BE bytes
         byte[] oldBytes = toUTF16BE(oldPath);
-        byte[] newBytes = toUTF16BE(newPath);
 
         int replacements = 0;
-        List<byte[]> segments = new ArrayList<>();
         int pos = 0;
 
+        // Count occurrences of oldBytes in rawData (segments are not needed —
+        // rebuildWithUpdatedPaths re-parses from scratch)
         while (pos < rawData.length) {
             int idx = indexOf(rawData, oldBytes, pos);
             if (idx < 0) {
-                // Copy remaining data
-                segments.add(Arrays.copyOfRange(rawData, pos, rawData.length));
                 break;
             }
-
-            // Copy data before match
-            if (idx > pos) {
-                segments.add(Arrays.copyOfRange(rawData, pos, idx));
-            }
-
-            // We need to update the length field before this path
-            // The length field is 4 bytes before the path data
-            // But we also need to find the field structure to update lengths properly
-
-            // For simplicity, we'll rebuild the segment with updated length
-            segments.add(newBytes);
             replacements++;
             pos = idx + oldBytes.length;
         }
