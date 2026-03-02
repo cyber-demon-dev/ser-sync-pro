@@ -19,11 +19,11 @@ import java.util.*;
 public class ser_sync_dupe_mover {
 
     private static final String DUPES_FOLDER = "ser-sync-pro/dupes";
-    private static List<String> logEntries = new ArrayList<>();
-    private static Map<String, String> movedToKeptMap = new HashMap<>(); // moved path -> kept path
-    private static int totalGroupsFound = 0;
-    private static int totalFilesMoved = 0;
-    private static String currentMoveMode = ser_sync_config.DUPE_MOVE_KEEP_NEWEST;
+    private List<String> logEntries = new ArrayList<>();
+    private Map<String, String> movedToKeptMap = new HashMap<>(); // moved path -> kept path
+    private int totalGroupsFound = 0;
+    private int totalFilesMoved = 0;
+    private String currentMoveMode = ser_sync_config.DUPE_MOVE_KEEP_NEWEST;
 
     /**
      * Scans media library for duplicates and moves copies to dupes folder.
@@ -51,12 +51,8 @@ public class ser_sync_dupe_mover {
 
         ser_sync_log.info("Scanning for duplicates to move...");
 
-        // Reset state
-        logEntries.clear();
-        movedToKeptMap.clear();
-        totalGroupsFound = 0;
-        totalFilesMoved = 0;
-        currentMoveMode = moveMode;
+        ser_sync_dupe_mover instance = new ser_sync_dupe_mover();
+        instance.currentMoveMode = moveMode;
 
         // Log move strategy
         if (ser_sync_config.DUPE_MOVE_KEEP_NEWEST.equals(moveMode)) {
@@ -98,22 +94,16 @@ public class ser_sync_dupe_mover {
         for (Map.Entry<String, List<String>> entry : groups.entrySet()) {
             if (entry.getValue().size() > 1) {
                 dupeGroups.add(entry);
-                // Debug: log each duplicate group found
-                ser_sync_log.info("Duplicate group found: " + entry.getKey() +
-                        " (" + entry.getValue().size() + " files)");
-                for (String path : entry.getValue()) {
-                    ser_sync_log.info("  - " + path);
-                }
             }
         }
 
         if (dupeGroups.isEmpty()) {
             ser_sync_log.info("No duplicates found.");
-            return movedToKeptMap;
+            return instance.movedToKeptMap;
         }
 
-        totalGroupsFound = dupeGroups.size();
-        ser_sync_log.info("Found " + totalGroupsFound + " duplicate groups.");
+        instance.totalGroupsFound = dupeGroups.size();
+        ser_sync_log.info("Found " + instance.totalGroupsFound + " duplicate groups.");
 
         // Create timestamped folder
         String timestamp = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date());
@@ -124,28 +114,28 @@ public class ser_sync_dupe_mover {
         if (!dupesRoot.exists()) {
             if (!dupesRoot.mkdirs()) {
                 ser_sync_log.error("Failed to create dupes folder: " + dupesRoot.getAbsolutePath());
-                return movedToKeptMap;
+                return instance.movedToKeptMap;
             }
         } else {
             // This should never happen with timestamped folders, but check anyway
             ser_sync_log.error("Dupes folder already exists: " + dupesRoot.getAbsolutePath());
             ser_sync_log.error("This should not happen with timestamped folders. Aborting.");
-            return movedToKeptMap;
+            return instance.movedToKeptMap;
         }
 
         // Process each duplicate group
         for (Map.Entry<String, List<String>> entry : dupeGroups) {
-            processDuplicateGroup(entry.getKey(), entry.getValue(), musicLibraryRoot, dupesRoot);
+            instance.processDuplicateGroup(entry.getKey(), entry.getValue(), musicLibraryRoot, dupesRoot);
         }
 
         // Write log file with header at top
         File logFile = new File(dupesRoot, "dupes.log");
-        writeLogFile(logFile, timestamp);
+        instance.writeLogFile(logFile, timestamp);
 
-        ser_sync_log.info("Moved " + totalFilesMoved + " duplicate files to: " + dupesRoot.getAbsolutePath());
+        ser_sync_log.info("Moved " + instance.totalFilesMoved + " duplicate files to: " + dupesRoot.getAbsolutePath());
         ser_sync_log.info("See " + logFile.getAbsolutePath() + " for details.");
 
-        return movedToKeptMap;
+        return instance.movedToKeptMap;
     }
 
     /**
@@ -153,7 +143,7 @@ public class ser_sync_dupe_mover {
      * - "oldest": Keep newest, move older files
      * - "newest": Keep oldest, move newer files
      */
-    private static void processDuplicateGroup(String groupKey, List<String> paths,
+    private void processDuplicateGroup(String groupKey, List<String> paths,
             String libraryRoot, File dupesRoot) {
 
         // Sort by modification time based on move mode
@@ -207,7 +197,7 @@ public class ser_sync_dupe_mover {
     /**
      * Gets the relative path from library root.
      */
-    private static String getRelativePath(String filePath, String libraryRoot) {
+    private String getRelativePath(String filePath, String libraryRoot) {
         // Normalize paths
         String normalizedFile = filePath.replace("\\", "/");
         String normalizedRoot = libraryRoot.replace("\\", "/");
@@ -227,7 +217,7 @@ public class ser_sync_dupe_mover {
     /**
      * Writes the complete log file with header at top.
      */
-    private static void writeLogFile(File logFile, String timestamp) {
+    private void writeLogFile(File logFile, String timestamp) {
         try (PrintWriter writer = new PrintWriter(new FileWriter(logFile))) {
             // Write header first
             writer.println("=== Duplicate File Scan Report ===");

@@ -1,5 +1,4 @@
 import java.io.*;
-import java.text.Normalizer;
 import java.util.*;
 
 /**
@@ -181,17 +180,10 @@ public class ser_sync_crate_scanner {
 
     /**
      * Normalizes a path for comparison.
-     * Uses Unicode NFC normalization for accented characters.
+     * Delegates to shared utility for consistent behavior.
      */
     private static String normalizePath(String path) {
-        if (path == null)
-            return "";
-        path = Normalizer.normalize(path, Normalizer.Form.NFC);
-        path = path.toLowerCase();
-        path = path.replace('\\', '/');
-        path = path.replaceAll("^[a-z]:/", "");
-        path = path.replaceAll("^/volumes/[^/]+/", "");
-        return path;
+        return ser_sync_binary_utils.normalizePath(path);
     }
 
     /**

@@ -93,4 +93,58 @@ class ser_sync_binary_utils_test {
         byte[] actual = ser_sync_binary_utils.readFile(tmp);
         assertArrayEquals(expected, actual);
     }
+
+    // ==================== normalizePath tests ====================
+
+    @Test
+    void normalizePath_stripsVolumesPrefix() {
+        assertEquals("music/dj/track.mp3",
+                ser_sync_binary_utils.normalizePath("/Volumes/DriveName/Music/DJ/track.mp3"));
+    }
+
+    @Test
+    void normalizePath_stripsWindowsDriveLetter() {
+        assertEquals("music/dj/track.mp3",
+                ser_sync_binary_utils.normalizePath("C:\\Music\\DJ\\track.mp3"));
+    }
+
+    @Test
+    void normalizePath_normalizesNfcUnicode() {
+        // NFD: e + combining acute accent (U+0301)
+        String nfd = "caf\u0065\u0301.mp3";
+        // NFC: é (U+00E9)
+        String nfc = "caf\u00e9.mp3";
+        assertEquals(ser_sync_binary_utils.normalizePath(nfd),
+                ser_sync_binary_utils.normalizePath(nfc));
+    }
+
+    @Test
+    void normalizePath_handlesNull() {
+        assertEquals("", ser_sync_binary_utils.normalizePath(null));
+    }
+
+    @Test
+    void normalizePath_lowercases() {
+        assertEquals("music/track.mp3",
+                ser_sync_binary_utils.normalizePath("Music/TRACK.MP3"));
+    }
+
+    // ==================== normalizePathForDatabase tests ====================
+
+    @Test
+    void normalizePathForDatabase_preservesCase() {
+        assertEquals("Music/DJ/Track.mp3",
+                ser_sync_binary_utils.normalizePathForDatabase("/Volumes/Drive/Music/DJ/Track.mp3"));
+    }
+
+    @Test
+    void normalizePathForDatabase_stripsWindowsDrive() {
+        assertEquals("Music/DJ/Track.mp3",
+                ser_sync_binary_utils.normalizePathForDatabase("D:\\Music\\DJ\\Track.mp3"));
+    }
+
+    @Test
+    void normalizePathForDatabase_handlesNull() {
+        assertEquals("", ser_sync_binary_utils.normalizePathForDatabase(null));
+    }
 }

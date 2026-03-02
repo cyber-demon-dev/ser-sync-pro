@@ -30,8 +30,11 @@ public class ser_sync_database_fixer {
             byte[] oldPathBytes = oldPath.getBytes(StandardCharsets.UTF_16BE);
             byte[] newPathBytes = newPath.getBytes(StandardCharsets.UTF_16BE);
 
+            // Build otrk index for efficient parent lookup
+            List<int[]> otrkIndex = indexOtrkBlocks(data);
+
             // Find and replace the path
-            byte[] result = replacePfilPath(data, oldPathBytes, newPathBytes);
+            byte[] result = replacePfilPath(data, oldPathBytes, newPathBytes, otrkIndex);
 
             if (result != null) {
                 // Write back to file
@@ -69,6 +72,9 @@ public class ser_sync_database_fixer {
             int progressStep = Math.max(1, totalPaths / 20); // 5% increments
             int nextProgressAt = progressStep;
 
+            // Build otrk index once for efficient parent lookup
+            List<int[]> otrkIndex = indexOtrkBlocks(data);
+
             for (Map.Entry<String, String> entry : pathMappings.entrySet()) {
                 processed++;
                 if (processed >= nextProgressAt) {
@@ -83,10 +89,14 @@ public class ser_sync_database_fixer {
                 byte[] oldPathBytes = oldPath.getBytes(StandardCharsets.UTF_16BE);
                 byte[] newPathBytes = newPath.getBytes(StandardCharsets.UTF_16BE);
 
-                byte[] result = replacePfilPath(data, oldPathBytes, newPathBytes);
+                byte[] result = replacePfilPath(data, oldPathBytes, newPathBytes, otrkIndex);
                 if (result != null) {
                     data = result;
                     updatedCount++;
+                    // Rebuild index if data array size changed (path lengths differ)
+                    if (oldPathBytes.length != newPathBytes.length) {
+                        otrkIndex = indexOtrkBlocks(data);
+                    }
                 }
             }
 
@@ -105,25 +115,40 @@ public class ser_sync_database_fixer {
 
     /**
      * Normalizes a path for database format (relative, no volume prefix).
-     * Matches the format Serato uses internally.
+     * Delegates to shared utility for consistent behavior.
      */
     private static String normalizePathForDatabase(String path) {
-        if (path == null)
-            return "";
-        // Forward slashes only
-        path = path.replace('\\', '/');
-        // Remove Windows drive letters
-        path = path.replaceAll("^[a-zA-Z]:/", "");
-        // Remove macOS /Volumes/DriveName/ prefix
-        path = path.replaceAll("^/Volumes/[^/]+/", "");
-        return path;
+        return ser_sync_binary_utils.normalizePathForDatabase(path);
+    }
+
+    /**
+     * Builds an index of otrk block positions for fast parent lookup.
+     * Returns a list of [otrkPos, otrkEnd] pairs.
+     */
+    private static List<int[]> indexOtrkBlocks(byte[] data) {
+        List<int[]> blocks = new ArrayList<>();
+        byte[] marker = "otrk".getBytes(StandardCharsets.US_ASCII);
+        int pos = 0;
+        while (pos < data.length - 8) {
+            if (data[pos] == marker[0] && data[pos + 1] == marker[1] &&
+                    data[pos + 2] == marker[2] && data[pos + 3] == marker[3]) {
+                int len = ser_sync_binary_utils.readInt(data, pos + 4);
+                blocks.add(new int[] { pos, pos + 8 + len });
+                pos = pos + 8 + len;
+            } else {
+                pos++;
+            }
+        }
+        return blocks;
     }
 
     /**
      * Finds a pfil tag containing the old path and replaces it with the new path.
      * Adjusts length fields for both pfil and parent otrk block.
+     * Uses pre-built otrk index for O(K) parent lookup instead of O(N) scanning.
      */
-    private static byte[] replacePfilPath(byte[] data, byte[] oldPathBytes, byte[] newPathBytes) {
+    private static byte[] replacePfilPath(byte[] data, byte[] oldPathBytes, byte[] newPathBytes,
+            List<int[]> otrkIndex) {
         // Search for "pfil" tag followed by the old path
         byte[] pfilMarker = "pfil".getBytes(StandardCharsets.US_ASCII);
 
@@ -155,8 +180,8 @@ public class ser_sync_database_fixer {
 
                         int lengthDiff = newPathBytes.length - oldPathBytes.length;
 
-                        // Find the otrk block that contains this pfil
-                        int otrkPos = findParentOtrk(data, pos);
+                        // Find the otrk block that contains this pfil using index
+                        int otrkPos = findParentOtrk(otrkIndex, pos);
                         if (otrkPos == -1) {
                             // Can't find parent otrk, just replace inline if same length
                             if (lengthDiff == 0) {
@@ -209,38 +234,15 @@ public class ser_sync_database_fixer {
     }
 
     /**
-     * Finds the otrk block that contains the given position.
+     * Finds the otrk block that contains the given position using pre-built index.
      */
-    private static int findParentOtrk(byte[] data, int targetPos) {
-        byte[] otrkMarker = "otrk".getBytes(StandardCharsets.US_ASCII);
-
-        // Search backwards from targetPos for the nearest otrk
-        // We need to scan forward from the beginning and track otrk positions
-        int lastOtrkPos = -1;
-        int pos = 0;
-
-        while (pos < targetPos && pos < data.length - 8) {
-            if (data[pos] == otrkMarker[0] && data[pos + 1] == otrkMarker[1] &&
-                    data[pos + 2] == otrkMarker[2] && data[pos + 3] == otrkMarker[3]) {
-
-                int otrkLen = ser_sync_binary_utils.readInt(data, pos + 4);
-
-                int otrkEnd = pos + 8 + otrkLen;
-
-                // Check if targetPos is within this otrk block
-                if (targetPos >= pos && targetPos < otrkEnd) {
-                    return pos;
-                }
-
-                lastOtrkPos = pos;
-                // Skip to end of this otrk block
-                pos = otrkEnd;
-            } else {
-                pos++;
+    private static int findParentOtrk(List<int[]> otrkBlocks, int targetPos) {
+        for (int[] block : otrkBlocks) {
+            if (targetPos >= block[0] && targetPos < block[1]) {
+                return block[0];
             }
         }
-
-        return lastOtrkPos;
+        return -1;
     }
 
 }

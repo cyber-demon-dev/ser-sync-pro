@@ -2,6 +2,30 @@
 
 <!-- Newest entries go at the top, below this comment. Do NOT delete old entries. -->
 
+## 2026-03-01 — Codebase Cleanup (Health Check Pt. 3)
+
+- **Task**: Execute all 8 phases of the ACTION_PLAN codebase cleanup
+- **Files Changed**:
+  - `build.xml` [MODIFIED] — Test target Java 1.8→11, added `ser_sync_crate_test` class
+  - `ser-sync-pro/src/ser_sync_config.java` [MODIFIED] — try-with-resources constructor
+  - `session-fixer/src/session_fixer_config.java` [MODIFIED] — try-with-resources constructor
+  - `shared/src/ser_sync_binary_utils.java` [MODIFIED] — Added `normalizePath()` + `normalizePathForDatabase()`
+  - `shared/src/ser_sync_database.java` [MODIFIED] — Delegates normalization, removed unused import
+  - `ser-sync-pro/src/ser_sync_crate_scanner.java` [MODIFIED] — Delegates normalization, removed unused import
+  - `shared/src/ser_sync_database_fixer.java` [MODIFIED] — Delegates normalization, otrk block indexing
+  - `ser-sync-pro/src/ser_sync_crate.java` [MODIFIED] — `getUniformTrackName()` delegates to shared util
+  - `ser-sync-pro/src/ser_sync_dupe_mover.java` [MODIFIED] — Static→instance state, removed verbose logging
+  - `shared/src/ser_sync_media_library.java` [MODIFIED] — Regex→Set extension check
+  - `session-fixer/src/session_fixer_main.java` [MODIFIED] — Removed `System.exit(0)`
+  - `test/ser_sync_binary_utils_test.java` [MODIFIED] — Added 8 normalization tests
+  - `test/ser_sync_crate_test.java` [NEW] — 3 crate round-trip tests
+  - `md/ACTION_PLAN.md` [DELETED] — Plan fully executed
+  - `md/TODO.md` [MODIFIED] — Removed completed cleanup phases
+  - `md/CHANGELOG.md` [MODIFIED] — Added cleanup entry
+  - `md/CODEBASE_GUIDE.md` [MODIFIED] — Updated for all refactors
+- **What Was Done**: Executed all 8 phases: fixed stream leaks, consolidated 4 duplicated path normalizations, converted dupe mover to instance state, replaced regex with Set, removed verbose logging, removed System.exit(0), indexed otrk blocks (O(N²)→O(N)), added 11 new tests (26 total). Clean build, all tests pass.
+- **Docs to Update**: CHANGELOG, CODEBASE_GUIDE, TODO (all done)
+
 ## 2026-02-12 — Interactive GUI Config Window
 
 - **Task**: Add dark-themed config panel matching Music Timestamp Agent style

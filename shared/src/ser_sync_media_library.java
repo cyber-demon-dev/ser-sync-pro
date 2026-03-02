@@ -2,7 +2,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.SortedSet;
 import java.util.TreeSet;
-import java.util.regex.Pattern;
+import java.util.Set;
 import java.util.concurrent.*;
 import java.util.List;
 import java.util.ArrayList;
@@ -14,28 +14,9 @@ import java.util.ArrayList;
  */
 public class ser_sync_media_library implements Comparable<ser_sync_media_library> {
 
-    private static final Pattern[] MUSIC_FILENAME_PATTERNS = {
-            Pattern.compile("(.*)\\.mp3", Pattern.CASE_INSENSITIVE),
-            Pattern.compile("(.*)\\.flac", Pattern.CASE_INSENSITIVE),
-            Pattern.compile("(.*)\\.wav", Pattern.CASE_INSENSITIVE),
-            Pattern.compile("(.*)\\.ogg", Pattern.CASE_INSENSITIVE),
-            Pattern.compile("(.*)\\.aif", Pattern.CASE_INSENSITIVE),
-            Pattern.compile("(.*)\\.aiff", Pattern.CASE_INSENSITIVE),
-            Pattern.compile("(.*)\\.aac", Pattern.CASE_INSENSITIVE),
-            Pattern.compile("(.*)\\.alac", Pattern.CASE_INSENSITIVE),
-            Pattern.compile("(.*)\\.m4a", Pattern.CASE_INSENSITIVE)
-    };
-
-    private static final Pattern[] VIDEO_FILENAME_PATTERNS = {
-            Pattern.compile("(.*)\\.mov", Pattern.CASE_INSENSITIVE),
-            Pattern.compile("(.*)\\.mp4", Pattern.CASE_INSENSITIVE),
-            Pattern.compile("(.*)\\.avi", Pattern.CASE_INSENSITIVE),
-            Pattern.compile("(.*)\\.flv", Pattern.CASE_INSENSITIVE),
-            Pattern.compile("(.*)\\.mpg", Pattern.CASE_INSENSITIVE),
-            Pattern.compile("(.*)\\.mpeg", Pattern.CASE_INSENSITIVE),
-            Pattern.compile("(.*)\\.dv", Pattern.CASE_INSENSITIVE),
-            Pattern.compile("(.*)\\.qtz", Pattern.CASE_INSENSITIVE)
-    };
+    private static final Set<String> MEDIA_EXTENSIONS = Set.of(
+            ".mp3", ".flac", ".wav", ".ogg", ".aif", ".aiff", ".aac", ".alac", ".m4a",
+            ".mov", ".mp4", ".avi", ".flv", ".mpg", ".mpeg", ".dv", ".qtz");
 
     // Thread pool for parallel scanning
     private static final int NUM_THREADS = Math.min(4, Runtime.getRuntime().availableProcessors());
@@ -178,16 +159,9 @@ public class ser_sync_media_library implements Comparable<ser_sync_media_library
     }
 
     private boolean isMedia(File file) {
-        String name = file.getName().trim();
-        for (Pattern p : MUSIC_FILENAME_PATTERNS) {
-            if (p.matcher(name).matches())
-                return true;
-        }
-        for (Pattern p : VIDEO_FILENAME_PATTERNS) {
-            if (p.matcher(name).matches())
-                return true;
-        }
-        return false;
+        String name = file.getName().toLowerCase();
+        int dot = name.lastIndexOf('.');
+        return dot >= 0 && MEDIA_EXTENSIONS.contains(name.substring(dot));
     }
 
     public int compareTo(ser_sync_media_library that) {

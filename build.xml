@@ -87,7 +87,7 @@
         <mkdir dir="out/test-classes"/>
         <javac srcdir="test"
                destdir="out/test-classes"
-               source="1.8" target="1.8"
+               source="11" target="11"
                includeantruntime="false">
             <classpath>
                 <pathelement location="out/production/ser-sync-pro"/>
@@ -101,7 +101,8 @@
             <arg value="out/test-classes:out/production/ser-sync-pro"/>
             <arg value="--select-class"/>
             <arg value="ser_sync_binary_utils_test"/>
-        </java>
+            <arg value="--select-class"/>
+            <arg value="ser_sync_crate_test"/>        </java>
     </target>
     
 </project>
