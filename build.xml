@@ -82,4 +82,26 @@
     <!-- Build all applications -->
     <target name="all" depends="clean, jar, session-fixer-jar" description="Clean and build everything"/>
     
+    <!-- Compile and run tests -->
+    <target name="test" depends="compile" description="Run unit tests">
+        <mkdir dir="out/test-classes"/>
+        <javac srcdir="test"
+               destdir="out/test-classes"
+               source="1.8" target="1.8"
+               includeantruntime="false">
+            <classpath>
+                <pathelement location="out/production/ser-sync-pro"/>
+                <fileset dir="lib" includes="*.jar"/>
+            </classpath>
+        </javac>
+        <java jar="lib/junit-platform-console-standalone-1.11.4.jar"
+              fork="true" failonerror="true">
+            <arg value="execute"/>
+            <arg value="--class-path"/>
+            <arg value="out/test-classes:out/production/ser-sync-pro"/>
+            <arg value="--select-class"/>
+            <arg value="ser_sync_binary_utils_test"/>
+        </java>
+    </target>
+    
 </project>
