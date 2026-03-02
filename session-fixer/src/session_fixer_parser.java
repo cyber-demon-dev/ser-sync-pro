@@ -129,7 +129,7 @@ public class session_fixer_parser {
                 throw new ser_sync_exception("Invalid session file: missing vrsn header");
             }
 
-            int versionLen = readInt(data, 4);
+            int versionLen = ser_sync_binary_utils.readInt(data, 4);
             result.version = readUTF16BE(data, 8, versionLen);
 
             // Find and parse all "oent" entries
@@ -164,7 +164,7 @@ public class session_fixer_parser {
             // Read entry length (4 bytes after "oent")
             if (oentOffset + 8 > data.length)
                 return null;
-            entry.length = readInt(data, oentOffset + 4);
+            entry.length = ser_sync_binary_utils.readInt(data, oentOffset + 4);
 
             // Save raw bytes for this entry
             int entryEnd = Math.min(oentOffset + 8 + entry.length, data.length);
@@ -175,14 +175,14 @@ public class session_fixer_parser {
             if (adatOffset < 0)
                 return entry;
 
-            int adatLen = readInt(data, adatOffset + 4);
+            int adatLen = ser_sync_binary_utils.readInt(data, adatOffset + 4);
             int fieldPos = adatOffset + 8;
             int fieldEnd = Math.min(adatOffset + 8 + adatLen, entryEnd);
 
             // Parse field ID / length / value triplets
             while (fieldPos < fieldEnd - 8) {
-                int fieldId = readInt(data, fieldPos);
-                int fieldLen = readInt(data, fieldPos + 4);
+                int fieldId = ser_sync_binary_utils.readInt(data, fieldPos);
+                int fieldLen = ser_sync_binary_utils.readInt(data, fieldPos + 4);
                 fieldPos += 8;
 
                 if (fieldLen < 0 || fieldLen > 1024 || fieldPos + fieldLen > fieldEnd) {
@@ -204,7 +204,7 @@ public class session_fixer_parser {
                         break;
                     case FIELD_BPM:
                         if (fieldLen == 4) {
-                            entry.bpm = readInt(data, fieldPos);
+                            entry.bpm = ser_sync_binary_utils.readInt(data, fieldPos);
                         }
                         break;
                     case FIELD_KEY:
@@ -212,12 +212,12 @@ public class session_fixer_parser {
                         break;
                     case FIELD_START_TIME:
                         if (fieldLen == 4) {
-                            entry.startTime = readInt(data, fieldPos) & 0xFFFFFFFFL;
+                            entry.startTime = ser_sync_binary_utils.readInt(data, fieldPos) & 0xFFFFFFFFL;
                         }
                         break;
                     case FIELD_END_TIME:
                         if (fieldLen == 4) {
-                            entry.endTime = readInt(data, fieldPos) & 0xFFFFFFFFL;
+                            entry.endTime = ser_sync_binary_utils.readInt(data, fieldPos) & 0xFFFFFFFFL;
                         }
                         break;
                     case FIELD_DECK:
@@ -327,7 +327,7 @@ public class session_fixer_parser {
                 }
 
                 // Read entry length
-                int entryLen = readInt(rawData, oentPos + 4);
+                int entryLen = ser_sync_binary_utils.readInt(rawData, oentPos + 4);
                 int entryEnd = Math.min(oentPos + 8 + entryLen, rawData.length);
 
                 // Extract entry data and check for path
@@ -375,7 +375,7 @@ public class session_fixer_parser {
         out.write(entryData, 0, adatPos);
 
         // Read adat length
-        int adatLen = readInt(entryData, adatPos + 4);
+        int adatLen = ser_sync_binary_utils.readInt(entryData, adatPos + 4);
         int adatEnd = Math.min(adatPos + 8 + adatLen, entryData.length);
 
         // Rebuild adat block with updated path
@@ -383,8 +383,8 @@ public class session_fixer_parser {
         int fieldPos = adatPos + 8;
 
         while (fieldPos < adatEnd - 8) {
-            int fieldId = readInt(entryData, fieldPos);
-            int fieldLen = readInt(entryData, fieldPos + 4);
+            int fieldId = ser_sync_binary_utils.readInt(entryData, fieldPos);
+            int fieldLen = ser_sync_binary_utils.readInt(entryData, fieldPos + 4);
 
             if (fieldLen < 0 || fieldLen > 1024 || fieldPos + 8 + fieldLen > adatEnd) {
                 break;
@@ -459,13 +459,6 @@ public class session_fixer_parser {
     }
 
     // Helper methods for binary parsing
-
-    private static int readInt(byte[] data, int offset) {
-        return ((data[offset] & 0xFF) << 24) |
-                ((data[offset + 1] & 0xFF) << 16) |
-                ((data[offset + 2] & 0xFF) << 8) |
-                (data[offset + 3] & 0xFF);
-    }
 
     private static String readUTF16BE(byte[] data, int offset, int length) {
         try {

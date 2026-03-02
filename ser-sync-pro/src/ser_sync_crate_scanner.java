@@ -173,7 +173,7 @@ public class ser_sync_crate_scanner {
         String normalizedPath = normalizePath(path);
         tracksByPath.put(normalizedPath, path);
 
-        String filename = getFilename(path);
+        String filename = ser_sync_binary_utils.getFilename(path);
         tracksByFilename.put(filename, path);
 
         trackCount++;
@@ -195,17 +195,6 @@ public class ser_sync_crate_scanner {
     }
 
     /**
-     * Extracts filename from path with Unicode normalization.
-     */
-    private static String getFilename(String path) {
-        if (path == null)
-            return "";
-        path = Normalizer.normalize(path, Normalizer.Form.NFC);
-        int lastSlash = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
-        return lastSlash >= 0 ? path.substring(lastSlash + 1).toLowerCase() : path.toLowerCase();
-    }
-
-    /**
      * Checks if a track exists by path.
      */
     public boolean containsTrackByPath(String trackPath) {
@@ -216,7 +205,7 @@ public class ser_sync_crate_scanner {
      * Checks if a track exists by filename.
      */
     public boolean containsTrackByFilename(String trackPath) {
-        return tracksByFilename.containsKey(getFilename(trackPath));
+        return tracksByFilename.containsKey(ser_sync_binary_utils.getFilename(trackPath));
     }
 
     public int getTrackCount() {

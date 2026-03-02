@@ -1,0 +1,81 @@
+import java.io.*;
+import java.text.Normalizer;
+
+/**
+ * Shared binary utility methods used across ser-sync-pro and session-fixer.
+ * Consolidates duplicated readInt, readFile, writeFile, getFilename, and
+ * formatSize methods.
+ */
+public class ser_sync_binary_utils {
+
+    /**
+     * Reads a 4-byte big-endian integer from a byte array.
+     */
+    public static int readInt(byte[] data, int offset) {
+        return ((data[offset] & 0xFF) << 24) |
+                ((data[offset + 1] & 0xFF) << 16) |
+                ((data[offset + 2] & 0xFF) << 8) |
+                (data[offset + 3] & 0xFF);
+    }
+
+    /**
+     * Reads entire file into byte array.
+     */
+    public static byte[] readFile(File file) throws IOException {
+        try (FileInputStream fis = new FileInputStream(file)) {
+            byte[] data = new byte[(int) file.length()];
+            int read = fis.read(data);
+            if (read != data.length) {
+                throw new IOException("Could not read entire file");
+            }
+            return data;
+        }
+    }
+
+    /**
+     * Writes byte array to file.
+     */
+    public static void writeFile(File file, byte[] data) throws IOException {
+        try (FileOutputStream fos = new FileOutputStream(file)) {
+            fos.write(data);
+        }
+    }
+
+    /**
+     * Extracts filename from path with Unicode NFC normalization and lowercase.
+     */
+    public static String getFilename(String path) {
+        if (path == null)
+            return "";
+        // Apply NFC normalization for consistent Unicode handling
+        path = Normalizer.normalize(path, Normalizer.Form.NFC);
+        int lastSlash = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
+        return lastSlash >= 0 ? path.substring(lastSlash + 1).toLowerCase() : path.toLowerCase();
+    }
+
+    /**
+     * Extracts raw filename from path WITHOUT any normalization.
+     * Preserves exact Serato encoding for later matching.
+     */
+    public static String getRawFilename(String path) {
+        if (path == null)
+            return "";
+        int lastSlash = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
+        return lastSlash >= 0 ? path.substring(lastSlash + 1) : path;
+    }
+
+    /**
+     * Formats byte count as human-readable size.
+     */
+    public static String formatSize(long bytes) {
+        if (bytes < 1024) {
+            return bytes + " B";
+        } else if (bytes < 1024 * 1024) {
+            return String.format("%.1f KB", bytes / 1024.0);
+        } else if (bytes < 1024 * 1024 * 1024) {
+            return String.format("%.1f MB", bytes / (1024.0 * 1024));
+        } else {
+            return String.format("%.2f GB", bytes / (1024.0 * 1024 * 1024));
+        }
+    }
+}

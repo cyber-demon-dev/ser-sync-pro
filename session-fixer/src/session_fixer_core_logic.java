@@ -313,7 +313,7 @@ public class session_fixer_core_logic {
 
             // Copy header (vrsn block)
             if (data.length >= 8 && data[0] == 'v' && data[1] == 'r' && data[2] == 's' && data[3] == 'n') {
-                int vrsnLen = readInt(data, 4);
+                int vrsnLen = ser_sync_binary_utils.readInt(data, 4);
                 int vrsnEnd = 8 + vrsnLen;
                 out.write(data, 0, vrsnEnd);
                 pos = vrsnEnd;
@@ -326,7 +326,7 @@ public class session_fixer_core_logic {
                     String marker = new String(data, pos, 4);
 
                     if (marker.equals("ocol") || marker.equals("oses")) {
-                        int blockLen = readInt(data, pos + 4);
+                        int blockLen = ser_sync_binary_utils.readInt(data, pos + 4);
                         int blockEnd = Math.min(pos + 8 + blockLen, data.length);
 
                         if (marker.equals("oses")) {
@@ -340,20 +340,20 @@ public class session_fixer_core_logic {
                             while (searchPos < blockEnd - 8) {
                                 if (data[searchPos] == 'a' && data[searchPos + 1] == 'd' &&
                                         data[searchPos + 2] == 'a' && data[searchPos + 3] == 't') {
-                                    int adatLen = readInt(data, searchPos + 4);
+                                    int adatLen = ser_sync_binary_utils.readInt(data, searchPos + 4);
                                     int adatEnd = Math.min(searchPos + 8 + adatLen, blockEnd);
                                     int fPos = searchPos + 8;
 
                                     while (fPos < adatEnd - 8) {
-                                        int fieldId = readInt(data, fPos);
-                                        int fieldLen = readInt(data, fPos + 4);
+                                        int fieldId = ser_sync_binary_utils.readInt(data, fPos);
+                                        int fieldLen = ser_sync_binary_utils.readInt(data, fPos + 4);
 
                                         if (fieldLen < 0 || fieldLen > 4096 || fPos + 8 + fieldLen > adatEnd) {
                                             break;
                                         }
 
                                         if (fieldId == 0x2D && fieldLen == 4) {
-                                            duration = readInt(data, fPos + 8);
+                                            duration = ser_sync_binary_utils.readInt(data, fPos + 8);
                                         }
 
                                         fPos += 8 + fieldLen;
@@ -394,14 +394,5 @@ public class session_fixer_core_logic {
 
         ser_sync_log.info("");
         return deletedSessionNames.size();
-    }
-
-    private static int readInt(byte[] data, int offset) {
-        if (offset + 4 > data.length)
-            return 0;
-        return ((data[offset] & 0xFF) << 24) |
-                ((data[offset + 1] & 0xFF) << 16) |
-                ((data[offset + 2] & 0xFF) << 8) |
-                (data[offset + 3] & 0xFF);
     }
 }

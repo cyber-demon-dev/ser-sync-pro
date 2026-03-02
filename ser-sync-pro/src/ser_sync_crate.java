@@ -86,7 +86,7 @@ public class ser_sync_crate {
 
         for (String track : trackPaths) {
             File f = new File(track);
-            String size = formatSize(f.length());
+            String size = ser_sync_binary_utils.formatSize(f.length());
             if (!index.shouldSkipTrack(track, size)) {
                 // Try to use Serato's original filename encoding to match database
                 String trackToAdd = track;
@@ -102,14 +102,6 @@ public class ser_sync_crate {
                 }
                 tracks.add(trackToAdd);
             }
-        }
-    }
-
-    private String formatSize(long bytes) {
-        if (bytes < 1024 * 1024) {
-            return String.format("%.1fKB", bytes / 1024.0);
-        } else {
-            return String.format("%.1fMB", bytes / (1024.0 * 1024));
         }
     }
 
