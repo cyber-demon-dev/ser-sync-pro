@@ -1,5 +1,4 @@
 import java.io.*;
-import java.text.Normalizer;
 import java.util.*;
 
 /**
@@ -181,29 +180,10 @@ public class ser_sync_database {
 
     /**
      * Normalizes a path for comparison.
-     * Uses Unicode NFC normalization to handle accented characters consistently.
+     * Delegates to shared utility for consistent behavior.
      */
     private static String normalizePath(String path) {
-        if (path == null)
-            return "";
-
-        // Unicode NFC normalization - converts decomposed characters to composed form
-        // e.g., 'e' + combining accent -> 'é'
-        path = Normalizer.normalize(path, Normalizer.Form.NFC);
-
-        // Convert to lowercase
-        path = path.toLowerCase();
-
-        // Replace backslashes with forward slashes
-        path = path.replace('\\', '/');
-
-        // Remove Windows drive letters
-        path = path.replaceAll("^[a-z]:/", "");
-
-        // Remove macOS /Volumes/... prefix
-        path = path.replaceAll("^/volumes/[^/]+/", "");
-
-        return path;
+        return ser_sync_binary_utils.normalizePath(path);
     }
 
     /**

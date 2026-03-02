@@ -78,4 +78,34 @@ public class ser_sync_binary_utils {
             return String.format("%.2f GB", bytes / (1024.0 * 1024 * 1024));
         }
     }
+
+    /**
+     * Normalizes a path for comparison (lowercase, NFC, strips volume/drive
+     * prefix).
+     * Use this when comparing paths from different sources (database vs
+     * filesystem).
+     */
+    public static String normalizePath(String path) {
+        if (path == null)
+            return "";
+        path = Normalizer.normalize(path, Normalizer.Form.NFC);
+        path = path.toLowerCase();
+        path = path.replace('\\', '/');
+        path = path.replaceAll("^[a-z]:/", "");
+        path = path.replaceAll("^/volumes/[^/]+/", "");
+        return path;
+    }
+
+    /**
+     * Normalizes a path for Serato database format (relative, no volume prefix).
+     * Does NOT lowercase — preserves original case for database writes.
+     */
+    public static String normalizePathForDatabase(String path) {
+        if (path == null)
+            return "";
+        path = path.replace('\\', '/');
+        path = path.replaceAll("^[a-zA-Z]:/", "");
+        path = path.replaceAll("^/Volumes/[^/]+/", "");
+        return path;
+    }
 }

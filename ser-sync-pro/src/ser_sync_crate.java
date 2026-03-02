@@ -304,19 +304,13 @@ public class ser_sync_crate {
     }
 
     /**
-     * Normalizes track path for Serato format.
-     * Does NOT modify Unicode encoding - we preserve exact bytes from
-     * database/filesystem.
+     * Normalizes track path for Serato crate format.
+     * Does NOT lowercase or NFC-normalize — Serato expects exact case and
+     * encoding when writing to crate files. This is intentionally different
+     * from the comparison normalization in ser_sync_binary_utils.normalizePath().
      */
     public static String getUniformTrackName(String name) {
-        // Forward slashes only
-        name = name.replaceAll("\\\\", "/");
-        // Remove Windows drive
-        name = name.replaceAll("^[a-zA-Z]:\\/", "");
-        // Remove macOS /Volumes/DriveName/ prefix
-        name = name.replaceAll("^/Volumes/[^/]+/", "");
-        // DO NOT normalize Unicode - preserve exact bytes to match database
-        return name;
+        return ser_sync_binary_utils.normalizePathForDatabase(name);
     }
 
     public void writeTo(File outFile) throws ser_sync_exception {

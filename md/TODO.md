@@ -6,12 +6,8 @@
 
 ## Backlog
 
-- [ ] Add unit tests for crate read/write round-trip
-- [ ] Add unit tests for Unicode NFC/NFD normalization
 - [ ] Add CI pipeline (GitHub Actions) for automated builds
 - [ ] Add `--dry-run` CLI flag to preview changes without writing
-- [ ] Improve error messages for missing/invalid config properties
-- [ ] Add progress bar or percentage indicator for large libraries
 - [ ] Document Windows-specific path handling and testing notes
 
 ## Ideas / Future

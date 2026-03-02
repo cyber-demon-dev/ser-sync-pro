@@ -17,15 +17,17 @@ public class ser_sync_config {
     /** File-based constructor for CLI mode */
     public ser_sync_config() throws IOException {
         properties = new Properties();
-
-        FileInputStream in = null;
-        try {
-            in = new FileInputStream(CONFIG_FILE);
-        } catch (FileNotFoundException e) {
-            in = new FileInputStream(CONFIG_FILE_ALT);
+        try (FileInputStream in = openConfigFile()) {
+            properties.load(in);
         }
-        properties.load(in);
-        in.close();
+    }
+
+    private static FileInputStream openConfigFile() throws IOException {
+        try {
+            return new FileInputStream(CONFIG_FILE);
+        } catch (FileNotFoundException e) {
+            return new FileInputStream(CONFIG_FILE_ALT);
+        }
     }
 
     /** Properties-based constructor for GUI mode */
