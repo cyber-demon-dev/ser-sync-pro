@@ -169,7 +169,7 @@ public class ser_sync_log {
             WINDOW_HANDLER.fatalError();
         }
         closeLogFile();
-        System.exit(-1);
+        throw new ser_sync_fatal_exception("Fatal error");
     }
 
     public static void success() {
@@ -179,7 +179,6 @@ public class ser_sync_log {
             // Don't exit - keep window open for log review
         } else {
             closeLogFile();
-            System.exit(0);
         }
     }
 

@@ -26,6 +26,7 @@ public class ser_sync_main {
             launchGui(initialConfig);
         } else {
             runSync(initialConfig);
+            System.exit(0);
         }
     }
 
@@ -62,9 +63,13 @@ public class ser_sync_main {
                 SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
                     @Override
                     protected Void doInBackground() {
-                        Properties guiProps = window.collectProperties();
-                        ser_sync_config config = new ser_sync_config(guiProps);
-                        runSync(config);
+                        try {
+                            Properties guiProps = window.collectProperties();
+                            ser_sync_config config = new ser_sync_config(guiProps);
+                            runSync(config);
+                        } catch (ser_sync_fatal_exception e) {
+                            ser_sync_log.error("Fatal: " + e.getMessage());
+                        }
                         return null;
                     }
 

@@ -66,7 +66,7 @@ public class ser_sync_config {
         if (path.contains("%%")) {
             ser_sync_log.error("Invalid 'crate.parent.path': nested paths are not supported.");
             ser_sync_log.error("Use a single crate name like 'Current', not 'Current%%2025'.");
-            ser_sync_log.fatalError();
+            throw new ser_sync_fatal_exception("Invalid crate.parent.path: nested paths not supported");
         }
         return path;
     }
@@ -162,8 +162,7 @@ public class ser_sync_config {
     private String getRequiredOption(String name) {
         String result = properties.getProperty(name);
         if (result == null || result.trim().length() <= 0) {
-            ser_sync_log.error("Required config option '" + name + "' is not specified");
-            ser_sync_log.fatalError();
+            throw new ser_sync_fatal_exception("Required config option missing: " + name);
         }
         return result;
     }
