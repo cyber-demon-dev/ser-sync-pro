@@ -129,10 +129,7 @@ public class ser_sync_database {
             pos += 4;
 
             // Read length (4 bytes, big-endian)
-            int len = ((data[pos] & 0xFF) << 24) |
-                    ((data[pos + 1] & 0xFF) << 16) |
-                    ((data[pos + 2] & 0xFF) << 8) |
-                    (data[pos + 3] & 0xFF);
+            int len = ser_sync_binary_utils.readInt(data, pos);
             pos += 4;
 
             if (pos + len > data.length) {
@@ -168,14 +165,14 @@ public class ser_sync_database {
             tracksByPath.put(key, path);
 
             // Also index by filename
-            String filename = getFilename(path);
+            String filename = ser_sync_binary_utils.getFilename(path);
             String filenameKey = filename + (size != null ? "|" + size : "");
             tracksByFilename.put(filenameKey, path);
             // Index by filename only (for fast path lookup without size)
             tracksByFilenameOnly.put(filename, path);
 
             // Store raw filename (preserving exact encoding) for matching later
-            String rawFilename = getRawFilename(path);
+            String rawFilename = ser_sync_binary_utils.getRawFilename(path);
             rawFilenamesByNormalizedName.put(filename, rawFilename);
 
             trackCount++;
@@ -210,29 +207,6 @@ public class ser_sync_database {
     }
 
     /**
-     * Extracts filename from path with Unicode normalization.
-     */
-    private static String getFilename(String path) {
-        if (path == null)
-            return "";
-        // Apply NFC normalization for consistent Unicode handling
-        path = Normalizer.normalize(path, Normalizer.Form.NFC);
-        int lastSlash = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
-        return lastSlash >= 0 ? path.substring(lastSlash + 1).toLowerCase() : path.toLowerCase();
-    }
-
-    /**
-     * Extracts raw filename from path WITHOUT any normalization.
-     * Preserves exact Serato encoding for later matching.
-     */
-    private static String getRawFilename(String path) {
-        if (path == null)
-            return "";
-        int lastSlash = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
-        return lastSlash >= 0 ? path.substring(lastSlash + 1) : path;
-    }
-
-    /**
      * Checks if a track exists using path-based matching.
      * 
      * @param trackPath Full path to the track
@@ -253,7 +227,7 @@ public class ser_sync_database {
      * @return true if a track with same filename exists
      */
     public boolean containsTrackByFilename(String trackPath, String fileSize) {
-        String filename = getFilename(trackPath);
+        String filename = ser_sync_binary_utils.getFilename(trackPath);
         String key = filename + (fileSize != null ? "|" + fileSize : "");
         return tracksByFilename.containsKey(key);
     }
@@ -273,7 +247,7 @@ public class ser_sync_database {
      * @return Original path from database, or null if not found
      */
     public String getOriginalPathByFilename(String trackPath) {
-        String filename = getFilename(trackPath);
+        String filename = ser_sync_binary_utils.getFilename(trackPath);
         // O(1) lookup using the filename-only index
         return tracksByFilenameOnly.get(filename);
     }
@@ -287,7 +261,7 @@ public class ser_sync_database {
      *         found
      */
     public String getSeratoFilename(String trackPath) {
-        String normalizedKey = getFilename(trackPath);
+        String normalizedKey = ser_sync_binary_utils.getFilename(trackPath);
         return rawFilenamesByNormalizedName.get(normalizedKey);
     }
 }

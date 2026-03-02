@@ -44,7 +44,7 @@ public class ser_sync_database_entry_selector {
         String lowerFilename = filename.toLowerCase();
 
         try {
-            byte[] data = readFile(dbFile);
+            byte[] data = ser_sync_binary_utils.readFile(dbFile);
             scanForEntries(data, lowerFilename, entries);
         } catch (IOException e) {
             ser_sync_log.error("Error scanning database V2: " + e.getMessage());
@@ -89,7 +89,7 @@ public class ser_sync_database_entry_selector {
                     data[pos + 2] == otrkMarker[2] && data[pos + 3] == otrkMarker[3]) {
 
                 // Read record length
-                int recordLen = readInt(data, pos + 4);
+                int recordLen = ser_sync_binary_utils.readInt(data, pos + 4);
                 if (pos + 8 + recordLen > data.length) {
                     break;
                 }
@@ -116,7 +116,7 @@ public class ser_sync_database_entry_selector {
 
         while (pos + 8 < end) {
             String tag = new String(data, pos, 4, StandardCharsets.US_ASCII);
-            int fieldLen = readInt(data, pos + 4);
+            int fieldLen = ser_sync_binary_utils.readInt(data, pos + 4);
             pos += 8;
 
             if (pos + fieldLen > end) {
@@ -132,7 +132,7 @@ public class ser_sync_database_entry_selector {
             }
 
             if ("uadd".equals(tag) && fieldLen == 4) {
-                dateAdded = readInt(data, pos) & 0xFFFFFFFFL;
+                dateAdded = ser_sync_binary_utils.readInt(data, pos) & 0xFFFFFFFFL;
             }
 
             pos += fieldLen;
@@ -140,39 +140,11 @@ public class ser_sync_database_entry_selector {
 
         // Check if this entry matches our filename
         if (path != null) {
-            String entryFilename = extractFilename(path).toLowerCase();
+            String entryFilename = ser_sync_binary_utils.getFilename(path);
             if (entryFilename.equals(lowerFilename)) {
                 entries.add(new DbEntry(path, dateAdded));
             }
         }
     }
 
-    /**
-     * Extracts filename from a path.
-     */
-    private static String extractFilename(String path) {
-        int lastSlash = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
-        return lastSlash >= 0 ? path.substring(lastSlash + 1) : path;
-    }
-
-    /**
-     * Reads a 4-byte big-endian integer.
-     */
-    private static int readInt(byte[] data, int pos) {
-        return ((data[pos] & 0xFF) << 24) |
-                ((data[pos + 1] & 0xFF) << 16) |
-                ((data[pos + 2] & 0xFF) << 8) |
-                (data[pos + 3] & 0xFF);
-    }
-
-    /**
-     * Reads entire file into byte array.
-     */
-    private static byte[] readFile(File file) throws IOException {
-        try (FileInputStream fis = new FileInputStream(file)) {
-            byte[] data = new byte[(int) file.length()];
-            fis.read(data);
-            return data;
-        }
-    }
 }

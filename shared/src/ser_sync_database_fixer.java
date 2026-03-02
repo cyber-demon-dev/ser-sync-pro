@@ -24,7 +24,7 @@ public class ser_sync_database_fixer {
 
         try {
             // Read entire file
-            byte[] data = readFile(dbFile);
+            byte[] data = ser_sync_binary_utils.readFile(dbFile);
 
             // Convert paths to UTF-16BE for searching
             byte[] oldPathBytes = oldPath.getBytes(StandardCharsets.UTF_16BE);
@@ -35,7 +35,7 @@ public class ser_sync_database_fixer {
 
             if (result != null) {
                 // Write back to file
-                writeFile(dbFile, result);
+                ser_sync_binary_utils.writeFile(dbFile, result);
                 return true;
             }
 
@@ -62,7 +62,7 @@ public class ser_sync_database_fixer {
 
         try {
             // Read entire file
-            byte[] data = readFile(dbFile);
+            byte[] data = ser_sync_binary_utils.readFile(dbFile);
             int updatedCount = 0;
             int totalPaths = pathMappings.size();
             int processed = 0;
@@ -93,7 +93,7 @@ public class ser_sync_database_fixer {
             ser_sync_log.progressComplete("Updating database V2");
 
             if (updatedCount > 0) {
-                writeFile(dbFile, data);
+                ser_sync_binary_utils.writeFile(dbFile, data);
             }
 
             return updatedCount;
@@ -134,10 +134,7 @@ public class ser_sync_database_fixer {
                     data[pos + 2] == pfilMarker[2] && data[pos + 3] == pfilMarker[3]) {
 
                 // Read pfil length (4 bytes, big-endian)
-                int pfilLen = ((data[pos + 4] & 0xFF) << 24) |
-                        ((data[pos + 5] & 0xFF) << 16) |
-                        ((data[pos + 6] & 0xFF) << 8) |
-                        (data[pos + 7] & 0xFF);
+                int pfilLen = ser_sync_binary_utils.readInt(data, pos + 4);
 
                 // Check if this pfil contains our old path
                 int pathStart = pos + 8;
@@ -171,10 +168,7 @@ public class ser_sync_database_fixer {
                         }
 
                         // Read otrk length
-                        int otrkLen = ((data[otrkPos + 4] & 0xFF) << 24) |
-                                ((data[otrkPos + 5] & 0xFF) << 16) |
-                                ((data[otrkPos + 6] & 0xFF) << 8) |
-                                (data[otrkPos + 7] & 0xFF);
+                        int otrkLen = ser_sync_binary_utils.readInt(data, otrkPos + 4);
 
                         // Build new data array
                         byte[] newData = new byte[data.length + lengthDiff];
@@ -229,10 +223,7 @@ public class ser_sync_database_fixer {
             if (data[pos] == otrkMarker[0] && data[pos + 1] == otrkMarker[1] &&
                     data[pos + 2] == otrkMarker[2] && data[pos + 3] == otrkMarker[3]) {
 
-                int otrkLen = ((data[pos + 4] & 0xFF) << 24) |
-                        ((data[pos + 5] & 0xFF) << 16) |
-                        ((data[pos + 6] & 0xFF) << 8) |
-                        (data[pos + 7] & 0xFF);
+                int otrkLen = ser_sync_binary_utils.readInt(data, pos + 4);
 
                 int otrkEnd = pos + 8 + otrkLen;
 
@@ -252,20 +243,4 @@ public class ser_sync_database_fixer {
         return lastOtrkPos;
     }
 
-    private static byte[] readFile(File file) throws IOException {
-        try (FileInputStream fis = new FileInputStream(file)) {
-            byte[] data = new byte[(int) file.length()];
-            int read = fis.read(data);
-            if (read != data.length) {
-                throw new IOException("Could not read entire file");
-            }
-            return data;
-        }
-    }
-
-    private static void writeFile(File file, byte[] data) throws IOException {
-        try (FileOutputStream fos = new FileOutputStream(file)) {
-            fos.write(data);
-        }
-    }
 }

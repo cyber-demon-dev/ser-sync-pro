@@ -66,7 +66,7 @@ public class ser_sync_library {
         if (trackIndex != null) {
             for (String track : all) {
                 java.io.File f = new java.io.File(track);
-                String size = formatSize(f.length());
+                String size = ser_sync_binary_utils.formatSize(f.length());
                 trackIndex.shouldSkipTrack(track, size); // Just counts, doesn't skip
             }
         }
@@ -195,11 +195,4 @@ public class ser_sync_library {
         return names;
     }
 
-    private String formatSize(long bytes) {
-        if (bytes < 1024 * 1024) {
-            return String.format("%.1fKB", bytes / 1024.0);
-        } else {
-            return String.format("%.1fMB", bytes / (1024.0 * 1024));
-        }
-    }
 }
