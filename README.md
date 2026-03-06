@@ -24,6 +24,7 @@ Based on [serato-sync](https://github.com/ralekseenkov/serato-sync-old/) by Roma
 - **Auto-Create Missing Folders**: Prompts to create `_Serato_` or parent crate if missing
 - **Broken Filepath Fixer**: Automatically repairs broken track paths in existing crates and database V2
 - **Session Fixer**: Standalone tool to fix broken paths in Serato `.session` history files
+- **Dry-Run Mode**: Preview a full sync without writing anything to disk (`--dry-run` CLI flag)
 - **Timestamped Logs**: All logs saved to `logs/ser-sync-pro-<timestamp>.log`
 
 ## Quick Start
@@ -38,12 +39,25 @@ Based on [serato-sync](https://github.com/ralekseenkov/serato-sync-old/) by Roma
 
 3. Run: `java -jar ser-sync-pro.jar`
 
+## CLI Flags
+
+| Flag          | Mode      | Description                                                                        |
+|---------------|-----------|------------------------------------------------------------------------------------|
+| *(none)*      | GUI / CLI | Normal sync                                                                        |
+| `--dry-run`   | CLI only  | Preview sync — logs all actions with `[DRY RUN]` prefix, writes nothing to disk   |
+
+Example:
+
+```bash
+java -jar ser-sync-pro.jar --dry-run
+```
+
 ## Configuration Options
 
 | Property | Description | Default |
 | -------- | ----------- | ------- |
 | `mode` | `gui` or `cmd` | `gui` |
-| `music.library.filesystem` | Path to your music content (not _Serato_ folder) | Required |
+| `music.library.filesystem` | Path to your music content (not *Serato* folder) | Required |
 | `music.library.database` | Path to `_Serato_` folder | Required |
 | `music.library.database.backup` | Create backup before sync | `true` |
 | `music.library.database.clear-before-sync` | Clear existing crates first | `false` |

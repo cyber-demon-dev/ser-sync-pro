@@ -2,6 +2,19 @@
 
 <!-- Newest entries go at the top, below this comment. Do NOT delete old entries. -->
 
+## 2026-03-06 — Execute CI Pipeline + Dry-Run Plans
+
+- **Task**: Execute `CI_PIPELINE_PLAN.md` and `DRY_RUN_PLAN.md` per `EXECUTE.md` protocol — all phases in order, one file per phase, verified after each
+- **Files Changed**:
+  - `.github/workflows/build.yml` [NEW] — GitHub Actions workflow: `ant test` on push/PR to `master`
+  - `README.md` [MODIFIED] — CI badge added below `h1` heading
+  - `ser-sync-pro/src/ser_sync_config.java` [MODIFIED] — Added `dryRun` field, `isDryRun()`, `setDryRun()`
+  - `ser-sync-pro/src/ser_sync_main.java` [MODIFIED] — `main()` parses `--dry-run`; all 7 write sites in `runSync()` guarded with `[DRY RUN]` log output
+  - `ser-sync-pro/ser-sync.properties.template` [MODIFIED] — Appended `--dry-run` comment block (docs only, no new keys)
+  - `md/TODO.md` [MODIFIED] — Moved both CI and dry-run items to `## Done`
+- **What Was Done**: Executed two pre-written phased plans end-to-end. CI plan: 4 phases (workflow file, README badge, TODO update, commit+push). Dry-run plan: 6 phases (config getter/setter, arg parsing, 7 write-site guards, template docs, TODO update, commit+push). All 26 tests pass post-execution. Two clean commits pushed to `origin/master`.
+- **Docs to Update**: CHANGELOG.md (CI workflow is a user-facing feature worth logging)
+
 ## 2026-03-06 — Action Plan Skill + CI Pipeline + Dry-Run Plans
 
 - **Task**: Establish the `md/actions/` planning protocol and produce the first two feature plans with prompt and audit skeletons
