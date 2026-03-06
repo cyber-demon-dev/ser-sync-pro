@@ -158,8 +158,26 @@ The prompt is handed to a fresh agent with no prior context. It must be self-con
 
 ---
 
+## Audit Fill-In (Mandatory)
+
+After every phase completes and its Verify block passes, immediately update the corresponding row in `<FEATURE>_AUDIT.md`:
+
+1. Open the audit file
+2. Fill in `Verify Output` with the actual command output (truncated if long)
+3. Set `Pass/Fail` to ✅ PASS or ⚠️ DEVIATION
+4. If a deviation: document it in the `## Deviations` section before proceeding
+
+After all phases and build verification are complete:
+- Paste `ant test` output into `## Build Verification`
+- Paste `git log --oneline -5` into `## Final Commit Log`
+- Check all sign-off boxes
+
+**Do not push before the audit sign-off is complete.**
+
+---
+
 ## What You Are NOT Allowed To Do
-[Explicit prohibition list. At minimum: rename files, refactor unlisted code, add tests, modify build config, deviate from commit messages, push before tests pass.]
+[Explicit prohibition list. At minimum: rename files, refactor unlisted code, add tests, modify build config, deviate from commit messages, push before tests pass, leave audit blanks unfilled.]
 ```
 
 **Rules for writing the prompt:**
@@ -172,7 +190,7 @@ The prompt is handed to a fresh agent with no prior context. It must be self-con
 
 ### Step 3 — Create the Audit File (`*_AUDIT.md`)
 
-The audit is filled in **after** the plans are executed (by the user or executing agent). You write the skeleton now; it gets completed later.
+You write the skeleton now. **The executing agent is required to fill it in as they work — one row per phase, immediately after that phase's Verify block passes.** The audit is not optional and not deferred. `EXECUTE.md` must contain an explicit section enforcing this (see Step 2 rules).
 
 **Filename:** `md/actions/<FEATURE_NAME>_AUDIT.md`
 
@@ -204,8 +222,10 @@ The audit is filled in **after** the plans are executed (by the user or executin
 
 | Phase | File | Action | Verify Output | Pass/Fail |
 |-------|------|--------|---------------|-----------|
-| 1 | ___ | ___ | ___ | ___ |
-| N | ___ | ___ | ___ | ___ |
+| 1 | `<exact file from plan Phase 1>` | `<exact action from plan Phase 1>` | ___ | ___ |
+| N | `<exact file from plan Phase N>` | `<exact action from plan Phase N>` | ___ | ___ |
+
+> **Executing agent:** Fill in `Verify Output` and `Pass/Fail` immediately after each phase completes. Do not batch-fill at the end.
 
 ---
 
@@ -278,6 +298,18 @@ After confirming the user is ready, perform these actions in sequence:
 
    Do not add source code files to this commit. This commit is docs only.
 
+4. **Archive completed artefacts** — after the executing agent has fully signed off all audits and pushed, move all completed files into `md/actions/archive/`:
+
+   ```bash
+   git mv md/actions/<PLAN>.md md/actions/archive/<PLAN>.md
+   git mv md/actions/<AUDIT>.md md/actions/archive/<AUDIT>.md
+   git mv md/actions/EXECUTE.md md/actions/archive/EXECUTE.md
+   git commit -m "chore(actions): archive completed <feature> plans, prompts, and audits"
+   git push origin master
+   ```
+
+   `md/actions/` must be empty (or contain only new in-progress work) after archiving.
+
 ---
 
 ## Quality Gates (Self-Check Before Presenting to User)
@@ -304,6 +336,7 @@ If any gate fails, fix the output before presenting it.
 | Plan | `<FEATURE>_PLAN.md` — e.g. `CI_PIPELINE_PLAN.md`, `DRY_RUN_PLAN.md` |
 | Prompt | `EXECUTE.md` — always this name, always overwritten |
 | Audit | `<FEATURE>_AUDIT.md` — e.g. `CI_PIPELINE_AUDIT.md` |
+| Archive | `md/actions/archive/` — all completed plans, audits, and prompts move here after sign-off |
 
 ---
 
