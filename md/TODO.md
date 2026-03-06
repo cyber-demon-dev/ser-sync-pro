@@ -6,7 +6,6 @@
 
 ## Backlog
 
-- [ ] Add `--dry-run` CLI flag to preview changes without writing
 - [ ] Document Windows-specific path handling and testing notes
 
 ## Ideas / Future
@@ -18,3 +17,4 @@
 ## Done
 
 - [x] Add CI pipeline (GitHub Actions) — `ant test` on push/PR to `master`
+- [x] Add `--dry-run` CLI flag — previews all sync actions, suppresses all disk writes
