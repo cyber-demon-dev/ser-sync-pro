@@ -21,5 +21,4 @@ logs/
 *.command
 
 # Guides
-CODEBASE_GUIDE.md
 DATABASE_GUIDE.md
