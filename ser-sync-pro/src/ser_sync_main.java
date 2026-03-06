@@ -11,6 +11,13 @@ import javax.swing.UIManager;
 public class ser_sync_main {
 
     public static void main(String[] args) {
+        boolean dryRunFlag = false;
+        for (String arg : args) {
+            if ("--dry-run".equals(arg)) {
+                dryRunFlag = true;
+            }
+        }
+
         // Try to load config to check mode
         ser_sync_config initialConfig;
         try {
@@ -18,6 +25,10 @@ public class ser_sync_main {
         } catch (IOException e) {
             // No config file — default to GUI mode
             initialConfig = null;
+        }
+
+        if (dryRunFlag && initialConfig != null) {
+            initialConfig.setDryRun(true);
         }
 
         boolean guiMode = (initialConfig == null) || initialConfig.isGuiMode();
@@ -102,11 +113,15 @@ public class ser_sync_main {
 
         // Backup Serato folder
         if (config.isBackupEnabled()) {
-            String backupPath = ser_sync_backup.createBackup(seratoPath);
-            if (backupPath == null) {
-                ser_sync_log.error("Backup failed. Aborting sync for safety.");
-                ser_sync_log.fatalError();
-                return;
+            if (config.isDryRun()) {
+                ser_sync_log.info("[DRY RUN] Would have: created backup of " + seratoPath);
+            } else {
+                String backupPath = ser_sync_backup.createBackup(seratoPath);
+                if (backupPath == null) {
+                    ser_sync_log.error("Backup failed. Aborting sync for safety.");
+                    ser_sync_log.fatalError();
+                    return;
+                }
             }
         }
 
@@ -126,22 +141,23 @@ public class ser_sync_main {
         // files)
         if (config.isHardDriveDupeScanEnabled()) {
             if (config.isDupeMoveEnabled()) {
-                java.util.Map<String, String> movedToKept = ser_sync_dupe_mover.scanAndMoveDuplicates(
-                        config.getMusicLibraryPath(), fsLibrary, config.getDupeDetectionMode(),
-                        config.getDupeMoveMode());
-                if (!movedToKept.isEmpty()) {
-                    // Update database V2 to point moved paths to kept paths
-                    String databasePath = seratoPath + "/database V2";
-                    int dbUpdated = ser_sync_database_fixer.updatePaths(databasePath, movedToKept);
-                    if (dbUpdated > 0) {
-                        ser_sync_log.info("Updated " + dbUpdated + " paths in database V2 for moved duplicates");
+                if (config.isDryRun()) {
+                    ser_sync_log.info("[DRY RUN] Would have: scanned and moved duplicate files ("
+                            + config.getDupeMoveMode() + ")");
+                } else {
+                    java.util.Map<String, String> movedToKept = ser_sync_dupe_mover.scanAndMoveDuplicates(
+                            config.getMusicLibraryPath(), fsLibrary, config.getDupeDetectionMode(),
+                            config.getDupeMoveMode());
+                    if (!movedToKept.isEmpty()) {
+                        String databasePath = seratoPath + "/database V2";
+                        int dbUpdated = ser_sync_database_fixer.updatePaths(databasePath, movedToKept);
+                        if (dbUpdated > 0) {
+                            ser_sync_log.info("Updated " + dbUpdated + " paths in database V2 for moved duplicates");
+                        }
+                        ser_sync_log.info("Rescanning media library after duplicate removal...");
+                        fsLibrary = ser_sync_media_library.readFrom(config.getMusicLibraryPath());
+                        ser_sync_log.info("Found " + fsLibrary.getTotalNumberOfTracks() + " tracks remaining.");
                     }
-
-                    // Rescan library to get fresh state after files moved
-                    // This ensures broken path fixer can find files at their current locations
-                    ser_sync_log.info("Rescanning media library after duplicate removal...");
-                    fsLibrary = ser_sync_media_library.readFrom(config.getMusicLibraryPath());
-                    ser_sync_log.info("Found " + fsLibrary.getTotalNumberOfTracks() + " tracks remaining.");
                 }
             } else {
                 // Log-only mode runs after crates are built (doesn't affect anything)
@@ -150,22 +166,26 @@ public class ser_sync_main {
 
         ser_sync_log.info("Writing files into serato library " + seratoPath + "...");
         if (!new File(seratoPath).isDirectory()) {
-            boolean createFolder = ser_sync_log.confirm(
-                    "Serato library folder '" + seratoPath + "' does not exist.\n\n" +
-                            "Would you like to create it and continue with the sync?");
-            if (createFolder) {
-                boolean created = new File(seratoPath).mkdirs();
-                if (created) {
-                    ser_sync_log.info("Created Serato library folder: " + seratoPath);
+            if (config.isDryRun()) {
+                ser_sync_log.info("[DRY RUN] Would have: created Serato library folder " + seratoPath);
+            } else {
+                boolean createFolder = ser_sync_log.confirm(
+                        "Serato library folder '" + seratoPath + "' does not exist.\n\n" +
+                                "Would you like to create it and continue with the sync?");
+                if (createFolder) {
+                    boolean created = new File(seratoPath).mkdirs();
+                    if (created) {
+                        ser_sync_log.info("Created Serato library folder: " + seratoPath);
+                    } else {
+                        ser_sync_log.error("Failed to create Serato library folder: " + seratoPath);
+                        ser_sync_log.fatalError();
+                        return;
+                    }
                 } else {
-                    ser_sync_log.error("Failed to create Serato library folder: " + seratoPath);
+                    ser_sync_log.info("Sync halted by user.");
                     ser_sync_log.fatalError();
                     return;
                 }
-            } else {
-                ser_sync_log.info("Sync halted by user.");
-                ser_sync_log.fatalError();
-                return;
             }
         }
 
@@ -184,15 +204,19 @@ public class ser_sync_main {
             if (!parentCrateFile.exists()) {
                 ser_sync_log
                         .info("Parent crate '" + parentCratePath + "' does not exist. Creating it automatically...");
-                try {
-                    parentCrateFile.getParentFile().mkdirs();
-                    ser_sync_crate emptyCrate = new ser_sync_crate();
-                    emptyCrate.writeTo(parentCrateFile);
-                } catch (ser_sync_exception e) {
-                    ser_sync_log.error("Failed to create parent crate '" + parentCratePath + "'");
-                    ser_sync_log.error(e);
-                    ser_sync_log.fatalError();
-                    return;
+                if (config.isDryRun()) {
+                    ser_sync_log.info("[DRY RUN] Would have: created parent crate " + parentCratePath);
+                } else {
+                    try {
+                        parentCrateFile.getParentFile().mkdirs();
+                        ser_sync_crate emptyCrate = new ser_sync_crate();
+                        emptyCrate.writeTo(parentCrateFile);
+                    } catch (ser_sync_exception e) {
+                        ser_sync_log.error("Failed to create parent crate '" + parentCratePath + "'");
+                        ser_sync_log.error(e);
+                        ser_sync_log.fatalError();
+                        return;
+                    }
                 }
             }
 
@@ -227,18 +251,27 @@ public class ser_sync_main {
         // Build crate library
         ser_sync_library crateLibrary = ser_sync_library.createFrom(fsLibrary, parentCratePath, trackIndex);
 
-        try {
-            crateLibrary.writeTo(seratoPath, config.isClearLibraryBeforeSync());
-        } catch (ser_sync_exception e) {
-            ser_sync_log.error("Error occurred!");
-            ser_sync_log.error(e);
-            ser_sync_log.fatalError();
-            return;
+        if (config.isDryRun()) {
+            ser_sync_log.info("[DRY RUN] Would have: written " + crateLibrary.getAllCrateNames().size() + " crates to "
+                    + seratoPath);
+        } else {
+            try {
+                crateLibrary.writeTo(seratoPath, config.isClearLibraryBeforeSync());
+            } catch (ser_sync_exception e) {
+                ser_sync_log.error("Error occurred!");
+                ser_sync_log.error(e);
+                ser_sync_log.fatalError();
+                return;
+            }
         }
 
         // Fix broken paths in crates AFTER writing them (so fixes aren't overwritten)
         if (config.isFixBrokenPathsEnabled()) {
-            ser_sync_crate_fixer.fixBrokenPaths(seratoPath, fsLibrary, database, config.getDupeMoveMode());
+            if (config.isDryRun()) {
+                ser_sync_log.info("[DRY RUN] Would have: fixed broken paths in crates and database V2");
+            } else {
+                ser_sync_crate_fixer.fixBrokenPaths(seratoPath, fsLibrary, database, config.getDupeMoveMode());
+            }
         }
 
         // Summary
@@ -255,10 +288,18 @@ public class ser_sync_main {
 
         // Sort crates if enabled
         if (config.isCrateSortingEnabled()) {
-            ser_sync_pref_sorter.sort(seratoPath);
+            if (config.isDryRun()) {
+                ser_sync_log.info("[DRY RUN] Would have: sorted crates alphabetically in neworder.pref");
+            } else {
+                ser_sync_pref_sorter.sort(seratoPath);
+            }
         }
 
-        ser_sync_log.success();
+        if (config.isDryRun()) {
+            ser_sync_log.info("[DRY RUN] Sync complete — no files were written.");
+        } else {
+            ser_sync_log.success();
+        }
     }
 
     private static void scanForHardDriveDuplicates(ser_sync_media_library library) {

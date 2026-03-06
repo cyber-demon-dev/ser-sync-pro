@@ -13,6 +13,7 @@ public class ser_sync_config {
     public static final String CONFIG_FILE_ALT = "ser-sync.properties.txt";
 
     private Properties properties;
+    private boolean dryRun = false;
 
     /** File-based constructor for CLI mode */
     public ser_sync_config() throws IOException {
@@ -44,6 +45,14 @@ public class ser_sync_config {
 
     public boolean isGuiMode() {
         return !("cmd".equals(properties.getProperty("mode")));
+    }
+
+    public boolean isDryRun() {
+        return dryRun;
+    }
+
+    public void setDryRun(boolean dryRun) {
+        this.dryRun = dryRun;
     }
 
     // ==================== Paths ====================

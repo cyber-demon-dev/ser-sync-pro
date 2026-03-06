@@ -45,3 +45,7 @@ harddrive.dupe.move.enabled=keep-oldest
 # Only works when harddrive.dupe.scan.enabled=true
 harddrive.dupe.detection.mode=name-only
 
+# --dry-run
+# Pass --dry-run as a command-line argument (CLI mode only) to preview all sync
+# actions without writing anything to disk. Logs every action with a [DRY RUN] prefix.
+# Example: java -jar ser-sync-pro.jar --dry-run
