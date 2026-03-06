@@ -1,5 +1,7 @@
 # ser-sync-pro
 
+![Build](https://github.com/cyber-demon-dev/ser-sync-pro/actions/workflows/build.yml/badge.svg)
+
 Serato DJ crate synchronization tool — automatically sync your filesystem folders to Serato crates and more.
 
 ## License
