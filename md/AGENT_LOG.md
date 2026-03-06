@@ -2,6 +2,19 @@
 
 <!-- Newest entries go at the top, below this comment. Do NOT delete old entries. -->
 
+## 2026-03-06 — Action Plan Skill + CI Pipeline + Dry-Run Plans
+
+- **Task**: Establish the `md/actions/` planning protocol and produce the first two feature plans with prompt and audit skeletons
+- **Files Changed**:
+  - `.agents/skills/action-plan/SKILL.md` [NEW] — 4-step skill: Plan → Prompt → Audit → Docs+Commit
+  - `md/actions/CI_PIPELINE_PLAN.md` [NEW] — Phased plan for GitHub Actions CI pipeline
+  - `md/actions/DRY_RUN_PLAN.md` [NEW] — Phased plan for `--dry-run` CLI flag (6 phases, 7 write sites)
+  - `md/actions/EXECUTE.md` [NEW] — Bulletproof execution prompt for another agent to run both plans
+  - `md/actions/CI_PIPELINE_AUDIT.md` [NEW] — Audit skeleton for CI plan
+  - `md/actions/DRY_RUN_AUDIT.md` [NEW] — Audit skeleton for dry-run plan
+- **What Was Done**: Defined the `action-plan` agent skill governing a strict 4-artefact protocol (PLAN, EXECUTE, AUDIT, docs+commit) for all future feature shipping. Produced CI pipeline plan (4 phases) and dry-run flag plan (6 phases) as the first executed instances of the skill. Both include verbatim code, exact verify steps, and no fallback paths.
+- **Docs to Update**: TODO.md (when plans are executed)
+
 ## 2026-03-01 — Codebase Cleanup (Health Check Pt. 3)
 
 - **Task**: Execute all 8 phases of the ACTION_PLAN codebase cleanup
