@@ -2,7 +2,7 @@ import java.io.*;
 import java.text.Normalizer;
 
 /**
- * Shared binary utility methods used across ser-sync-pro and session-fixer.
+ * Shared binary utility methods used across cdd-sync-pro and session-fixer.
  * Consolidates duplicated readInt, readFile, writeFile, getFilename, and
  * formatSize methods.
  */

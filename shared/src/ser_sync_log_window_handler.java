@@ -2,7 +2,7 @@ import javax.swing.*;
 
 /**
  * Singleton handler for the log window.
- * In ser-sync-pro GUI mode, a ser_sync_pro_window is used instead.
+ * In cdd-sync-pro GUI mode, a ser_sync_pro_window is used instead.
  */
 public class ser_sync_log_window_handler {
 
@@ -11,7 +11,7 @@ public class ser_sync_log_window_handler {
 
     private ser_sync_log_window_handler() {
         if (window == null) {
-            window = new ser_sync_log_window("ser-sync-pro logging window", 700, 400);
+            window = new ser_sync_log_window("cdd-sync-pro logging window", 700, 400);
         }
     }
 
@@ -57,7 +57,7 @@ public class ser_sync_log_window_handler {
     }
 
     public boolean confirm(String message) {
-        int result = JOptionPane.showConfirmDialog(window, message, "ser-sync-pro",
+        int result = JOptionPane.showConfirmDialog(window, message, "cdd-sync-pro",
                 JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
         return result == JOptionPane.YES_OPTION;
     }

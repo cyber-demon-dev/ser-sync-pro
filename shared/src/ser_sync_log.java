@@ -4,7 +4,7 @@ import java.util.Date;
 import java.util.Scanner;
 
 /**
- * Logging utility for ser-sync-pro.
+ * Logging utility for cdd-sync-pro.
  * Supports GUI and command-line modes, with optional file logging.
  */
 public class ser_sync_log {
@@ -14,7 +14,7 @@ public class ser_sync_log {
     private static ser_sync_log_window_handler WINDOW_HANDLER;
     private static PrintWriter FILE_WRITER;
     private static PrintWriter DUPE_WRITER;
-    private static String LOG_FILE = "ser-sync-pro.log";
+    private static String LOG_FILE = "cdd-sync-pro.log";
     private static final String DUPE_FILE = "ser-sync-dupe-files.log";
     private static String LOG_DIR = null; // null = use CWD-relative "logs/"
 
@@ -220,10 +220,10 @@ public class ser_sync_log {
 
             // Create timestamped log filename
             String timestamp = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date());
-            String logPath = new File(logsDir, "ser-sync-pro-" + timestamp + ".log").getAbsolutePath();
+            String logPath = new File(logsDir, "cdd-sync-pro-" + timestamp + ".log").getAbsolutePath();
 
             FILE_WRITER = new PrintWriter(new FileWriter(logPath, false));
-            FILE_WRITER.println(getTimestamp() + " [INFO] ser-sync-pro started");
+            FILE_WRITER.println(getTimestamp() + " [INFO] cdd-sync-pro started");
             FILE_WRITER.flush();
             String dupeLogPath = new File(logsDir, "ser-sync-dupe-files-" + timestamp + ".log").getAbsolutePath();
             DUPE_WRITER = new PrintWriter(new FileWriter(dupeLogPath, false));
@@ -241,7 +241,7 @@ public class ser_sync_log {
 
     private static void closeLogFile() {
         if (FILE_WRITER != null) {
-            FILE_WRITER.println(getTimestamp() + " [INFO] ser-sync-pro finished");
+            FILE_WRITER.println(getTimestamp() + " [INFO] cdd-sync-pro finished");
             FILE_WRITER.close();
         }
         if (DUPE_WRITER != null) {
