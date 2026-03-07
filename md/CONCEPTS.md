@@ -1,4 +1,4 @@
-# Concepts & Glossary — ser-sync-pro
+# Concepts & Glossary — cdd-sync-pro
 
 Quick reference for domain-specific terms used in this project.
 

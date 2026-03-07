@@ -1,4 +1,4 @@
-# Agent Log — ser-sync-pro
+# Agent Log — cdd-sync-pro
 
 <!-- Newest entries go at the top, below this comment. Do NOT delete old entries. -->
 
@@ -8,9 +8,9 @@
 - **Files Changed**:
   - `.github/workflows/build.yml` [NEW] — GitHub Actions workflow: `ant test` on push/PR to `master`
   - `README.md` [MODIFIED] — CI badge added below `h1` heading
-  - `ser-sync-pro/src/ser_sync_config.java` [MODIFIED] — Added `dryRun` field, `isDryRun()`, `setDryRun()`
-  - `ser-sync-pro/src/ser_sync_main.java` [MODIFIED] — `main()` parses `--dry-run`; all 7 write sites in `runSync()` guarded with `[DRY RUN]` log output
-  - `ser-sync-pro/ser-sync.properties.template` [MODIFIED] — Appended `--dry-run` comment block (docs only, no new keys)
+  - `cdd-sync-pro/src/ser_sync_config.java` [MODIFIED] — Added `dryRun` field, `isDryRun()`, `setDryRun()`
+  - `cdd-sync-pro/src/ser_sync_main.java` [MODIFIED] — `main()` parses `--dry-run`; all 7 write sites in `runSync()` guarded with `[DRY RUN]` log output
+  - `cdd-sync-pro/ser-sync.properties.template` [MODIFIED] — Appended `--dry-run` comment block (docs only, no new keys)
   - `md/TODO.md` [MODIFIED] — Moved both CI and dry-run items to `## Done`
 - **What Was Done**: Executed two pre-written phased plans end-to-end. CI plan: 4 phases (workflow file, README badge, TODO update, commit+push). Dry-run plan: 6 phases (config getter/setter, arg parsing, 7 write-site guards, template docs, TODO update, commit+push). All 26 tests pass post-execution. Two clean commits pushed to `origin/master`.
 - **Docs to Update**: CHANGELOG.md (CI workflow is a user-facing feature worth logging)
@@ -33,14 +33,14 @@
 - **Task**: Execute all 8 phases of the ACTION_PLAN codebase cleanup
 - **Files Changed**:
   - `build.xml` [MODIFIED] — Test target Java 1.8→11, added `ser_sync_crate_test` class
-  - `ser-sync-pro/src/ser_sync_config.java` [MODIFIED] — try-with-resources constructor
+  - `cdd-sync-pro/src/ser_sync_config.java` [MODIFIED] — try-with-resources constructor
   - `session-fixer/src/session_fixer_config.java` [MODIFIED] — try-with-resources constructor
   - `shared/src/ser_sync_binary_utils.java` [MODIFIED] — Added `normalizePath()` + `normalizePathForDatabase()`
   - `shared/src/ser_sync_database.java` [MODIFIED] — Delegates normalization, removed unused import
-  - `ser-sync-pro/src/ser_sync_crate_scanner.java` [MODIFIED] — Delegates normalization, removed unused import
+  - `cdd-sync-pro/src/ser_sync_crate_scanner.java` [MODIFIED] — Delegates normalization, removed unused import
   - `shared/src/ser_sync_database_fixer.java` [MODIFIED] — Delegates normalization, otrk block indexing
-  - `ser-sync-pro/src/ser_sync_crate.java` [MODIFIED] — `getUniformTrackName()` delegates to shared util
-  - `ser-sync-pro/src/ser_sync_dupe_mover.java` [MODIFIED] — Static→instance state, removed verbose logging
+  - `cdd-sync-pro/src/ser_sync_crate.java` [MODIFIED] — `getUniformTrackName()` delegates to shared util
+  - `cdd-sync-pro/src/ser_sync_dupe_mover.java` [MODIFIED] — Static→instance state, removed verbose logging
   - `shared/src/ser_sync_media_library.java` [MODIFIED] — Regex→Set extension check
   - `session-fixer/src/session_fixer_main.java` [MODIFIED] — Removed `System.exit(0)`
   - `test/ser_sync_binary_utils_test.java` [MODIFIED] — Added 8 normalization tests
@@ -56,10 +56,10 @@
 
 - **Task**: Add dark-themed config panel matching Music Timestamp Agent style
 - **Files Changed**:
-  - `ser-sync-pro/src/ser_sync_pro_window.java` [NEW] — Full config + log GUI window (467 lines)
+  - `cdd-sync-pro/src/ser_sync_pro_window.java` [NEW] — Full config + log GUI window (467 lines)
   - `shared/src/ser_sync_log_window.java` [MODIFIED] — Refactored: protected fields, handler injection
-  - `ser-sync-pro/src/ser_sync_config.java` [MODIFIED] — Added Properties-based constructor + getProperties()
-  - `ser-sync-pro/src/ser_sync_main.java` [MODIFIED] — GUI/CLI branching, SwingWorker, cross-platform L&F
+  - `cdd-sync-pro/src/ser_sync_config.java` [MODIFIED] — Added Properties-based constructor + getProperties()
+  - `cdd-sync-pro/src/ser_sync_main.java` [MODIFIED] — GUI/CLI branching, SwingWorker, cross-platform L&F
 - **What Was Done**: Built interactive config window with path Browse buttons, sync option checkboxes, dupe management dropdowns, log output area, Start/Cancel buttons. Dark theme via Metal L&F. Settings load from and save back to `ser-sync.properties`. Base log window kept in `shared/` (Option A) so session-fixer is unaffected.
 - **New Concepts**: SwingWorker (background threading for Swing), Look and Feel (Metal vs Aqua)
 - **Docs to Update**: CHANGELOG, CODEBASE_GUIDE
@@ -69,23 +69,23 @@
 - **Task**: Move log output to volume; fix smart crate write always rewriting all crates
 - **Files Changed**:
   - `shared/src/ser_sync_log.java` [MODIFIED] — Added `setLogDirectory()` and `LOG_DIR` field
-  - `ser-sync-pro/src/ser_sync_main.java` [MODIFIED] — Calls `setLogDirectory()` with volume path
-  - `ser-sync-pro/src/ser_sync_crate.java` [MODIFIED] — `getColumns()` returns `unmodifiableList()` instead of `unmodifiableCollection()`
-- **What Was Done**: Fixed root cause of smart crate write always rewriting: `Collections.unmodifiableCollection()` doesn't override `equals()`, falling back to identity comparison. One-line fix to `unmodifiableList()`. Also added configurable log directory so logs write to `<volume>/ser-sync-pro/logs/`.
+  - `cdd-sync-pro/src/ser_sync_main.java` [MODIFIED] — Calls `setLogDirectory()` with volume path
+  - `cdd-sync-pro/src/ser_sync_crate.java` [MODIFIED] — `getColumns()` returns `unmodifiableList()` instead of `unmodifiableCollection()`
+- **What Was Done**: Fixed root cause of smart crate write always rewriting: `Collections.unmodifiableCollection()` doesn't override `equals()`, falling back to identity comparison. One-line fix to `unmodifiableList()`. Also added configurable log directory so logs write to `<volume>/cdd-sync-pro/logs/`.
 - **New Concepts**: None
 - **Docs to Update**: CHANGELOG
 
-## 2026-02-12 — Silo Restructure (shared/src + ser-sync-pro/src)
+## 2026-02-12 — Silo Restructure (shared/src + cdd-sync-pro/src)
 
 - **Task**: Restructure monolithic `src/` into three source directories mirroring the session-fixer silo pattern
 - **Files Changed**:
   - `shared/src/` [NEW] — 9 files moved from `src/` (ser_sync_backup, ser_sync_database, ser_sync_database_fixer, ser_sync_exception, ser_sync_input_stream, ser_sync_log, ser_sync_log_window, ser_sync_media_library, ser_sync_output_stream)
-  - `ser-sync-pro/src/` [NEW] — 11 files moved from `src/` (ser_sync_main, ser_sync_config, ser_sync_crate, ser_sync_crate_fixer, ser_sync_crate_scanner, ser_sync_database_entry_selector, ser_sync_dupe_mover, ser_sync_file_utils, ser_sync_library, ser_sync_pref_sorter, ser_sync_track_index)
+  - `cdd-sync-pro/src/` [NEW] — 11 files moved from `src/` (ser_sync_main, ser_sync_config, ser_sync_crate, ser_sync_crate_fixer, ser_sync_crate_scanner, ser_sync_database_entry_selector, ser_sync_dupe_mover, ser_sync_file_utils, ser_sync_library, ser_sync_pref_sorter, ser_sync_track_index)
   - `src/` [DELETED] — empty after moves
-  - `build.xml` [MODIFIED] — srcdir now compiles `shared/src:ser-sync-pro/src:session-fixer/src`
+  - `build.xml` [MODIFIED] — srcdir now compiles `shared/src:cdd-sync-pro/src:session-fixer/src`
   - `README.md` [MODIFIED] — Project Structure section updated
   - `md/CODEBASE_GUIDE.md` [MODIFIED] — Directory Structure section updated
-- **What Was Done**: Siloed the main sync tool's source files into `ser-sync-pro/src/`, extracted 9 shared classes into `shared/src/`, and updated the Ant build to compile from all three source directories. All 24 source files compile and both JARs build successfully.
+- **What Was Done**: Siloed the main sync tool's source files into `cdd-sync-pro/src/`, extracted 9 shared classes into `shared/src/`, and updated the Ant build to compile from all three source directories. All 24 source files compile and both JARs build successfully.
 - **New Concepts**: None
 - **Docs to Update**: README, CODEBASE_GUIDE (already updated), CHANGELOG
 

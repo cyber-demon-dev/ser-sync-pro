@@ -6,7 +6,7 @@ import java.io.*;
 import java.util.Properties;
 
 /**
- * Full config + log GUI window for ser-sync-pro.
+ * Full config + log GUI window for cdd-sync-pro.
  * Extends the base log window with interactive config controls.
  * Dark theme matching Music Timestamp Agent style.
  */
@@ -50,7 +50,7 @@ public class ser_sync_pro_window extends ser_sync_log_window {
     private Runnable onStartCallback;
 
     public ser_sync_pro_window() {
-        super("ser-sync-pro", 750, 700);
+        super("cdd-sync-pro", 750, 700);
 
         // Remove the default content from base class
         getContentPane().removeAll();
@@ -372,7 +372,7 @@ public class ser_sync_pro_window extends ser_sync_log_window {
     public void saveToFile() {
         Properties props = collectProperties();
         try (FileOutputStream out = new FileOutputStream(ser_sync_config.CONFIG_FILE)) {
-            props.store(out, "ser-sync-pro configuration");
+            props.store(out, "cdd-sync-pro configuration");
         } catch (IOException e) {
             ser_sync_log.error("Failed to save config: " + e.getMessage());
         }

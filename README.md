@@ -1,6 +1,6 @@
-# ser-sync-pro
+# cdd-sync-pro
 
-![Build](https://github.com/cyber-demon-dev/ser-sync-pro/actions/workflows/build.yml/badge.svg)
+![Build](https://github.com/cyber-demon-dev/cdd-sync-pro/actions/workflows/build.yml/badge.svg)
 
 Serato DJ crate synchronization tool — automatically sync your filesystem folders to Serato crates and more.
 
@@ -20,16 +20,16 @@ Based on [serato-sync](https://github.com/ralekseenkov/serato-sync-old/) by Roma
 - **Parent Crate Support**: Add synced folders as subcrates under existing Serato crates
 - **Alphabetical Crate Sorting**: Automatically sort crates A–Z in Serato via `neworder.pref`
 - **Duplicate File Scanner**: Logs duplicate files (same name + size) to `logs/ser-sync-dupe-files-<timestamp>.log`
-- **Duplicate File Mover**: Moves duplicate files to `ser-sync-pro/dupes/<timestamp>/` (choose to keep newest or oldest)
+- **Duplicate File Mover**: Moves duplicate files to `cdd-sync-pro/dupes/<timestamp>/` (choose to keep newest or oldest)
 - **Auto-Create Missing Folders**: Prompts to create `_Serato_` or parent crate if missing
 - **Broken Filepath Fixer**: Automatically repairs broken track paths in existing crates and database V2
 - **Session Fixer**: Standalone tool to fix broken paths in Serato `.session` history files
 - **Dry-Run Mode**: Preview a full sync without writing anything to disk (`--dry-run` CLI flag)
-- **Timestamped Logs**: All logs saved to `logs/ser-sync-pro-<timestamp>.log`
+- **Timestamped Logs**: All logs saved to `logs/cdd-sync-pro-<timestamp>.log`
 
 ## Quick Start
 
-1. Download the `distr/ser-sync-pro/` directory
+1. Download the `distr/cdd-sync-pro/` directory
 2. Edit `ser-sync.properties` to configure your paths:
 
    ```properties
@@ -37,7 +37,7 @@ Based on [serato-sync](https://github.com/ralekseenkov/serato-sync-old/) by Roma
    music.library.database=/Volumes/YourDrive/_Serato_
    ```
 
-3. Run: `java -jar ser-sync-pro.jar`
+3. Run: `java -jar cdd-sync-pro.jar`
 
 ## CLI Flags
 
@@ -49,7 +49,7 @@ Based on [serato-sync](https://github.com/ralekseenkov/serato-sync-old/) by Roma
 Example:
 
 ```bash
-java -jar ser-sync-pro.jar --dry-run
+java -jar cdd-sync-pro.jar --dry-run
 ```
 
 ## Configuration Options
@@ -88,23 +88,23 @@ The project uses Apache Ant for building. Available targets:
 
 | Target | Description |
 | ------ | ----------- |
-| `ant all` | Clean and build both `ser-sync-pro` and `session-fixer` |
+| `ant all` | Clean and build both `cdd-sync-pro` and `session-fixer` |
 | `ant compile` | Compile all Java source files |
-| `ant jar` | Package `ser-sync-pro` into a JAR |
+| `ant jar` | Package `cdd-sync-pro` into a JAR |
 | `ant session-fixer-jar` | Package `session-fixer` into a JAR |
-| `ant run` | Build and run `ser-sync-pro` |
+| `ant run` | Build and run `cdd-sync-pro` |
 | `ant session-fixer-run` | Build and run `session-fixer` |
 | `ant clean` | Remove all generated build artifacts |
 
 ### 3. Output Artifacts
 
-- **Main Sync Tool**: `distr/ser-sync-pro/ser-sync-pro.jar`
+- **Main Sync Tool**: `distr/cdd-sync-pro/cdd-sync-pro.jar`
 - **Session Fixer**: `distr/session-fixer/session-fixer.jar`
 
 ## Project Structure
 
 ```text
-ser-sync-pro/
+cdd-sync-pro/
 ├── shared/src/                     # Shared Java source files (used by both apps)
 │   ├── ser_sync_backup.java        # Timestamped backups of the _Serato_ folder
 │   ├── ser_sync_database.java      # Parses the Serato database V2 file
@@ -115,7 +115,7 @@ ser-sync-pro/
 │   ├── ser_sync_log_window.java    # GUI component for real-time logging
 │   ├── ser_sync_media_library.java # Scans the filesystem for supported media files
 │   └── ser_sync_output_stream.java # Helper for writing Serato's big-endian format
-├── ser-sync-pro/src/               # Main sync tool source files (silo)
+├── cdd-sync-pro/src/               # Main sync tool source files (silo)
 │   ├── ser_sync_main.java          # Primary entry point for the sync application
 │   ├── ser_sync_config.java        # Loads and manages configuration from ser-sync.properties
 │   ├── ser_sync_crate.java         # Core logic for reading and writing Serato .crate files
@@ -140,7 +140,7 @@ ser-sync-pro/
 
 ## How It Works
 
-1. **Backup**: Creates timestamped backup in `ser-sync-pro/backup/` folder
+1. **Backup**: Creates timestamped backup in `cdd-sync-pro/backup/` folder
 2. **Scan**: Reads your music library directory structure
 3. **Fix Paths** (optional): Repairs broken filepaths in existing crates and updates database V2
 4. **Deduplicate**: Skips tracks already in Serato database
