@@ -4,7 +4,7 @@ Developer documentation for the session-fixer standalone tool.
 
 ## Overview
 
-Session-fixer repairs broken file paths in Serato's `.session` history files. It's a standalone tool separate from the main ser-sync-pro application.
+Session-fixer repairs broken file paths in Serato's `.session` history files. It's a standalone tool separate from the main cdd-sync-pro application.
 
 ## Source Files
 

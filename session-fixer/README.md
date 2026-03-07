@@ -101,7 +101,7 @@ Fixed 166506 path entries across 539 session files.
 ## Building from Source
 
 ```bash
-cd /path/to/ser-sync-pro
+cd /path/to/cdd-sync-pro
 ant session-fixer-jar
 ```
 
@@ -172,4 +172,4 @@ if (fieldId == 0x02) {
 
 ## Related
 
-- **ser-sync-pro** - Main Serato crate sync tool (see [README.md](README.md))
+- **cdd-sync-pro** - Main Serato crate sync tool (see [README.md](README.md))
