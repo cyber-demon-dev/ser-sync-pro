@@ -15,7 +15,7 @@ public class cdd_sync_log {
     private static PrintWriter FILE_WRITER;
     private static PrintWriter DUPE_WRITER;
     private static String LOG_FILE = "cdd-sync-pro.log";
-    private static final String DUPE_FILE = "ser-sync-dupe-files.log";
+    private static final String DUPE_FILE = "cdd-sync-dupe-files.log";
     private static String LOG_DIR = null; // null = use CWD-relative "logs/"
 
     /**
@@ -225,7 +225,7 @@ public class cdd_sync_log {
             FILE_WRITER = new PrintWriter(new FileWriter(logPath, false));
             FILE_WRITER.println(getTimestamp() + " [INFO] cdd-sync-pro started");
             FILE_WRITER.flush();
-            String dupeLogPath = new File(logsDir, "ser-sync-dupe-files-" + timestamp + ".log").getAbsolutePath();
+            String dupeLogPath = new File(logsDir, "cdd-sync-dupe-files-" + timestamp + ".log").getAbsolutePath();
             DUPE_WRITER = new PrintWriter(new FileWriter(dupeLogPath, false));
         } catch (IOException e) {
             // Can't write log file - continue without it

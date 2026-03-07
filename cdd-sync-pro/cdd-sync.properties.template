@@ -28,7 +28,7 @@ database.dupe.detection.mode=filename
 crate.sorting.alphabetical=true
 
 # Scan for duplicate files on hard drive (default: true)
-# Identical files (same name and size) in different folders will be logged to logs/ser-sync-dupe-files-<timestamp>.log, nothing is deleted or removed.
+# Identical files (same name and size) in different folders will be logged to logs/cdd-sync-dupe-files-<timestamp>.log, nothing is deleted or removed.
 harddrive.dupe.scan.enabled=true
 
 # Move duplicate files: keep-newest, keep-oldest, or false (default: false)
