@@ -6,7 +6,6 @@ import java.util.Map;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.HashSet;
-import java.text.Normalizer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -48,10 +47,7 @@ public class session_fixer_core_logic {
             library.flattenTracks(tracks);
 
             for (String path : tracks) {
-                File f = new File(path);
-                String filename = f.getName();
-                // Normalize to NFC for consistent comparison
-                String normalizedKey = Normalizer.normalize(filename, Normalizer.Form.NFC).toLowerCase();
+                String normalizedKey = cdd_sync_binary_utils.getFilename(path);
                 libraryFiles.put(normalizedKey, path);
             }
             totalTracks += tracks.size();
@@ -114,10 +110,7 @@ public class session_fixer_core_logic {
                     totalBrokenPaths++;
 
                     // File is missing, try to find it in our library map
-                    String filename = trackFile.getName();
-                    // Strip nulls and normalize to NFC for consistent lookup
-                    filename = filename.replace("\u0000", "");
-                    String normalizedKey = Normalizer.normalize(filename, Normalizer.Form.NFC).toLowerCase();
+                    String normalizedKey = cdd_sync_binary_utils.getFilename(trackPath);
                     String fixedPath = libraryFiles.get(normalizedKey);
 
                     if (fixedPath != null && new File(fixedPath).exists()) {
@@ -285,8 +278,11 @@ public class session_fixer_core_logic {
                         deletedSessionNames.add(filename.replace(".session", ""));
                     }
                 }
+            } catch (cdd_sync_exception e) {
+                cdd_sync_log.error("Skipping unreadable session: " + sessionFile.getName() + " — " + e.getMessage());
             } catch (Exception e) {
-                // Skip files we can't parse
+                cdd_sync_log
+                        .error("Unexpected error reading session: " + sessionFile.getName() + " — " + e.getMessage());
             }
         }
 

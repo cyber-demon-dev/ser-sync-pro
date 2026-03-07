@@ -1,6 +1,5 @@
 import java.io.File;
 import java.io.FilenameFilter;
-import java.text.Normalizer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,7 +49,7 @@ public class cdd_sync_crate_fixer {
         for (String path : allTracks) {
             File f = new File(path);
             // Normalize filename to NFC for consistent matching
-            String filename = Normalizer.normalize(f.getName().toLowerCase(), Normalizer.Form.NFC);
+            String filename = cdd_sync_binary_utils.getFilename(path);
             libraryFiles.put(filename, path);
         }
 
@@ -196,33 +195,13 @@ public class cdd_sync_crate_fixer {
             }
 
             if (!exists) {
-                // Normalize to NFC for matching (database may use NFD for accented chars)
-                String filename = Normalizer.normalize(trackFile.getName().toLowerCase(), Normalizer.Form.NFC);
+                String filename = cdd_sync_binary_utils.getFilename(trackPath);
                 String fixedPath = libraryFiles.get(filename);
 
                 if (fixedPath != null && new File(fixedPath).exists()) {
                     String normalizedPath = fixedPath;
 
-                    // Try to preserve Serato's original filename encoding
-                    // Only update the directory path, keep filename exactly as stored in database
-                    if (database != null) {
-                        String originalFilename = database.getSeratoFilename(fixedPath);
-                        if (originalFilename != null) {
-                            // Get parent directory from the new filesystem location
-                            String newDir = new File(fixedPath).getParent();
-                            if (newDir != null) {
-                                // Strip volume root to make relative path
-                                if (volumeRoot != null && newDir.startsWith(volumeRoot)) {
-                                    newDir = newDir.substring(volumeRoot.length());
-                                    if (newDir.startsWith("/")) {
-                                        newDir = newDir.substring(1);
-                                    }
-                                }
-                                // Combine new directory with original filename encoding
-                                normalizedPath = newDir + "/" + originalFilename;
-                            }
-                        }
-                    }
+                    normalizedPath = cdd_sync_binary_utils.resolveSeratoPath(fixedPath, database);
 
                     if (!trackPath.equals(normalizedPath)) {
                         // Use database path as key if available (for exact byte matching in database

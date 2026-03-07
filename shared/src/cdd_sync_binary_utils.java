@@ -108,4 +108,28 @@ public class cdd_sync_binary_utils {
         path = path.replaceAll("^/Volumes/[^/]+/", "");
         return path;
     }
+
+    /**
+     * Resolves a track path using Serato's original filename encoding from the
+     * database.
+     * If the database has a Serato-encoded filename for this track, replaces the
+     * filesystem filename with the Serato version (preserving encoding for crate
+     * writes).
+     * Returns the original trackPath unchanged if db is null or no match found.
+     */
+    public static String resolveSeratoPath(String trackPath, cdd_sync_database db) {
+        if (db == null) {
+            return trackPath;
+        }
+        String seratoFilename = db.getSeratoFilename(trackPath);
+        if (seratoFilename == null) {
+            return trackPath;
+        }
+        java.io.File f = new java.io.File(trackPath);
+        String dir = f.getParent();
+        if (dir == null) {
+            return trackPath;
+        }
+        return dir + java.io.File.separator + seratoFilename;
+    }
 }
