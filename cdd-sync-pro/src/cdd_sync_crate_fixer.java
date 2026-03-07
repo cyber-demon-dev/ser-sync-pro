@@ -18,10 +18,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class cdd_sync_crate_fixer {
 
-    // Thread pool for parallel crate processing
-    private static final int NUM_THREADS = Runtime.getRuntime().availableProcessors();
-    private static final ExecutorService CRATE_POOL = Executors.newFixedThreadPool(NUM_THREADS);
-
     /**
      * Fixes broken paths in all .crate files in the given Serato directory.
      * Updates the database V2 file first to prevent duplicates, then updates
@@ -86,22 +82,27 @@ public class cdd_sync_crate_fixer {
         final int totalCrates = crateFiles.length;
         final AtomicInteger processedCount = new AtomicInteger(0);
 
-        for (File crateFile : crateFiles) {
-            futures.add(CRATE_POOL.submit(() -> {
-                processCrateFile(crateFile, libraryFiles, database, finalVolumeRoot, pathFixes, crateUpdates,
-                        seratoPath, dupeMoveMode);
-                int done = processedCount.incrementAndGet();
-                cdd_sync_log.progress("Checking crates for broken paths", done, totalCrates);
-            }));
-        }
-
-        // Wait for all crate processing to complete
-        for (Future<?> future : futures) {
-            try {
-                future.get();
-            } catch (InterruptedException | ExecutionException e) {
-                cdd_sync_log.error("Error processing crate: " + e.getMessage());
+        ExecutorService cratePool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+        try {
+            for (File crateFile : crateFiles) {
+                futures.add(cratePool.submit(() -> {
+                    processCrateFile(crateFile, libraryFiles, database, finalVolumeRoot, pathFixes, crateUpdates,
+                            seratoPath, dupeMoveMode);
+                    int done = processedCount.incrementAndGet();
+                    cdd_sync_log.progress("Checking crates for broken paths", done, totalCrates);
+                }));
             }
+
+            // Wait for all crate processing to complete
+            for (Future<?> future : futures) {
+                try {
+                    future.get();
+                } catch (InterruptedException | ExecutionException e) {
+                    cdd_sync_log.error("Error processing crate: " + e.getMessage());
+                }
+            }
+        } finally {
+            cratePool.shutdown();
         }
 
         cdd_sync_log.progressComplete("Checking crates");

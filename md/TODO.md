@@ -7,7 +7,6 @@
 ## Backlog
 
 - [ ] Document Windows-specific path handling and testing notes
-- [ ] Rename all `ser_sync_*` Java classes → `cdd_sync_*` (plan: `md/actions/RENAME_CLASSES_PLAN.md`)
 
 ## Ideas / Future
 
@@ -19,3 +18,4 @@
 
 - [x] Add CI pipeline (GitHub Actions) — `ant test` on push/PR to `master`
 - [x] Add `--dry-run` CLI flag — previews all sync actions, suppresses all disk writes
+- [x] Rename all `ser_sync_*` Java classes → `cdd_sync_*`

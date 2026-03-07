@@ -105,11 +105,4 @@ public class cdd_sync_backup {
         return source.length();
     }
 
-    /**
-     * Checks if backup is needed (always true for now, could add logic for
-     * incremental checks).
-     */
-    public static boolean isBackupNeeded(String seratoPath) {
-        return new File(seratoPath).exists();
-    }
 }

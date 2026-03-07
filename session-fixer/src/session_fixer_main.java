@@ -25,8 +25,7 @@ public class session_fixer_main {
             System.exit(1);
         }
 
-        // Initialize logging with session-fixer log file
-        cdd_sync_log.setLogFile("session-fixer.log");
+        // Initialize logging
         if (config.isGuiMode()) {
             cdd_sync_log.setMode(true);
         } else {
