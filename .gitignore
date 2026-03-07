@@ -36,6 +36,7 @@ dist/
 # ── Java / Ant ───────────────────────────────────────────────
 *.class
 *.jar
+!distr/**
 # (keep build.xml — that's source)
 
 # ── IDE — IntelliJ ───────────────────────────────────────────
