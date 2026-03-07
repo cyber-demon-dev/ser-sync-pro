@@ -26,10 +26,11 @@ This document provides a comprehensive overview of the **cdd-sync-pro** reposito
 - Provides smart deduplication and backup functionality
 - Supports alphabetical crate sorting
 
-The project contains **two distinct applications**:
+The project contains **two distinct Java applications** and one **Python companion tool**:
 
 1. **cdd-sync-pro** — Main sync tool (filesystem → Serato crates)
 2. **session-fixer** — Standalone tool to repair session file paths
+3. **s3-smart-sync** — S3 sync companion (Python, separate silo)
 
 ---
 
@@ -37,15 +38,20 @@ The project contains **two distinct applications**:
 
 ```text
 cdd-sync-pro/
-├── shared/src/                         # Shared source files (used by both apps, 9 files)
-├── cdd-sync-pro/src/                   # Main sync app source files (12 files)
-│   └── ser-sync.properties.template    # Config template for main sync tool
+├── shared/src/                         # Shared Java source (used by both apps, 12 files)
+├── cdd-sync-pro/src/                   # Main sync app source (12 files)
+│   └── cdd-sync.properties.template    # Config template for main sync tool
 ├── session-fixer/                      # Session-fixer silo (standalone tool)
 │   ├── src/                            # Session-fixer source files (4 files)
 │   ├── CODEBASE_GUIDE.md               # Developer docs for session-fixer
 │   ├── README.md                       # User docs for session-fixer
 │   └── session-fixer.properties.template
-├── build.xml                           # Apache Ant build script (compiles all 3 source dirs)
+├── s3-smart-sync/                      # S3 sync companion (Python)
+├── test/                               # JUnit 5 unit tests
+├── lib/                                # Test dependencies (JUnit platform JAR)
+├── md/                                 # Internal docs (CODEBASE_GUIDE, CHANGELOG, TODO, etc.)
+│   └── actions/                        # Phased action plans + audit trails
+├── build.xml                           # Apache Ant build script (compiles all 3 Java source dirs)
 ├── distr/                              # Distribution artifacts (generated)
 ├── out/                                # Compiled classes (generated)
 └── README.md                           # User documentation
@@ -57,14 +63,15 @@ cdd-sync-pro/
 
 | Module | Source Dir | Entry Point | Purpose | Key Dependencies |
 |--------|-----------|-------------|---------|------------------|
-| **Main Sync** | `cdd-sync-pro/src/` | `ser_sync_main.java` | Syncs filesystem to Serato crates | `ser_sync_config`, `ser_sync_media_library`, `ser_sync_library`, `ser_sync_crate` |
-| **Session Fixer** | `session-fixer/src/` | `session_fixer_main.java` | [See session-fixer/CODEBASE_GUIDE.md](session-fixer/CODEBASE_GUIDE.md) | Uses shared modules |
-| **Crate Management** | `cdd-sync-pro/src/` | `ser_sync_crate.java` | Read/write Serato `.crate` files | `ser_sync_input_stream`, `ser_sync_output_stream`, `ser_sync_database` |
-| **Database Parser** | `shared/src/` | `ser_sync_database.java` | Parse Serato `database V2` file | — |
-| **Media Library** | `shared/src/` | `ser_sync_media_library.java` | Scan filesystem for audio/video files | — |
-| **Path Fixers** | `cdd-sync-pro/src/` + `shared/src/` | `ser_sync_crate_fixer.java`, `ser_sync_database_fixer.java` | Repair broken paths | `ser_sync_media_library`, `ser_sync_database` |
-| **I/O Utilities** | `shared/src/` | `ser_sync_input_stream.java`, `ser_sync_output_stream.java` | Binary stream helpers for Serato format | — |
-| **Logging** | `shared/src/` | `ser_sync_log.java` | GUI/CLI logging, file output | `ser_sync_log_window` |
+| **Main Sync** | `cdd-sync-pro/src/` | `cdd_sync_main.java` | Syncs filesystem to Serato crates | `cdd_sync_config`, `cdd_sync_media_library`, `cdd_sync_library`, `cdd_sync_crate` |
+| **GUI Window** | `cdd-sync-pro/src/` | `cdd_sync_pro_window.java` | Dark-themed config + log window | `cdd_sync_log_window`, `cdd_sync_config` |
+| **Session Fixer** | `session-fixer/src/` | `session_fixer_main.java` | [See session-fixer/CODEBASE_GUIDE.md](../session-fixer/CODEBASE_GUIDE.md) | Uses shared modules |
+| **Crate Management** | `cdd-sync-pro/src/` | `cdd_sync_crate.java` | Read/write Serato `.crate` files | `cdd_sync_input_stream`, `cdd_sync_output_stream`, `cdd_sync_database` |
+| **Database Parser** | `shared/src/` | `cdd_sync_database.java` | Parse Serato `database V2` file | — |
+| **Media Library** | `shared/src/` | `cdd_sync_media_library.java` | Scan filesystem for audio/video files | — |
+| **Path Fixers** | `cdd-sync-pro/src/` + `shared/src/` | `cdd_sync_crate_fixer.java`, `cdd_sync_database_fixer.java` | Repair broken paths | `cdd_sync_media_library`, `cdd_sync_database` |
+| **I/O Utilities** | `shared/src/` | `cdd_sync_input_stream.java`, `cdd_sync_output_stream.java` | Binary stream helpers for Serato format | — |
+| **Logging** | `shared/src/` | `cdd_sync_log.java` | GUI/CLI logging, file output | `cdd_sync_log_window` |
 
 ---
 
@@ -72,54 +79,54 @@ cdd-sync-pro/
 
 ### 1. Main Entry Point (`cdd-sync-pro/src/`)
 
-#### `ser_sync_main.java`
+#### `cdd_sync_main.java`
 
 - **Purpose**: Main entry point for the crate sync application
 - **Modes**:
-  - **GUI mode** (default): Launches `ser_sync_pro_window` config panel, runs sync on SwingWorker background thread
-  - **CLI mode** (`mode=cmd`): Reads `ser-sync.properties` and runs sync directly
+  - **GUI mode** (default): Launches `cdd_sync_pro_window` config panel, runs sync on SwingWorker background thread
+  - **CLI mode** (`mode=cmd`): Reads `cdd-sync.properties` and runs sync directly
   - **Dry-run mode** (`--dry-run` arg, CLI only): Full sync logic runs but all 7 write sites are suppressed; each logs `[DRY RUN] Would have: ...`
 - **Dependencies**:
-  - `ser_sync_config` — Load configuration
-  - `ser_sync_pro_window` — Interactive config GUI (GUI mode only)
-  - `ser_sync_backup` — Create backups
-  - `ser_sync_media_library` — Scan filesystem
-  - `ser_sync_library` — Build crate hierarchy
-  - `ser_sync_crate_fixer` — Fix broken paths
-  - `ser_sync_track_index` — Deduplication
-  - `ser_sync_pref_sorter` — Crate sorting
+  - `cdd_sync_config` — Load configuration
+  - `cdd_sync_pro_window` — Interactive config GUI (GUI mode only)
+  - `cdd_sync_backup` — Create backups
+  - `cdd_sync_media_library` — Scan filesystem
+  - `cdd_sync_library` — Build crate hierarchy
+  - `cdd_sync_crate_fixer` — Fix broken paths
+  - `cdd_sync_track_index` — Deduplication
+  - `cdd_sync_pref_sorter` — Crate sorting
 - **Key Methods**:
   - `main(String[] args)` — Entry point, branches to GUI or CLI
   - `launchGui(config)` — Show config window, wire Start callback
   - `runSync(config)` — Core sync logic (shared by both modes)
   - `scanForHardDriveDuplicates()` — Log duplicate files
 
-#### `ser_sync_pro_window.java`
+#### `cdd_sync_pro_window.java`
 
 - **Purpose**: Dark-themed interactive config + log GUI window
-- **Extends**: `ser_sync_log_window` (shared base class)
+- **Extends**: `cdd_sync_log_window` (shared base class)
 - **Features**:
   - Path fields with Browse buttons (JFileChooser)
   - Sync Options panel: backup, skip existing, fix broken paths, sort crates, dedup mode
   - Duplicate Management panel: scan toggle, detection mode, move mode
   - Log Output area (dark JTextArea)
   - Start/Cancel buttons with state management
-  - Loads from / saves to `ser-sync.properties`
+  - Loads from / saves to `cdd-sync.properties`
 - **Theme**: Cross-platform Metal L&F with dark colors (`#3C3F41` background, `#1E1E1E` log area)
 
-> **Session Fixer**: Standalone silo at `session-fixer/src/`. See [session-fixer/CODEBASE_GUIDE.md](session-fixer/CODEBASE_GUIDE.md) for details.
+> **Session Fixer**: Standalone silo at `session-fixer/src/`. See [session-fixer/CODEBASE_GUIDE.md](../session-fixer/CODEBASE_GUIDE.md) for details.
 
 ---
 
 ### 2. Configuration (`cdd-sync-pro/src/`)
 
-#### `ser_sync_config.java`
+#### `cdd_sync_config.java`
 
-- **Purpose**: Loads settings from `ser-sync.properties` or from GUI-provided Properties
-- **Config File**: `ser-sync.properties` or `ser-sync.properties.txt`
+- **Purpose**: Loads settings from `cdd-sync.properties` or from GUI-provided Properties
+- **Config File**: `cdd-sync.properties` or `cdd-sync.properties.txt`
 - **Constructors**:
-  - `ser_sync_config()` — File-based (CLI mode)
-  - `ser_sync_config(Properties)` — Properties-based (GUI mode)
+  - `cdd_sync_config()` — File-based (CLI mode)
+  - `cdd_sync_config(Properties)` — Properties-based (GUI mode)
 - **Key Methods**:
   - `getProperties()` — Returns raw Properties for GUI pre-population
   - `getMusicLibraryPath()` — Filesystem path to music
@@ -137,25 +144,25 @@ cdd-sync-pro/
 
 ### 3. Crate Management (`cdd-sync-pro/src/`)
 
-#### `ser_sync_crate.java`
+#### `cdd_sync_crate.java`
 
 - **Purpose**: Read/write Serato `.crate` binary files
 - **Dependencies**:
-  - `ser_sync_input_stream`, `ser_sync_output_stream` — Binary I/O
-  - `ser_sync_database` — Path encoding lookup
+  - `cdd_sync_input_stream`, `cdd_sync_output_stream` — Binary I/O
+  - `cdd_sync_database` — Path encoding lookup
 - **Binary Format**: UTF-16BE encoded, `vrsn`/`otrk`/`ptrk` tags
 - **Key Methods**:
   - `readFrom(File)` — Parse existing crate file
   - `writeTo(File)` — Write crate to disk
   - `addTrack(String)` / `addTracks(Collection)` — Add tracks
-  - `setDatabase(ser_sync_database)` — Set path encoding reference
+  - `setDatabase(cdd_sync_database)` — Set path encoding reference
 
-#### `ser_sync_library.java`
+#### `cdd_sync_library.java`
 
 - **Purpose**: Build Serato crate hierarchy from filesystem structure
-- **Dependencies**: `ser_sync_crate`, `ser_sync_media_library`, `ser_sync_track_index`
+- **Dependencies**: `cdd_sync_crate`, `cdd_sync_media_library`, `cdd_sync_track_index`
 - **Key Methods**:
-  - `createFrom(ser_sync_media_library, parentCratePath, trackIndex)` — Build crate tree
+  - `createFrom(cdd_sync_media_library, parentCratePath, trackIndex)` — Build crate tree
   - `writeTo(seratoPath, clearFirst)` — Smart write: checks existing crate content on disk and only updates if changed
   - `getAllCrateNames()` — Get crate names for sorting
 
@@ -163,7 +170,7 @@ cdd-sync-pro/
 
 ### 4. Database Parsing (`shared/src/`)
 
-#### `ser_sync_database.java`
+#### `cdd_sync_database.java`
 
 - **Purpose**: Parse Serato `database V2` file
 - **Binary Format**: `vrsn` header, `otrk` blocks, `pfil`/`tsiz` tags
@@ -173,13 +180,13 @@ cdd-sync-pro/
   - `containsTrackByFilename(trackPath, fileSize)` — Filename-based lookup
   - `getOriginalPathByFilename(trackPath)` — Get exact database encoding
 
-> **Session Parsing**: Moved to `session-fixer/src/session_fixer_parser.java`. See [session-fixer/CODEBASE_GUIDE.md](session-fixer/CODEBASE_GUIDE.md).
+> **Session Parsing**: In `session-fixer/src/session_fixer_parser.java`. See [session-fixer/CODEBASE_GUIDE.md](../session-fixer/CODEBASE_GUIDE.md).
 
 ---
 
 ### 5. Path Fixers (`cdd-sync-pro/src/` + `shared/src/`)
 
-#### `ser_sync_crate_fixer.java`
+#### `cdd_sync_crate_fixer.java`
 
 - **Purpose**: Fix broken paths in `.crate` files and sync database V2
 - **Features**:
@@ -187,13 +194,13 @@ cdd-sync-pro/
   - Looks up correct path by filename in the media library
   - Uses database path as search key for exact byte matching
   - Syncs database V2 when crate paths differ from database paths (prevents Serato duplicates)
-- **Dependencies**: `ser_sync_media_library`, `ser_sync_database`, `ser_sync_database_fixer`
+- **Dependencies**: `cdd_sync_media_library`, `cdd_sync_database`, `cdd_sync_database_fixer`
 - **Key Methods**:
   - `fixBrokenPaths(seratoPath, library, database)` — Scan and fix all crates + update database
 
-> **Session Fixer**: Moved to `session-fixer/src/session_fixer_core_logic.java`. See [session-fixer/CODEBASE_GUIDE.md](session-fixer/CODEBASE_GUIDE.md).
+> **Session Fixer**: In `session-fixer/src/session_fixer_core_logic.java`. See [session-fixer/CODEBASE_GUIDE.md](../session-fixer/CODEBASE_GUIDE.md).
 
-#### `ser_sync_database_fixer.java`
+#### `cdd_sync_database_fixer.java`
 
 - **Purpose**: Update paths in Serato `database V2` file
 - **Performance**: Pre-builds an otrk block index for O(K) parent lookup instead of O(N) per-call scanning. Index is rebuilt only when path length changes cause array resizing.
@@ -205,7 +212,7 @@ cdd-sync-pro/
 
 ### 6. Supporting Modules (mixed)
 
-#### `ser_sync_media_library.java`
+#### `cdd_sync_media_library.java`
 
 - **Purpose**: Scan filesystem for supported audio/video files
 - **Supported Formats**: mp3, flac, wav, ogg, aif, aiff, aac, alac, m4a, mov, mp4, avi, flv, mpg, mpeg, dv, qtz
@@ -216,35 +223,35 @@ cdd-sync-pro/
   - `getTracks()` / `getChildren()` — Get tracks and subdirectories
   - `flattenTracks(List)` — Get all tracks as flat list
 
-#### `ser_sync_crate_scanner.java`
+#### `cdd_sync_crate_scanner.java`
 
 - **Purpose**: Scan existing `.crate` files for track paths
 - **Key Methods**:
   - `scanFrom(seratoPath)` — Parse all crates in Subcrates folder
   - `containsTrackByPath()` / `containsTrackByFilename()` — Lookup methods
 
-#### `ser_sync_track_index.java`
+#### `cdd_sync_track_index.java`
 
 - **Purpose**: Unified track index for deduplication
-- **Dependencies**: `ser_sync_database`, `ser_sync_crate_scanner`
+- **Dependencies**: `cdd_sync_database`, `cdd_sync_crate_scanner`
 - **Modes**: `path`, `filename`, `off`
 - **Key Methods**:
   - `createFrom(seratoPath, mode)` — Build index from database + crates
   - `shouldSkipTrack(trackPath, fileSize)` — Check for duplicates
 
-#### `ser_sync_backup.java`
+#### `cdd_sync_backup.java`
 
 - **Purpose**: Create timestamped backups of `_Serato_` folder
 - **Key Methods**:
   - `createBackup(seratoPath)` — Create full backup
 
-#### `ser_sync_pref_sorter.java`
+#### `cdd_sync_pref_sorter.java`
 
 - **Purpose**: Sort crates alphabetically via `neworder.pref`
 - **Key Methods**:
   - `sort(seratoPath)` — Recreate `neworder.pref` with sorted crates
 
-#### `ser_sync_dupe_mover.java`
+#### `cdd_sync_dupe_mover.java`
 
 - **Purpose**: Scan for duplicate files and move copies to a timestamped folder
 - **Architecture**: Instance-based state. The static `scanAndMoveDuplicates()` API creates an internal instance to avoid re-entrant state bugs from static mutable fields.
@@ -254,7 +261,7 @@ cdd-sync-pro/
 - **Detection Strategies**: Supports `name-and-size` (strict) or `name-only` (catches different versions/edits with same name)
 - **Output**: `cdd-sync-pro/dupes/<timestamp>/dupes.log` + moved files with preserved paths
 - **Flow**: Runs early in sync process (before crate building), triggers library rescan after moving
-- **Dependencies**: `ser_sync_media_library`, `ser_sync_log`, `ser_sync_config`
+- **Dependencies**: `cdd_sync_media_library`, `cdd_sync_log`, `cdd_sync_config`
 - **Key Methods**:
   - `scanAndMoveDuplicates(musicLibraryRoot, library, detectionMode, moveMode)` — Static entry point (creates instance internally)
   - `processDuplicateGroup()` — Instance method: keeps one file based on moveMode, moves the rest
@@ -263,47 +270,47 @@ cdd-sync-pro/
 
 ---
 
-### 7. Utility Classes (`shared/src/` unless noted)
+### 7. Utility Classes (`shared/src/`)
 
-#### `ser_sync_binary_utils.java`
+#### `cdd_sync_binary_utils.java`
 
 - Shared binary utility methods: `readInt`, `readFile`, `writeFile`, `getFilename`, `getRawFilename`, `formatSize`
 - **Path normalization** (consolidated from 4 duplicated implementations):
   - `normalizePath(path)` — Lowercase, NFC, strips volume/drive prefix. For comparison.
   - `normalizePathForDatabase(path)` — Case-preserving, strips volume/drive prefix. For database/crate writes.
 
-#### `ser_sync_input_stream.java`
+#### `cdd_sync_input_stream.java`
 
 - Extended `DataInputStream` for reading Serato binary format
 - UTF-16BE string reading, integer/long value parsing
 
-#### `ser_sync_output_stream.java`
+#### `cdd_sync_output_stream.java`
 
 - Extended `DataOutputStream` for writing Serato binary format
 - UTF-16 string writing, long value serialization
 
-#### `ser_sync_log.java` / `ser_sync_log_window.java`
+#### `cdd_sync_log.java` / `cdd_sync_log_window.java` / `cdd_sync_log_window_handler.java`
 
 - Logging with GUI and CLI support
 - Configurable log directory via `setLogDirectory()` — defaults to `<volume>/cdd-sync-pro/logs/`
 - Timestamped logs to `cdd-sync-pro-<timestamp>.log`
-- Duplicate file logging to `ser-sync-dupe-files-<timestamp>.log`
-- `ser_sync_log_window` is the shared base class (protected fields for subclassing)
-- `ser_sync_log_window_handler` supports custom window injection via `install()`
+- `cdd_sync_log_window` is the shared base class (protected fields for subclassing)
+- `cdd_sync_log_window_handler` — `java.util.logging` handler bridging to the GUI log window; installed via `install()`
 
-#### `ser_sync_file_utils.java`
+#### `cdd_sync_exception.java` / `cdd_sync_fatal_exception.java`
 
-- Simple file utility methods
+- `cdd_sync_exception` — Recoverable custom exception
+- `cdd_sync_fatal_exception` — Unrecoverable custom exception (aborts sync)
 
-#### `ser_sync_exception.java`
+#### `cdd_sync_file_utils.java`
 
-- Custom exception class
+- Simple file system utility methods (in `cdd-sync-pro/src/`)
 
 ---
 
 ## Configuration Files
 
-### `ser-sync.properties`
+### `cdd-sync.properties`
 
 ```properties
 mode=gui                                    # gui or cmd
@@ -312,7 +319,7 @@ music.library.database=/Volumes/Drive/_Serato_  # Target Serato folder
 music.library.database.backup=true          # Enable backup
 crate.parent.path=Sync                      # Optional parent crate
 database.fix.broken.paths=false             # Fix broken paths
-database.skip.existing.tracks=true            # Skip duplicates
+database.skip.existing.tracks=true          # Skip duplicates
 database.dupe.detection.mode=filename       # path, filename, or off
 crate.sorting.alphabetical=false            # Sort crates A-Z
 harddrive.dupe.scan.enabled=true            # Master switch for dupe features
@@ -334,7 +341,7 @@ session.min.duration=                       # Min session length (minutes)
 
 ## Serato Data Reference
 
-### Directory Structure (`temp/symlinks/_serato_/`)
+### Directory Structure (`_Serato_/`)
 
 | Path | Description |
 |------|-------------|
@@ -388,8 +395,8 @@ ant run      # Build and run cdd-sync-pro
 
 ### Test Suite
 
-- `test/ser_sync_binary_utils_test.java` — Tests for readInt, getFilename, getRawFilename, formatSize, readFile/writeFile, normalizePath, normalizePathForDatabase
-- `test/ser_sync_crate_test.java` — Crate read/write round-trip tests (empty, populated, track order)
+- `test/cdd_sync_binary_utils_test.java` — Tests for readInt, getFilename, getRawFilename, formatSize, readFile/writeFile, normalizePath, normalizePathForDatabase
+- `test/cdd_sync_crate_test.java` — Crate read/write round-trip tests (empty, populated, track order)
 
 ### Output Artifacts
 
@@ -403,26 +410,26 @@ ant run      # Build and run cdd-sync-pro
 ### Sync Flow (cdd-sync-pro)
 
 ```text
-ser_sync_config
+cdd_sync_config
        |
        v
-ser_sync_backup ──────────────> cdd-sync-pro/backup/
+cdd_sync_backup ──────────────> <volume>/cdd-sync-pro/backup/
        |
        v
-ser_sync_media_library ───────> Audio/Video files
+cdd_sync_media_library ───────> Audio/Video files
        |
        v
-ser_sync_dupe_mover ──────────> cdd-sync-pro/dupes/<timestamp>/
+cdd_sync_dupe_mover ──────────> cdd-sync-pro/dupes/<timestamp>/
        |                        (if harddrive.dupe.move.enabled=true)
        | (removes moved files from library)
        v
-ser_sync_track_index <───────── ser_sync_database
-       |                        ser_sync_crate_scanner
+cdd_sync_track_index <───────── cdd_sync_database
+       |                        cdd_sync_crate_scanner
        v
-ser_sync_library ─────────────> .crate files (no broken paths!)
+cdd_sync_library ─────────────> .crate files (no broken paths!)
        |
        v
-ser_sync_pref_sorter ─────────> neworder.pref
+cdd_sync_pref_sorter ─────────> neworder.pref
 ```
 
 ### Session Fix Flow (session-fixer)
@@ -431,32 +438,32 @@ ser_sync_pref_sorter ─────────> neworder.pref
 session_fixer_config
        |
        v
-ser_sync_backup ──────────────> Backup created
+cdd_sync_backup ──────────────> Backup created
        |
        v
-ser_sync_media_library ───────> File lookup table
+cdd_sync_media_library ───────> File lookup table
        |
        v
-ser_sync_session_fixer ───────> Updated .session files
-                                Updated database V2
+session_fixer_core_logic ─────> Updated .session files
+                                 Updated database V2
 ```
 
 ---
 
 ## Summary
 
-This codebase contains two main applications sharing common infrastructure:
+This codebase contains two main Java applications sharing common infrastructure:
 
 1. **cdd-sync-pro**: Syncs filesystem structure to Serato crates
 2. **session-fixer**: Repairs broken paths in Serato session files
 
-**Core shared modules**:
+**Core shared modules** (`shared/src/`):
 
-- Binary parsers: `ser_sync_crate`, `ser_sync_database`
+- Binary parsers: `cdd_sync_crate`, `cdd_sync_database`
 - Session parsing: `session-fixer/src/session_fixer_parser.java` (in session-fixer silo)
-- Media scanning: `ser_sync_media_library`
-- Path fixing: `ser_sync_crate_fixer`, `ser_sync_database_fixer`
-- Utilities: `ser_sync_backup`, `ser_sync_log`, `ser_sync_track_index`
+- Media scanning: `cdd_sync_media_library`
+- Path fixing: `cdd_sync_crate_fixer`, `cdd_sync_database_fixer`
+- Utilities: `cdd_sync_backup`, `cdd_sync_log`, `cdd_sync_track_index`
 
 All modules are designed to work with Serato's proprietary binary formats using UTF-16BE encoding.
 
@@ -474,10 +481,10 @@ All modules are designed to work with Serato's proprietary binary formats using 
 - Database updates not matching existing entries
 - Potential duplicate track entries
 
-**Solution Applied**: Path normalization is now consolidated in `ser_sync_binary_utils`:
+**Solution Applied**: Path normalization is now consolidated in `cdd_sync_binary_utils`:
 
 - `normalizePath()` — NFC + lowercase for comparison across sources
-- `normalizePathForDatabase()` — Case-preserving for crate/database writes (used by `ser_sync_crate.getUniformTrackName()` and `ser_sync_database_fixer`)
+- `normalizePathForDatabase()` — Case-preserving for crate/database writes (used by `cdd_sync_crate.getUniformTrackName()` and `cdd_sync_database_fixer`)
 - `addTrack()` checks the database for existing filename encoding and uses Serato's original encoding when adding tracks to crates, preventing duplicate database entries from NFC/NFD mismatches
 
 ### Serato Duplicate Track Creation
@@ -506,7 +513,7 @@ All modules are designed to work with Serato's proprietary binary formats using 
 
 ### Smart Crate Writing
 
-To avoid unnecessary disk I/O and redundant log messages, `ser_sync_library` implements "Smart Crate Writing":
+To avoid unnecessary disk I/O and redundant log messages, `cdd_sync_library` implements "Smart Crate Writing":
 
 1. Before writing a crate, it reads the existing `.crate` file from disk (if present).
 2. It compares the in-memory crate with the on-disk crate using a robust `equals()` method.

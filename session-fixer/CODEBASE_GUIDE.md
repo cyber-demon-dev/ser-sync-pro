@@ -27,15 +27,15 @@ graph TD
         L --> P[session_fixer_parser]
     end
     
-    subgraph "Shared Utilities (src/)"
-        M --> LOG[ser_sync_log]
-        M --> BACKUP[ser_sync_backup]
-        M --> MEDIA[ser_sync_media_library]
+    subgraph "Shared Utilities (shared/src/)"
+        M --> LOG[cdd_sync_log]
+        M --> BACKUP[cdd_sync_backup]
+        M --> MEDIA[cdd_sync_media_library]
         L --> LOG
         L --> MEDIA
-        L --> DB[ser_sync_database]
-        L --> DBF[ser_sync_database_fixer]
-        P --> EXC[ser_sync_exception]
+        L --> DB[cdd_sync_database]
+        L --> DBF[cdd_sync_database_fixer]
+        P --> EXC[cdd_sync_exception]
     end
 ```
 
@@ -85,12 +85,12 @@ Binary parser for `.session` files:
 
 | Utility | Used For |
 |---------|----------|
-| `ser_sync_log` | Logging |
-| `ser_sync_backup` | Creating _Serato_ backups |
-| `ser_sync_media_library` | Scanning music folders |
-| `ser_sync_database` | Reading database V2 paths |
-| `ser_sync_database_fixer` | Updating database V2 paths |
-| `ser_sync_exception` | Custom exceptions |
+| `cdd_sync_log` | Logging |
+| `cdd_sync_backup` | Creating _Serato_ backups |
+| `cdd_sync_media_library` | Scanning music folders |
+| `cdd_sync_database` | Reading database V2 paths |
+| `cdd_sync_database_fixer` | Updating database V2 paths |
+| `cdd_sync_exception` | Custom exceptions |
 
 ---
 

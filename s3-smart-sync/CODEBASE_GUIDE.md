@@ -19,7 +19,8 @@ s3-smart-sync/
 ├── archive_handler.py   # Glacier/Deep Archive restore tracking
 ├── logger.py            # Timestamped logging to logs/ folder
 ├── requirements.txt     # Python dependencies (boto3)
-└── README.md            # User documentation
+├── README.md            # User documentation
+└── CODEBASE_GUIDE.md    # Developer documentation (this file)
 ```
 
 ## Module Reference
@@ -91,21 +92,31 @@ Boto3 wrapper for S3 operations.
 | `upload_file()` | Upload local file to S3 |
 | `delete_object()` | Delete single object |
 | `delete_objects()` | Batch delete (up to 1000) |
-| `move_object()` | **Server-side copy+delete** (detects archived objects) |
-| `list_objects()` | List bucket contents |
+| `move_object()` | **Server-side copy+delete** — returns `'success'`, `'archived'`, or `'error'` |
+| `move_objects()` | Batch version of `move_object()` — returns count of successful moves |
+| `list_objects()` | List bucket contents — returns `Dict[key, S3Object]` |
+| `object_exists()` | Check whether an object key exists in the bucket |
 | `restore_object()` | Initiate Glacier/Deep Archive restore |
-| `get_restore_status()` | Check restore progress |
+| `get_restore_status()` | Check restore progress — returns storage class + restore status |
 
 ### diff_engine.py
 
 Computes sync plan by comparing current vs previous state.
 
-**Logic:**
+| Class | Purpose |
+|-------|---------|
+| `SyncAction` | Dataclass: `action_type`, `path`, `old_path`, `local_abs_path` |
+| `SyncPlan` | Container of `moves`, `uploads`, `deletes` lists; has `summary()` |
+| `DiffEngine` | Compares current scan vs database + S3 state to produce a `SyncPlan` |
+| `create_diff_engine()` | Factory function for `DiffEngine` |
+
+**`DiffEngine.compute_plan()` logic:**
 
 1. Match inodes between current scan and database
-2. Same inode + different path → **Move**
-3. New inode → **Upload**
-4. Missing from local (with `--delete`) → **Delete**
+2. Same inode + different path → **Move** (only if old path exists in S3)
+3. New inode, not in S3 → **Upload**
+4. Modified (size or mtime changed) → **Upload**
+5. In S3 but not local (with `delete_orphans=True`) → **Delete**
 
 ### archive_handler.py
 

@@ -2,6 +2,16 @@
 
 <!-- Newest entries go at the top, below this comment. Do NOT delete old entries. -->
 
+## 2026-03-07 — Docs Refresh: README + md/
+
+- **Task**: Refresh `README.md` and all `md/` documentation files to match current codebase state
+- **Files Changed**:
+  - `README.md` [MODIFIED] — Corrected all `ser_sync_*` → `cdd_sync_*` filename references; added 3 new shared files (`cdd_sync_binary_utils`, `cdd_sync_fatal_exception`, `cdd_sync_log_window_handler`); added `cdd_sync_pro_window.java`; added `ant test` build target; corrected properties filename to `cdd-sync.properties`; updated log path; added GUI Config Window feature bullet; updated project structure tree (added `s3-smart-sync/`, `md/`, `test/`, `lib/`)
+  - `md/CODEBASE_GUIDE.md` [MODIFIED] — Corrected all `ser_sync_*` → `cdd_sync_*` references throughout; updated directory structure, module table, data flow diagrams, utility classes section, config filenames, and cross-reference links; split logging section to cover all 3 log classes; added `cdd_sync_fatal_exception`
+  - `md/CONCEPTS.md` [MODIFIED] — Corrected `ser_sync_track_index` → `cdd_sync_track_index`
+- **What Was Done**: Audited all `md/` files and README against actual on-disk source file listing. `TODO.md`, `DATABASE_GUIDE.md` were current; no changes needed there.
+- **Docs to Update**: None
+
 ## 2026-03-07 — Audit #1 Fixes — Action Plan for Another Agent
 
 - **Task**: Produce `AUDIT_FIXES_PLAN.md`, `EXECUTE.md`, and `AUDIT_FIXES_AUDIT.md` for five findings from Audit #1 of cdd-sync-pro
