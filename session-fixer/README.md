@@ -172,4 +172,4 @@ if (fieldId == 0x02) {
 
 ## Related
 
-- **cdd-sync-pro** - Main Serato crate sync tool (see [README.md](README.md))
+- **cdd-sync-pro** - Main Serato crate sync tool (see [README.md](../README.md))

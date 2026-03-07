@@ -19,5 +19,5 @@ Quick reference for domain-specific terms used in this project.
 | **`neworder.pref`** | A Serato config file that controls the display order of crates in the sidebar. |
 | **Parent Crate** | An optional crate under which all synced folders appear as subcrates. |
 | **Smart Crate Writing** | Optimization that reads existing crate content before writing; skips write if unchanged. |
-| **Track Index** | In-memory lookup (`ser_sync_track_index`) combining database + crate data for deduplication. |
+| **Track Index** | In-memory lookup (`cdd_sync_track_index`) combining database + crate data for deduplication. |
 | **Dupe Mover** | Feature that detects duplicate files on disk and moves copies to a timestamped safety folder. |
