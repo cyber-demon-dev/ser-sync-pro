@@ -2,6 +2,30 @@
 
 <!-- Newest entries go at the top, below this comment. Do NOT delete old entries. -->
 
+## 2026-03-06 — Project Rename: ser-sync-pro → cdd-sync-pro
+
+- **Task**: Execute `RENAME_TO_CDD_SYNC_PRO.md` — full product rename across source silo, build system, Java runtime strings, IDE project files, and all documentation
+- **Files Changed**:
+  - `ser-sync-pro/` → `cdd-sync-pro/` [RENAMED] — Source silo directory (13 files inside, all tracked)
+  - `build.xml` [MODIFIED] — Project name, src/build/dist dirs, jar name, classpaths (11 replacements)
+  - `cdd-sync-pro/src/ser_sync_main.java` [MODIFIED] — Log dir path + startup message
+  - `cdd-sync-pro/src/ser_sync_dupe_mover.java` [MODIFIED] — `DUPES_FOLDER` constant + Javadoc comment
+  - `cdd-sync-pro/src/ser_sync_pro_window.java` [MODIFIED] — Window title + config comment + Javadoc
+  - `cdd-sync-pro/ser-sync.properties.template` [MODIFIED] — `--dry-run` example JAR name
+  - `distr/ser-sync-pro/ser-sync.properties` [MODIFIED] — Comment header
+  - `.project` [MODIFIED] — Eclipse `<name>` tag
+  - `.classpath` [MODIFIED] — Eclipse classpath output path
+  - `README.md` [MODIFIED] — Title, badge URL, paths, JAR names, directory tree (~15 occurrences)
+  - `md/CODEBASE_GUIDE.md` [MODIFIED] — All path and product name references (~20 occurrences)
+  - `md/AGENT_LOG.md` [MODIFIED] — Historical file path references (18 occurrences)
+  - `md/CHANGELOG.md` [MODIFIED] — Product name references
+  - `md/TODO.md` [MODIFIED] — Header
+  - `md/CONCEPTS.md` [MODIFIED] — Header
+  - `md/DATABASE_GUIDE.md` [MODIFIED] — Link text
+  - `md/actions/RENAME_TO_CDD_SYNC_PRO.md` [NEW] — The rename plan itself
+- **What Was Done**: Executed all agent-executable phases of the rename plan (Phases 1–7). Phase 1: renamed source silo directory. Phases 2–6: surgically updated build.xml, 3 Java source files, properties template, generated artifact, and IDE project files. Phase 5: mass sed-replaced all 6 doc files + README. Phase 7: `ant clean && ant all && ant test` — BUILD SUCCESSFUL, 26/26 tests pass, `distr/cdd-sync-pro/cdd-sync-pro.jar` confirmed present. Committed and pushed to origin.
+- **Docs to Update**: None — all updated in this session. M1 (GitHub repo rename) and M2 (remote URL update) are manual steps pending user action.
+
 ## 2026-03-06 — Execute CI Pipeline + Dry-Run Plans
 
 - **Task**: Execute `CI_PIPELINE_PLAN.md` and `DRY_RUN_PLAN.md` per `EXECUTE.md` protocol — all phases in order, one file per phase, verified after each
