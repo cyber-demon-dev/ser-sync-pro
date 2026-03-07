@@ -12,7 +12,7 @@ import java.util.ArrayList;
  * Recursively scans directories for supported audio/video files.
  * Uses parallel processing for faster scanning on multi-core systems.
  */
-public class ser_sync_media_library implements Comparable<ser_sync_media_library> {
+public class cdd_sync_media_library implements Comparable<cdd_sync_media_library> {
 
     private static final Set<String> MEDIA_EXTENSIONS = Set.of(
             ".mp3", ".flac", ".wav", ".ogg", ".aif", ".aiff", ".aac", ".alac", ".m4a",
@@ -24,9 +24,9 @@ public class ser_sync_media_library implements Comparable<ser_sync_media_library
 
     private String directory;
     private SortedSet<String> tracks = new TreeSet<String>();
-    private SortedSet<ser_sync_media_library> children = new TreeSet<ser_sync_media_library>();
+    private SortedSet<cdd_sync_media_library> children = new TreeSet<cdd_sync_media_library>();
 
-    public ser_sync_media_library(String directory) {
+    public cdd_sync_media_library(String directory) {
         this.directory = directory;
     }
 
@@ -38,13 +38,13 @@ public class ser_sync_media_library implements Comparable<ser_sync_media_library
         return tracks;
     }
 
-    public SortedSet<ser_sync_media_library> getChildren() {
+    public SortedSet<cdd_sync_media_library> getChildren() {
         return children;
     }
 
     public int getTotalNumberOfTracks() {
         int result = tracks.size();
-        for (ser_sync_media_library childLibrary : children) {
+        for (cdd_sync_media_library childLibrary : children) {
             result += childLibrary.getTotalNumberOfTracks();
         }
         return result;
@@ -52,7 +52,7 @@ public class ser_sync_media_library implements Comparable<ser_sync_media_library
 
     public int getTotalNumberOfDirectories() {
         int result = children.size();
-        for (ser_sync_media_library childLibrary : children) {
+        for (cdd_sync_media_library childLibrary : children) {
             result += childLibrary.getTotalNumberOfDirectories();
         }
         return result;
@@ -60,7 +60,7 @@ public class ser_sync_media_library implements Comparable<ser_sync_media_library
 
     public void flattenTracks(java.util.List<String> list) {
         list.addAll(tracks);
-        for (ser_sync_media_library child : children) {
+        for (cdd_sync_media_library child : children) {
             child.flattenTracks(list);
         }
     }
@@ -86,15 +86,15 @@ public class ser_sync_media_library implements Comparable<ser_sync_media_library
         }
 
         // Remove from children recursively
-        for (ser_sync_media_library child : children) {
+        for (cdd_sync_media_library child : children) {
             removed += child.removeTracks(pathsToRemove);
         }
 
         return removed;
     }
 
-    public static ser_sync_media_library readFrom(String mediaLibraryPath) {
-        ser_sync_media_library result = new ser_sync_media_library(".");
+    public static cdd_sync_media_library readFrom(String mediaLibraryPath) {
+        cdd_sync_media_library result = new cdd_sync_media_library(".");
         result.collectAll(mediaLibraryPath);
         return result;
     }
@@ -126,32 +126,32 @@ public class ser_sync_media_library implements Comparable<ser_sync_media_library
 
         // Process subdirectories in parallel if there are multiple
         if (subdirs.size() > 1) {
-            List<Future<ser_sync_media_library>> futures = new ArrayList<>();
+            List<Future<cdd_sync_media_library>> futures = new ArrayList<>();
 
             for (File subdir : subdirs) {
                 String childDirectory = subdir.getName();
                 String childPath = path + "/" + childDirectory;
 
                 futures.add(SCAN_POOL.submit(() -> {
-                    ser_sync_media_library child = new ser_sync_media_library(childDirectory);
+                    cdd_sync_media_library child = new cdd_sync_media_library(childDirectory);
                     child.collectAll(childPath);
                     return child;
                 }));
             }
 
             // Collect results
-            for (Future<ser_sync_media_library> future : futures) {
+            for (Future<cdd_sync_media_library> future : futures) {
                 try {
                     children.add(future.get());
                 } catch (InterruptedException | ExecutionException e) {
-                    ser_sync_log.error("Error scanning directory: " + e.getMessage());
+                    cdd_sync_log.error("Error scanning directory: " + e.getMessage());
                 }
             }
         } else {
             // Single or no subdirectory - process sequentially
             for (File subdir : subdirs) {
                 String childDirectory = subdir.getName();
-                ser_sync_media_library child = new ser_sync_media_library(childDirectory);
+                cdd_sync_media_library child = new cdd_sync_media_library(childDirectory);
                 child.collectAll(path + "/" + childDirectory);
                 children.add(child);
             }
@@ -164,7 +164,7 @@ public class ser_sync_media_library implements Comparable<ser_sync_media_library
         return dot >= 0 && MEDIA_EXTENSIONS.contains(name.substring(dot));
     }
 
-    public int compareTo(ser_sync_media_library that) {
+    public int compareTo(cdd_sync_media_library that) {
         return this.directory.compareTo(that.directory);
     }
 
@@ -178,7 +178,7 @@ public class ser_sync_media_library implements Comparable<ser_sync_media_library
         for (String track : tracks) {
             result.append(indent(level + 1)).append(track).append("\n");
         }
-        for (ser_sync_media_library library : children) {
+        for (cdd_sync_media_library library : children) {
             result.append(library.toString(level + 1));
         }
         return result.toString();

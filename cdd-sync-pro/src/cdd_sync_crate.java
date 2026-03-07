@@ -6,7 +6,7 @@ import java.util.*;
  * Represents a single Serato crate.
  * Handles reading and writing .crate binary files.
  */
-public class ser_sync_crate {
+public class cdd_sync_crate {
 
     private static final String DEFAULT_VERSION = "81.0";
     private static final String DEFAULT_SORTING = "song";
@@ -19,9 +19,9 @@ public class ser_sync_crate {
     private List<String> columns = new ArrayList<>();
     private List<String> tracks = new ArrayList<>();
     private Set<String> normalizedPaths = new HashSet<>(); // For deduplication
-    private ser_sync_database database; // Reference to database for path lookup
+    private cdd_sync_database database; // Reference to database for path lookup
 
-    public ser_sync_crate() {
+    public cdd_sync_crate() {
     }
 
     /**
@@ -29,7 +29,7 @@ public class ser_sync_crate {
      * When adding tracks, if the track exists in the database,
      * we use the exact database path to match encoding.
      */
-    public void setDatabase(ser_sync_database db) {
+    public void setDatabase(cdd_sync_database db) {
         this.database = db;
     }
 
@@ -77,16 +77,16 @@ public class ser_sync_crate {
      * Adds tracks with deduplication filtering.
      * Uses Serato's filename encoding from database when available.
      */
-    public void addTracksFiltered(Collection<String> trackPaths, ser_sync_track_index index) {
+    public void addTracksFiltered(Collection<String> trackPaths, cdd_sync_track_index index) {
         if (index == null) {
             tracks.addAll(trackPaths);
             return;
         }
-        ser_sync_database database = index.getDatabase();
+        cdd_sync_database database = index.getDatabase();
 
         for (String track : trackPaths) {
             File f = new File(track);
-            String size = ser_sync_binary_utils.formatSize(f.length());
+            String size = cdd_sync_binary_utils.formatSize(f.length());
             if (!index.shouldSkipTrack(track, size)) {
                 // Try to use Serato's original filename encoding to match database
                 String trackToAdd = track;
@@ -151,14 +151,14 @@ public class ser_sync_crate {
     /**
      * Reads crate from file.
      */
-    public static ser_sync_crate readFrom(File inFile) throws ser_sync_exception {
-        ser_sync_crate result = new ser_sync_crate();
-        ser_sync_input_stream in;
+    public static cdd_sync_crate readFrom(File inFile) throws cdd_sync_exception {
+        cdd_sync_crate result = new cdd_sync_crate();
+        cdd_sync_input_stream in;
 
         try {
-            in = new ser_sync_input_stream(new BufferedInputStream(new FileInputStream(inFile)));
+            in = new cdd_sync_input_stream(new BufferedInputStream(new FileInputStream(inFile)));
         } catch (FileNotFoundException e) {
-            throw new ser_sync_exception(e);
+            throw new cdd_sync_exception(e);
         }
 
         try {
@@ -232,9 +232,9 @@ public class ser_sync_crate {
             }
 
         } catch (Exception e) {
-            ser_sync_log.error("Error reading crate file: " + inFile.getAbsolutePath());
-            ser_sync_log.error("Parser failure: " + e.getMessage());
-            throw new ser_sync_exception("Failed to read crate: " + inFile.getName(), e);
+            cdd_sync_log.error("Error reading crate file: " + inFile.getAbsolutePath());
+            cdd_sync_log.error("Parser failure: " + e.getMessage());
+            throw new cdd_sync_exception("Failed to read crate: " + inFile.getName(), e);
         } finally {
             try {
                 in.close();
@@ -249,8 +249,8 @@ public class ser_sync_crate {
     /**
      * Writes crate to output stream.
      */
-    public void writeTo(OutputStream outStream) throws ser_sync_exception {
-        ser_sync_output_stream out = new ser_sync_output_stream(outStream);
+    public void writeTo(OutputStream outStream) throws cdd_sync_exception {
+        cdd_sync_output_stream out = new cdd_sync_output_stream(outStream);
 
         try {
             // Version header
@@ -293,7 +293,7 @@ public class ser_sync_crate {
             }
 
         } catch (IOException e) {
-            throw new ser_sync_exception(e);
+            throw new cdd_sync_exception(e);
         } finally {
             try {
                 out.close();
@@ -307,17 +307,17 @@ public class ser_sync_crate {
      * Normalizes track path for Serato crate format.
      * Does NOT lowercase or NFC-normalize — Serato expects exact case and
      * encoding when writing to crate files. This is intentionally different
-     * from the comparison normalization in ser_sync_binary_utils.normalizePath().
+     * from the comparison normalization in cdd_sync_binary_utils.normalizePath().
      */
     public static String getUniformTrackName(String name) {
-        return ser_sync_binary_utils.normalizePathForDatabase(name);
+        return cdd_sync_binary_utils.normalizePathForDatabase(name);
     }
 
-    public void writeTo(File outFile) throws ser_sync_exception {
+    public void writeTo(File outFile) throws cdd_sync_exception {
         try {
             writeTo(new FileOutputStream(outFile));
         } catch (FileNotFoundException e) {
-            throw new ser_sync_exception("Error writing to file " + outFile.getName(), e);
+            throw new cdd_sync_exception("Error writing to file " + outFile.getName(), e);
         }
     }
 
@@ -327,7 +327,7 @@ public class ser_sync_crate {
             return true;
         if (o == null || getClass() != o.getClass())
             return false;
-        ser_sync_crate that = (ser_sync_crate) o;
+        cdd_sync_crate that = (cdd_sync_crate) o;
 
         // Compare versions and sorting
         if (getSortingRev() != that.getSortingRev() ||

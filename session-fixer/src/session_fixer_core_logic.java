@@ -31,9 +31,9 @@ public class session_fixer_core_logic {
      * @param libraries  List of scanned media libraries to check (in order)
      * @param database   The Serato database for path normalization (may be null)
      */
-    public static void fixBrokenPaths(String seratoPath, List<ser_sync_media_library> libraries,
-            ser_sync_database database) {
-        ser_sync_log.info("Checking for broken filepaths in session files...");
+    public static void fixBrokenPaths(String seratoPath, List<cdd_sync_media_library> libraries,
+            cdd_sync_database database) {
+        cdd_sync_log.info("Checking for broken filepaths in session files...");
 
         // 1. Build a map of filename -> absolute path from ALL media libraries
         // Use normalized filenames (NFC) as keys to handle macOS NFD encoding
@@ -43,7 +43,7 @@ public class session_fixer_core_logic {
 
         for (int i = libraries.size() - 1; i >= 0; i--) {
             // Process in reverse order so first library wins on duplicates
-            ser_sync_media_library library = libraries.get(i);
+            cdd_sync_media_library library = libraries.get(i);
             List<String> tracks = new ArrayList<>();
             library.flattenTracks(tracks);
 
@@ -57,13 +57,13 @@ public class session_fixer_core_logic {
             totalTracks += tracks.size();
         }
 
-        ser_sync_log.info("Loaded " + totalTracks + " tracks from " + libraries.size() + " libraries for lookup");
+        cdd_sync_log.info("Loaded " + totalTracks + " tracks from " + libraries.size() + " libraries for lookup");
 
         // 2. Find session files
         File sessionsDir = new File(seratoPath + "/History/Sessions");
         if (!sessionsDir.exists() || !sessionsDir.isDirectory()) {
-            ser_sync_log.error("Sessions directory not found: " + sessionsDir.getAbsolutePath());
-            ser_sync_log.error("Make sure you're pointing to the _Serato_ folder in ~/Music/");
+            cdd_sync_log.error("Sessions directory not found: " + sessionsDir.getAbsolutePath());
+            cdd_sync_log.error("Make sure you're pointing to the _Serato_ folder in ~/Music/");
             return;
         }
 
@@ -74,11 +74,11 @@ public class session_fixer_core_logic {
         });
 
         if (sessionFiles == null || sessionFiles.length == 0) {
-            ser_sync_log.info("No session files found.");
+            cdd_sync_log.info("No session files found.");
             return;
         }
 
-        ser_sync_log.info("Found " + sessionFiles.length + " session files to scan.");
+        cdd_sync_log.info("Found " + sessionFiles.length + " session files to scan.");
 
         // 3. Collect all path fixes needed and track unfixable paths
         Map<String, String> pathFixes = new HashMap<>(); // old path -> new path
@@ -91,8 +91,8 @@ public class session_fixer_core_logic {
 
             try {
                 session = session_fixer_parser.readFrom(sessionFile);
-            } catch (ser_sync_exception e) {
-                ser_sync_log.error("Failed to read session: " + sessionFile.getName());
+            } catch (cdd_sync_exception e) {
+                cdd_sync_log.error("Failed to read session: " + sessionFile.getName());
                 continue;
             }
 
@@ -137,9 +137,9 @@ public class session_fixer_core_logic {
 
                         pathFixes.put(trackPath, normalizedPath);
 
-                        ser_sync_log.info("Found fix for broken path:");
-                        ser_sync_log.info("  Broken: " + trackPath);
-                        ser_sync_log.info("   Fixed: " + normalizedPath);
+                        cdd_sync_log.info("Found fix for broken path:");
+                        cdd_sync_log.info("  Broken: " + trackPath);
+                        cdd_sync_log.info("   Fixed: " + normalizedPath);
                     } else {
                         // Could not find in any library - log and leave as-is
                         unfixablePaths.add(trackPath);
@@ -150,31 +150,31 @@ public class session_fixer_core_logic {
 
         // 4. Report unfixable paths
         if (!unfixablePaths.isEmpty()) {
-            ser_sync_log.info("");
-            ser_sync_log.info("=== Unfixable Paths (not found in any library) ===");
-            ser_sync_log.info("These files may have been intentionally removed.");
-            ser_sync_log.info("Leaving " + unfixablePaths.size() + " broken paths unchanged:");
+            cdd_sync_log.info("");
+            cdd_sync_log.info("=== Unfixable Paths (not found in any library) ===");
+            cdd_sync_log.info("These files may have been intentionally removed.");
+            cdd_sync_log.info("Leaving " + unfixablePaths.size() + " broken paths unchanged:");
             for (String path : unfixablePaths) {
-                ser_sync_log.info("  - " + path);
+                cdd_sync_log.info("  - " + path);
             }
-            ser_sync_log.info("");
+            cdd_sync_log.info("");
         }
 
         // Summary
-        ser_sync_log.info("Broken paths found: " + totalBrokenPaths);
-        ser_sync_log.info("  - Fixable: " + pathFixes.size());
-        ser_sync_log.info("  - Unfixable (left as-is): " + unfixablePaths.size());
+        cdd_sync_log.info("Broken paths found: " + totalBrokenPaths);
+        cdd_sync_log.info("  - Fixable: " + pathFixes.size());
+        cdd_sync_log.info("  - Unfixable (left as-is): " + unfixablePaths.size());
 
         if (pathFixes.isEmpty()) {
-            ser_sync_log.info("No broken paths could be fixed.");
+            cdd_sync_log.info("No broken paths could be fixed.");
             return;
         }
 
         // 5. Update database V2 file with all path fixes first
         String databasePath = seratoPath + "/database V2";
-        int dbUpdated = ser_sync_database_fixer.updatePaths(databasePath, pathFixes);
+        int dbUpdated = cdd_sync_database_fixer.updatePaths(databasePath, pathFixes);
         if (dbUpdated > 0) {
-            ser_sync_log.info("Updated " + dbUpdated + " paths in database V2");
+            cdd_sync_log.info("Updated " + dbUpdated + " paths in database V2");
         }
 
         // 6. Now update all session files using parallel processing
@@ -184,8 +184,8 @@ public class session_fixer_core_logic {
         final int totalSessionFiles = sessionFiles.length;
         final Map<String, String> fixes = pathFixes; // Final reference for lambda
 
-        ser_sync_log.info("");
-        ser_sync_log.info("=== Updating Session Files (parallel) ===");
+        cdd_sync_log.info("");
+        cdd_sync_log.info("=== Updating Session Files (parallel) ===");
 
         // Use a thread pool with 4 threads for parallel processing
         int numThreads = Math.min(4, Runtime.getRuntime().availableProcessors());
@@ -198,7 +198,7 @@ public class session_fixer_core_logic {
 
                 try {
                     session = session_fixer_parser.readFrom(sessionFile);
-                } catch (ser_sync_exception e) {
+                } catch (cdd_sync_exception e) {
                     return;
                 }
 
@@ -213,10 +213,10 @@ public class session_fixer_core_logic {
                         session.writeTo(sessionFile);
                         totalFixedSessions.incrementAndGet();
                         totalFixedEntries.addAndGet(entriesFixed);
-                        ser_sync_log.info("[" + currentCount + "/" + totalSessionFiles + "] Fixed " + entriesFixed
+                        cdd_sync_log.info("[" + currentCount + "/" + totalSessionFiles + "] Fixed " + entriesFixed
                                 + " paths in: " + sessionFile.getName());
-                    } catch (ser_sync_exception e) {
-                        ser_sync_log.error("[" + currentCount + "/" + totalSessionFiles + "] Failed to write: "
+                    } catch (cdd_sync_exception e) {
+                        cdd_sync_log.error("[" + currentCount + "/" + totalSessionFiles + "] Failed to write: "
                                 + sessionFile.getName());
                     }
                 }
@@ -228,12 +228,12 @@ public class session_fixer_core_logic {
         try {
             executor.awaitTermination(30, TimeUnit.MINUTES);
         } catch (InterruptedException e) {
-            ser_sync_log.error("Processing interrupted");
+            cdd_sync_log.error("Processing interrupted");
         }
 
-        ser_sync_log.info("");
+        cdd_sync_log.info("");
         if (totalFixedSessions.get() > 0) {
-            ser_sync_log.info(
+            cdd_sync_log.info(
                     "Fixed " + totalFixedEntries.get() + " path entries across " + totalFixedSessions.get()
                             + " session files.");
         }
@@ -252,19 +252,19 @@ public class session_fixer_core_logic {
             return 0;
         }
 
-        ser_sync_log.info("=== Session Duration Cleanup ===");
-        ser_sync_log.info("Deleting sessions shorter than " + minDurationMin + " minutes...");
+        cdd_sync_log.info("=== Session Duration Cleanup ===");
+        cdd_sync_log.info("Deleting sessions shorter than " + minDurationMin + " minutes...");
 
         // Step 1: Find and delete short session files
         File sessionsDir = new File(seratoPath + "/History/Sessions");
         if (!sessionsDir.exists()) {
-            ser_sync_log.info("No Sessions directory found.");
+            cdd_sync_log.info("No Sessions directory found.");
             return 0;
         }
 
         File[] sessionFiles = sessionsDir.listFiles((dir, name) -> name.endsWith(".session"));
         if (sessionFiles == null || sessionFiles.length == 0) {
-            ser_sync_log.info("No session files found.");
+            cdd_sync_log.info("No session files found.");
             return 0;
         }
 
@@ -280,7 +280,7 @@ public class session_fixer_core_logic {
                     int durationMin = durationSec / 60;
                     String filename = sessionFile.getName();
                     if (sessionFile.delete()) {
-                        ser_sync_log.info("  Deleted: " + filename + " (" + durationMin + " min)");
+                        cdd_sync_log.info("  Deleted: " + filename + " (" + durationMin + " min)");
                         // Store the base name without .session extension for matching
                         deletedSessionNames.add(filename.replace(".session", ""));
                     }
@@ -291,17 +291,17 @@ public class session_fixer_core_logic {
         }
 
         if (deletedSessionNames.isEmpty()) {
-            ser_sync_log.info("No sessions under " + minDurationMin + " minutes found.");
-            ser_sync_log.info("");
+            cdd_sync_log.info("No sessions under " + minDurationMin + " minutes found.");
+            cdd_sync_log.info("");
             return 0;
         }
 
-        ser_sync_log.info("Deleted " + deletedSessionNames.size() + " short session file(s).");
+        cdd_sync_log.info("Deleted " + deletedSessionNames.size() + " short session file(s).");
 
         // Step 2: Remove entries from history.database
         File historyDb = new File(seratoPath + "/History/history.database");
         if (!historyDb.exists()) {
-            ser_sync_log.info("");
+            cdd_sync_log.info("");
             return deletedSessionNames.size();
         }
 
@@ -313,7 +313,7 @@ public class session_fixer_core_logic {
 
             // Copy header (vrsn block)
             if (data.length >= 8 && data[0] == 'v' && data[1] == 'r' && data[2] == 's' && data[3] == 'n') {
-                int vrsnLen = ser_sync_binary_utils.readInt(data, 4);
+                int vrsnLen = cdd_sync_binary_utils.readInt(data, 4);
                 int vrsnEnd = 8 + vrsnLen;
                 out.write(data, 0, vrsnEnd);
                 pos = vrsnEnd;
@@ -326,7 +326,7 @@ public class session_fixer_core_logic {
                     String marker = new String(data, pos, 4);
 
                     if (marker.equals("ocol") || marker.equals("oses")) {
-                        int blockLen = ser_sync_binary_utils.readInt(data, pos + 4);
+                        int blockLen = cdd_sync_binary_utils.readInt(data, pos + 4);
                         int blockEnd = Math.min(pos + 8 + blockLen, data.length);
 
                         if (marker.equals("oses")) {
@@ -340,20 +340,20 @@ public class session_fixer_core_logic {
                             while (searchPos < blockEnd - 8) {
                                 if (data[searchPos] == 'a' && data[searchPos + 1] == 'd' &&
                                         data[searchPos + 2] == 'a' && data[searchPos + 3] == 't') {
-                                    int adatLen = ser_sync_binary_utils.readInt(data, searchPos + 4);
+                                    int adatLen = cdd_sync_binary_utils.readInt(data, searchPos + 4);
                                     int adatEnd = Math.min(searchPos + 8 + adatLen, blockEnd);
                                     int fPos = searchPos + 8;
 
                                     while (fPos < adatEnd - 8) {
-                                        int fieldId = ser_sync_binary_utils.readInt(data, fPos);
-                                        int fieldLen = ser_sync_binary_utils.readInt(data, fPos + 4);
+                                        int fieldId = cdd_sync_binary_utils.readInt(data, fPos);
+                                        int fieldLen = cdd_sync_binary_utils.readInt(data, fPos + 4);
 
                                         if (fieldLen < 0 || fieldLen > 4096 || fPos + 8 + fieldLen > adatEnd) {
                                             break;
                                         }
 
                                         if (fieldId == 0x2D && fieldLen == 4) {
-                                            duration = ser_sync_binary_utils.readInt(data, fPos + 8);
+                                            duration = cdd_sync_binary_utils.readInt(data, fPos + 8);
                                         }
 
                                         fPos += 8 + fieldLen;
@@ -386,13 +386,13 @@ public class session_fixer_core_logic {
 
             // Write updated history.database
             java.nio.file.Files.write(historyDb.toPath(), out.toByteArray());
-            ser_sync_log.info("Removed " + removedEntries + " entries from history.database.");
+            cdd_sync_log.info("Removed " + removedEntries + " entries from history.database.");
 
         } catch (Exception e) {
-            ser_sync_log.error("Failed to update history.database: " + e.getMessage());
+            cdd_sync_log.error("Failed to update history.database: " + e.getMessage());
         }
 
-        ser_sync_log.info("");
+        cdd_sync_log.info("");
         return deletedSessionNames.size();
     }
 }

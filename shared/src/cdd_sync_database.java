@@ -5,7 +5,7 @@ import java.util.*;
  * Parses Serato database V2 file to extract existing track information.
  * Used for deduplication during sync.
  */
-public class ser_sync_database {
+public class cdd_sync_database {
 
     // Track info storage: path -> size
     private Map<String, String> tracksByPath = new HashMap<>();
@@ -23,22 +23,22 @@ public class ser_sync_database {
      * Reads and parses the database V2 file.
      * 
      * @param databasePath Path to the database V2 file
-     * @return ser_sync_database instance with parsed tracks, or null if file
+     * @return cdd_sync_database instance with parsed tracks, or null if file
      *         doesn't
      *         exist
      */
-    public static ser_sync_database readFrom(String databasePath) {
+    public static cdd_sync_database readFrom(String databasePath) {
         File dbFile = new File(databasePath);
         if (!dbFile.exists()) {
             return null;
         }
 
-        ser_sync_database db = new ser_sync_database();
+        cdd_sync_database db = new cdd_sync_database();
 
         try {
             db.parseDatabase(dbFile);
         } catch (Exception e) {
-            ser_sync_log.error("Error parsing database V2: " + e.getMessage());
+            cdd_sync_log.error("Error parsing database V2: " + e.getMessage());
             return null;
         }
 
@@ -128,7 +128,7 @@ public class ser_sync_database {
             pos += 4;
 
             // Read length (4 bytes, big-endian)
-            int len = ser_sync_binary_utils.readInt(data, pos);
+            int len = cdd_sync_binary_utils.readInt(data, pos);
             pos += 4;
 
             if (pos + len > data.length) {
@@ -164,14 +164,14 @@ public class ser_sync_database {
             tracksByPath.put(key, path);
 
             // Also index by filename
-            String filename = ser_sync_binary_utils.getFilename(path);
+            String filename = cdd_sync_binary_utils.getFilename(path);
             String filenameKey = filename + (size != null ? "|" + size : "");
             tracksByFilename.put(filenameKey, path);
             // Index by filename only (for fast path lookup without size)
             tracksByFilenameOnly.put(filename, path);
 
             // Store raw filename (preserving exact encoding) for matching later
-            String rawFilename = ser_sync_binary_utils.getRawFilename(path);
+            String rawFilename = cdd_sync_binary_utils.getRawFilename(path);
             rawFilenamesByNormalizedName.put(filename, rawFilename);
 
             trackCount++;
@@ -183,7 +183,7 @@ public class ser_sync_database {
      * Delegates to shared utility for consistent behavior.
      */
     private static String normalizePath(String path) {
-        return ser_sync_binary_utils.normalizePath(path);
+        return cdd_sync_binary_utils.normalizePath(path);
     }
 
     /**
@@ -207,7 +207,7 @@ public class ser_sync_database {
      * @return true if a track with same filename exists
      */
     public boolean containsTrackByFilename(String trackPath, String fileSize) {
-        String filename = ser_sync_binary_utils.getFilename(trackPath);
+        String filename = cdd_sync_binary_utils.getFilename(trackPath);
         String key = filename + (fileSize != null ? "|" + fileSize : "");
         return tracksByFilename.containsKey(key);
     }
@@ -227,7 +227,7 @@ public class ser_sync_database {
      * @return Original path from database, or null if not found
      */
     public String getOriginalPathByFilename(String trackPath) {
-        String filename = ser_sync_binary_utils.getFilename(trackPath);
+        String filename = cdd_sync_binary_utils.getFilename(trackPath);
         // O(1) lookup using the filename-only index
         return tracksByFilenameOnly.get(filename);
     }
@@ -241,7 +241,7 @@ public class ser_sync_database {
      *         found
      */
     public String getSeratoFilename(String trackPath) {
-        String normalizedKey = ser_sync_binary_utils.getFilename(trackPath);
+        String normalizedKey = cdd_sync_binary_utils.getFilename(trackPath);
         return rawFilenamesByNormalizedName.get(normalizedKey);
     }
 }

@@ -6,7 +6,7 @@ import java.util.*;
  * When sorting is enabled, deletes and recreates the file with alphabetically
  * sorted crates based on all .crate files in the Subcrates folder.
  */
-public class ser_sync_pref_sorter {
+public class cdd_sync_pref_sorter {
 
     private static final String PREF_FILE = "neworder.pref";
     private static final String SUBCRATES_DIR = "Subcrates";
@@ -26,21 +26,21 @@ public class ser_sync_pref_sorter {
         // Delete existing file if present
         if (prefFile.exists()) {
             if (!prefFile.delete()) {
-                ser_sync_log.error("Failed to delete existing '" + PREF_FILE + "'. Skipping crate sorting.");
+                cdd_sync_log.error("Failed to delete existing '" + PREF_FILE + "'. Skipping crate sorting.");
                 return;
             }
-            ser_sync_log.info("Deleted existing '" + PREF_FILE + "' for recreation.");
+            cdd_sync_log.info("Deleted existing '" + PREF_FILE + "' for recreation.");
         }
 
         // Scan Subcrates folder for all .crate files
         List<String> crateNames = scanSubcratesFolder(seratoPath);
 
         if (crateNames.isEmpty()) {
-            ser_sync_log.info("No crates found in '" + SUBCRATES_DIR + "'. Skipping.");
+            cdd_sync_log.info("No crates found in '" + SUBCRATES_DIR + "'. Skipping.");
             return;
         }
 
-        ser_sync_log.info("Creating '" + PREF_FILE + "' with " + crateNames.size() + " crates...");
+        cdd_sync_log.info("Creating '" + PREF_FILE + "' with " + crateNames.size() + " crates...");
 
         // Sort alphabetically
         Collections.sort(crateNames);
@@ -55,11 +55,11 @@ public class ser_sync_pref_sorter {
             writer.write(END_MARKER + "\n");
             writer.close();
 
-            ser_sync_log.info("Successfully created '" + PREF_FILE + "' with " + crateNames.size()
+            cdd_sync_log.info("Successfully created '" + PREF_FILE + "' with " + crateNames.size()
                     + " crates sorted alphabetically.");
 
         } catch (IOException e) {
-            ser_sync_log.error("Failed to create '" + PREF_FILE + "': " + e.getMessage());
+            cdd_sync_log.error("Failed to create '" + PREF_FILE + "': " + e.getMessage());
         }
     }
 
@@ -75,7 +75,7 @@ public class ser_sync_pref_sorter {
         File subcratesDir = new File(seratoPath, SUBCRATES_DIR);
 
         if (!subcratesDir.exists() || !subcratesDir.isDirectory()) {
-            ser_sync_log.info("Subcrates directory not found: " + subcratesDir.getAbsolutePath());
+            cdd_sync_log.info("Subcrates directory not found: " + subcratesDir.getAbsolutePath());
             return crateNames;
         }
 
@@ -96,7 +96,7 @@ public class ser_sync_pref_sorter {
             crateNames.add(crateName);
         }
 
-        ser_sync_log.info("Found " + crateNames.size() + " crate files in '" + SUBCRATES_DIR + "'.");
+        cdd_sync_log.info("Found " + crateNames.size() + " crate files in '" + SUBCRATES_DIR + "'.");
         return crateNames;
     }
 }

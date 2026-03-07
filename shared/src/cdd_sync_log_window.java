@@ -4,18 +4,18 @@ import java.awt.*;
 /**
  * Base GUI log window for ser-sync apps.
  * Provides a text area for log output and a progress bar.
- * Extended by ser_sync_pro_window for the full config UI.
+ * Extended by cdd_sync_pro_window for the full config UI.
  * Also used standalone by session-fixer.
  *
  * @author Roman Alekseenkov (original), refactored for ser-sync
  */
-public class ser_sync_log_window extends JFrame {
+public class cdd_sync_log_window extends JFrame {
 
     protected JTextArea textArea;
     protected JProgressBar progressBar;
     protected JLabel progressLabel;
 
-    public ser_sync_log_window(String title, int width, int height) {
+    public cdd_sync_log_window(String title, int width, int height) {
         super(title);
         setSize(width, height);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);

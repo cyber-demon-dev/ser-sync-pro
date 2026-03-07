@@ -5,7 +5,7 @@ import java.util.*;
  * Scans existing .crate files to extract track information.
  * Used in addition to database V2 for comprehensive deduplication.
  */
-public class ser_sync_crate_scanner {
+public class cdd_sync_crate_scanner {
 
     private Map<String, String> tracksByPath = new HashMap<>();
     private Map<String, String> tracksByFilename = new HashMap<>();
@@ -17,10 +17,10 @@ public class ser_sync_crate_scanner {
      * Scans all .crate files in the Subcrates directory.
      * 
      * @param seratoPath Path to the _Serato_ folder
-     * @return ser_sync_crate_scanner instance with parsed tracks
+     * @return cdd_sync_crate_scanner instance with parsed tracks
      */
-    public static ser_sync_crate_scanner scanFrom(String seratoPath) {
-        ser_sync_crate_scanner scanner = new ser_sync_crate_scanner();
+    public static cdd_sync_crate_scanner scanFrom(String seratoPath) {
+        cdd_sync_crate_scanner scanner = new cdd_sync_crate_scanner();
 
         File subcratesDir = new File(seratoPath + "/Subcrates");
         if (!subcratesDir.exists() || !subcratesDir.isDirectory()) {
@@ -172,7 +172,7 @@ public class ser_sync_crate_scanner {
         String normalizedPath = normalizePath(path);
         tracksByPath.put(normalizedPath, path);
 
-        String filename = ser_sync_binary_utils.getFilename(path);
+        String filename = cdd_sync_binary_utils.getFilename(path);
         tracksByFilename.put(filename, path);
 
         trackCount++;
@@ -183,7 +183,7 @@ public class ser_sync_crate_scanner {
      * Delegates to shared utility for consistent behavior.
      */
     private static String normalizePath(String path) {
-        return ser_sync_binary_utils.normalizePath(path);
+        return cdd_sync_binary_utils.normalizePath(path);
     }
 
     /**
@@ -197,7 +197,7 @@ public class ser_sync_crate_scanner {
      * Checks if a track exists by filename.
      */
     public boolean containsTrackByFilename(String trackPath) {
-        return tracksByFilename.containsKey(ser_sync_binary_utils.getFilename(trackPath));
+        return tracksByFilename.containsKey(cdd_sync_binary_utils.getFilename(trackPath));
     }
 
     public int getTrackCount() {

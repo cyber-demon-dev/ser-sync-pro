@@ -6,7 +6,7 @@ import java.util.*;
  * Fixes broken filepaths in Serato's database V2 file.
  * Updates pfil (path) tags within otrk (track) blocks.
  */
-public class ser_sync_database_fixer {
+public class cdd_sync_database_fixer {
 
     /**
      * Updates a path in the database V2 file.
@@ -24,7 +24,7 @@ public class ser_sync_database_fixer {
 
         try {
             // Read entire file
-            byte[] data = ser_sync_binary_utils.readFile(dbFile);
+            byte[] data = cdd_sync_binary_utils.readFile(dbFile);
 
             // Convert paths to UTF-16BE for searching
             byte[] oldPathBytes = oldPath.getBytes(StandardCharsets.UTF_16BE);
@@ -38,13 +38,13 @@ public class ser_sync_database_fixer {
 
             if (result != null) {
                 // Write back to file
-                ser_sync_binary_utils.writeFile(dbFile, result);
+                cdd_sync_binary_utils.writeFile(dbFile, result);
                 return true;
             }
 
             return false;
         } catch (IOException e) {
-            ser_sync_log.error("Error updating database V2: " + e.getMessage());
+            cdd_sync_log.error("Error updating database V2: " + e.getMessage());
             return false;
         }
     }
@@ -65,7 +65,7 @@ public class ser_sync_database_fixer {
 
         try {
             // Read entire file
-            byte[] data = ser_sync_binary_utils.readFile(dbFile);
+            byte[] data = cdd_sync_binary_utils.readFile(dbFile);
             int updatedCount = 0;
             int totalPaths = pathMappings.size();
             int processed = 0;
@@ -78,7 +78,7 @@ public class ser_sync_database_fixer {
             for (Map.Entry<String, String> entry : pathMappings.entrySet()) {
                 processed++;
                 if (processed >= nextProgressAt) {
-                    ser_sync_log.progress("Updating database V2", processed, totalPaths);
+                    cdd_sync_log.progress("Updating database V2", processed, totalPaths);
                     nextProgressAt += progressStep;
                 }
 
@@ -100,15 +100,15 @@ public class ser_sync_database_fixer {
                 }
             }
 
-            ser_sync_log.progressComplete("Updating database V2");
+            cdd_sync_log.progressComplete("Updating database V2");
 
             if (updatedCount > 0) {
-                ser_sync_binary_utils.writeFile(dbFile, data);
+                cdd_sync_binary_utils.writeFile(dbFile, data);
             }
 
             return updatedCount;
         } catch (IOException e) {
-            ser_sync_log.error("Error updating database V2: " + e.getMessage());
+            cdd_sync_log.error("Error updating database V2: " + e.getMessage());
             return 0;
         }
     }
@@ -118,7 +118,7 @@ public class ser_sync_database_fixer {
      * Delegates to shared utility for consistent behavior.
      */
     private static String normalizePathForDatabase(String path) {
-        return ser_sync_binary_utils.normalizePathForDatabase(path);
+        return cdd_sync_binary_utils.normalizePathForDatabase(path);
     }
 
     /**
@@ -132,7 +132,7 @@ public class ser_sync_database_fixer {
         while (pos < data.length - 8) {
             if (data[pos] == marker[0] && data[pos + 1] == marker[1] &&
                     data[pos + 2] == marker[2] && data[pos + 3] == marker[3]) {
-                int len = ser_sync_binary_utils.readInt(data, pos + 4);
+                int len = cdd_sync_binary_utils.readInt(data, pos + 4);
                 blocks.add(new int[] { pos, pos + 8 + len });
                 pos = pos + 8 + len;
             } else {
@@ -159,7 +159,7 @@ public class ser_sync_database_fixer {
                     data[pos + 2] == pfilMarker[2] && data[pos + 3] == pfilMarker[3]) {
 
                 // Read pfil length (4 bytes, big-endian)
-                int pfilLen = ser_sync_binary_utils.readInt(data, pos + 4);
+                int pfilLen = cdd_sync_binary_utils.readInt(data, pos + 4);
 
                 // Check if this pfil contains our old path
                 int pathStart = pos + 8;
@@ -193,7 +193,7 @@ public class ser_sync_database_fixer {
                         }
 
                         // Read otrk length
-                        int otrkLen = ser_sync_binary_utils.readInt(data, otrkPos + 4);
+                        int otrkLen = cdd_sync_binary_utils.readInt(data, otrkPos + 4);
 
                         // Build new data array
                         byte[] newData = new byte[data.length + lengthDiff];

@@ -16,14 +16,14 @@ import java.util.*;
  * ├── dupes.log
  * └── <relative-path>/filename
  */
-public class ser_sync_dupe_mover {
+public class cdd_sync_dupe_mover {
 
     private static final String DUPES_FOLDER = "cdd-sync-pro/dupes";
     private List<String> logEntries = new ArrayList<>();
     private Map<String, String> movedToKeptMap = new HashMap<>(); // moved path -> kept path
     private int totalGroupsFound = 0;
     private int totalFilesMoved = 0;
-    private String currentMoveMode = ser_sync_config.DUPE_MOVE_KEEP_NEWEST;
+    private String currentMoveMode = cdd_sync_config.DUPE_MOVE_KEEP_NEWEST;
 
     /**
      * Scans media library for duplicates and moves copies to dupes folder.
@@ -38,33 +38,33 @@ public class ser_sync_dupe_mover {
      *         updates)
      */
     public static Map<String, String> scanAndMoveDuplicates(String musicLibraryRoot,
-            ser_sync_media_library library,
+            cdd_sync_media_library library,
             String detectionMode,
             String moveMode) {
-        ser_sync_log.info("Duplicate detection mode: " + detectionMode);
+        cdd_sync_log.info("Duplicate detection mode: " + detectionMode);
 
         // If detection is off, skip scanning
         if ("off".equals(detectionMode)) {
-            ser_sync_log.info("Duplicate detection is disabled.");
+            cdd_sync_log.info("Duplicate detection is disabled.");
             return new HashMap<>();
         }
 
-        ser_sync_log.info("Scanning for duplicates to move...");
+        cdd_sync_log.info("Scanning for duplicates to move...");
 
-        ser_sync_dupe_mover instance = new ser_sync_dupe_mover();
+        cdd_sync_dupe_mover instance = new cdd_sync_dupe_mover();
         instance.currentMoveMode = moveMode;
 
         // Log move strategy
-        if (ser_sync_config.DUPE_MOVE_KEEP_NEWEST.equals(moveMode)) {
-            ser_sync_log.info("Move strategy: Keep newest, move older files");
+        if (cdd_sync_config.DUPE_MOVE_KEEP_NEWEST.equals(moveMode)) {
+            cdd_sync_log.info("Move strategy: Keep newest, move older files");
         } else {
-            ser_sync_log.info("Move strategy: Keep oldest, move newer files");
+            cdd_sync_log.info("Move strategy: Keep oldest, move newer files");
         }
 
         // Flatten all tracks
         List<String> allTracks = new ArrayList<>();
         library.flattenTracks(allTracks);
-        ser_sync_log.info("Total tracks scanned: " + allTracks.size());
+        cdd_sync_log.info("Total tracks scanned: " + allTracks.size());
 
         // Group by filename + size (or just filename)
         Map<String, List<String>> groups = new HashMap<>();
@@ -77,16 +77,16 @@ public class ser_sync_dupe_mover {
                 key = f.getName().toLowerCase() + "|" + f.length();
             } else {
                 // Invalid mode, default to name-and-size
-                ser_sync_log.error("Invalid detection mode '" + detectionMode + "', defaulting to name-and-size");
+                cdd_sync_log.error("Invalid detection mode '" + detectionMode + "', defaulting to name-and-size");
                 key = f.getName().toLowerCase() + "|" + f.length();
             }
             groups.computeIfAbsent(key, k -> new ArrayList<>()).add(path);
         }
 
         if ("name-only".equals(detectionMode)) {
-            ser_sync_log.info("Total unique filenames: " + groups.size());
+            cdd_sync_log.info("Total unique filenames: " + groups.size());
         } else {
-            ser_sync_log.info("Total unique filename+size combinations: " + groups.size());
+            cdd_sync_log.info("Total unique filename+size combinations: " + groups.size());
         }
 
         // Find duplicate groups
@@ -98,12 +98,12 @@ public class ser_sync_dupe_mover {
         }
 
         if (dupeGroups.isEmpty()) {
-            ser_sync_log.info("No duplicates found.");
+            cdd_sync_log.info("No duplicates found.");
             return instance.movedToKeptMap;
         }
 
         instance.totalGroupsFound = dupeGroups.size();
-        ser_sync_log.info("Found " + instance.totalGroupsFound + " duplicate groups.");
+        cdd_sync_log.info("Found " + instance.totalGroupsFound + " duplicate groups.");
 
         // Create timestamped folder
         String timestamp = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date());
@@ -113,13 +113,13 @@ public class ser_sync_dupe_mover {
         // Create dupes folder (parent directories may already exist)
         if (!dupesRoot.exists()) {
             if (!dupesRoot.mkdirs()) {
-                ser_sync_log.error("Failed to create dupes folder: " + dupesRoot.getAbsolutePath());
+                cdd_sync_log.error("Failed to create dupes folder: " + dupesRoot.getAbsolutePath());
                 return instance.movedToKeptMap;
             }
         } else {
             // This should never happen with timestamped folders, but check anyway
-            ser_sync_log.error("Dupes folder already exists: " + dupesRoot.getAbsolutePath());
-            ser_sync_log.error("This should not happen with timestamped folders. Aborting.");
+            cdd_sync_log.error("Dupes folder already exists: " + dupesRoot.getAbsolutePath());
+            cdd_sync_log.error("This should not happen with timestamped folders. Aborting.");
             return instance.movedToKeptMap;
         }
 
@@ -132,8 +132,8 @@ public class ser_sync_dupe_mover {
         File logFile = new File(dupesRoot, "dupes.log");
         instance.writeLogFile(logFile, timestamp);
 
-        ser_sync_log.info("Moved " + instance.totalFilesMoved + " duplicate files to: " + dupesRoot.getAbsolutePath());
-        ser_sync_log.info("See " + logFile.getAbsolutePath() + " for details.");
+        cdd_sync_log.info("Moved " + instance.totalFilesMoved + " duplicate files to: " + dupesRoot.getAbsolutePath());
+        cdd_sync_log.info("See " + logFile.getAbsolutePath() + " for details.");
 
         return instance.movedToKeptMap;
     }
@@ -147,7 +147,7 @@ public class ser_sync_dupe_mover {
             String libraryRoot, File dupesRoot) {
 
         // Sort by modification time based on move mode
-        boolean keepNewest = ser_sync_config.DUPE_MOVE_KEEP_NEWEST.equals(currentMoveMode);
+        boolean keepNewest = cdd_sync_config.DUPE_MOVE_KEEP_NEWEST.equals(currentMoveMode);
         paths.sort((a, b) -> {
             long timeA = new File(a).lastModified();
             long timeB = new File(b).lastModified();
@@ -187,7 +187,7 @@ public class ser_sync_dupe_mover {
                 totalFilesMoved++;
             } catch (IOException e) {
                 logEntries.add("  ERROR: Failed to move " + movePath + ": " + e.getMessage());
-                ser_sync_log.error("Failed to move file: " + movePath + " - " + e.getMessage());
+                cdd_sync_log.error("Failed to move file: " + movePath + " - " + e.getMessage());
             }
         }
 
@@ -232,7 +232,7 @@ public class ser_sync_dupe_mover {
                 writer.println(entry);
             }
         } catch (IOException e) {
-            ser_sync_log.error("Failed to write dupes log: " + e.getMessage());
+            cdd_sync_log.error("Failed to write dupes log: " + e.getMessage());
         }
     }
 }

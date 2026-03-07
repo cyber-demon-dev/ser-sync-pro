@@ -108,7 +108,7 @@ public class session_fixer_parser {
     /**
      * Reads session from file.
      */
-    public static session_fixer_parser readFrom(File inFile) throws ser_sync_exception {
+    public static session_fixer_parser readFrom(File inFile) throws cdd_sync_exception {
         session_fixer_parser result = new session_fixer_parser();
 
         try {
@@ -121,15 +121,15 @@ public class session_fixer_parser {
 
             // Parse header: "vrsn" + 4-byte length + UTF-16BE version string
             if (data.length < 8) {
-                throw new ser_sync_exception("Session file too small");
+                throw new cdd_sync_exception("Session file too small");
             }
 
             String magic = new String(data, 0, 4);
             if (!"vrsn".equals(magic)) {
-                throw new ser_sync_exception("Invalid session file: missing vrsn header");
+                throw new cdd_sync_exception("Invalid session file: missing vrsn header");
             }
 
-            int versionLen = ser_sync_binary_utils.readInt(data, 4);
+            int versionLen = cdd_sync_binary_utils.readInt(data, 4);
             result.version = readUTF16BE(data, 8, versionLen);
 
             // Find and parse all "oent" entries
@@ -147,7 +147,7 @@ public class session_fixer_parser {
             }
 
         } catch (IOException e) {
-            throw new ser_sync_exception("Failed to read session file: " + inFile.getName(), e);
+            throw new cdd_sync_exception("Failed to read session file: " + inFile.getName(), e);
         }
 
         return result;
@@ -164,7 +164,7 @@ public class session_fixer_parser {
             // Read entry length (4 bytes after "oent")
             if (oentOffset + 8 > data.length)
                 return null;
-            entry.length = ser_sync_binary_utils.readInt(data, oentOffset + 4);
+            entry.length = cdd_sync_binary_utils.readInt(data, oentOffset + 4);
 
             // Save raw bytes for this entry
             int entryEnd = Math.min(oentOffset + 8 + entry.length, data.length);
@@ -175,14 +175,14 @@ public class session_fixer_parser {
             if (adatOffset < 0)
                 return entry;
 
-            int adatLen = ser_sync_binary_utils.readInt(data, adatOffset + 4);
+            int adatLen = cdd_sync_binary_utils.readInt(data, adatOffset + 4);
             int fieldPos = adatOffset + 8;
             int fieldEnd = Math.min(adatOffset + 8 + adatLen, entryEnd);
 
             // Parse field ID / length / value triplets
             while (fieldPos < fieldEnd - 8) {
-                int fieldId = ser_sync_binary_utils.readInt(data, fieldPos);
-                int fieldLen = ser_sync_binary_utils.readInt(data, fieldPos + 4);
+                int fieldId = cdd_sync_binary_utils.readInt(data, fieldPos);
+                int fieldLen = cdd_sync_binary_utils.readInt(data, fieldPos + 4);
                 fieldPos += 8;
 
                 if (fieldLen < 0 || fieldLen > 1024 || fieldPos + fieldLen > fieldEnd) {
@@ -204,7 +204,7 @@ public class session_fixer_parser {
                         break;
                     case FIELD_BPM:
                         if (fieldLen == 4) {
-                            entry.bpm = ser_sync_binary_utils.readInt(data, fieldPos);
+                            entry.bpm = cdd_sync_binary_utils.readInt(data, fieldPos);
                         }
                         break;
                     case FIELD_KEY:
@@ -212,12 +212,12 @@ public class session_fixer_parser {
                         break;
                     case FIELD_START_TIME:
                         if (fieldLen == 4) {
-                            entry.startTime = ser_sync_binary_utils.readInt(data, fieldPos) & 0xFFFFFFFFL;
+                            entry.startTime = cdd_sync_binary_utils.readInt(data, fieldPos) & 0xFFFFFFFFL;
                         }
                         break;
                     case FIELD_END_TIME:
                         if (fieldLen == 4) {
-                            entry.endTime = ser_sync_binary_utils.readInt(data, fieldPos) & 0xFFFFFFFFL;
+                            entry.endTime = cdd_sync_binary_utils.readInt(data, fieldPos) & 0xFFFFFFFFL;
                         }
                         break;
                     case FIELD_DECK:
@@ -313,7 +313,7 @@ public class session_fixer_parser {
                 }
 
                 // Read entry length
-                int entryLen = ser_sync_binary_utils.readInt(rawData, oentPos + 4);
+                int entryLen = cdd_sync_binary_utils.readInt(rawData, oentPos + 4);
                 int entryEnd = Math.min(oentPos + 8 + entryLen, rawData.length);
 
                 // Extract entry data and check for path
@@ -361,7 +361,7 @@ public class session_fixer_parser {
         out.write(entryData, 0, adatPos);
 
         // Read adat length
-        int adatLen = ser_sync_binary_utils.readInt(entryData, adatPos + 4);
+        int adatLen = cdd_sync_binary_utils.readInt(entryData, adatPos + 4);
         int adatEnd = Math.min(adatPos + 8 + adatLen, entryData.length);
 
         // Rebuild adat block with updated path
@@ -369,8 +369,8 @@ public class session_fixer_parser {
         int fieldPos = adatPos + 8;
 
         while (fieldPos < adatEnd - 8) {
-            int fieldId = ser_sync_binary_utils.readInt(entryData, fieldPos);
-            int fieldLen = ser_sync_binary_utils.readInt(entryData, fieldPos + 4);
+            int fieldId = cdd_sync_binary_utils.readInt(entryData, fieldPos);
+            int fieldLen = cdd_sync_binary_utils.readInt(entryData, fieldPos + 4);
 
             if (fieldLen < 0 || fieldLen > 1024 || fieldPos + 8 + fieldLen > adatEnd) {
                 break;
@@ -432,15 +432,15 @@ public class session_fixer_parser {
     /**
      * Writes session to file.
      */
-    public void writeTo(File outFile) throws ser_sync_exception {
+    public void writeTo(File outFile) throws cdd_sync_exception {
         if (rawData == null) {
-            throw new ser_sync_exception("No session data to write");
+            throw new cdd_sync_exception("No session data to write");
         }
 
         try (FileOutputStream fos = new FileOutputStream(outFile)) {
             fos.write(rawData);
         } catch (IOException e) {
-            throw new ser_sync_exception("Failed to write session file: " + outFile.getName(), e);
+            throw new cdd_sync_exception("Failed to write session file: " + outFile.getName(), e);
         }
     }
 
