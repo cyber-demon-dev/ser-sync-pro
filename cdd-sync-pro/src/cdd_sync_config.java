@@ -4,13 +4,13 @@ import java.io.IOException;
 import java.util.Properties;
 
 /**
- * Configuration loader for serato-sync.
- * Reads settings from ser-sync.properties file.
+ * Configuration loader for cdd-sync-pro.
+ * Reads settings from cdd-sync.properties file.
  */
 public class cdd_sync_config {
 
-    public static final String CONFIG_FILE = "ser-sync.properties";
-    public static final String CONFIG_FILE_ALT = "ser-sync.properties.txt";
+    public static final String CONFIG_FILE = "cdd-sync.properties";
+    public static final String CONFIG_FILE_ALT = "cdd-sync.properties.txt";
 
     private Properties properties;
     private boolean dryRun = false;

@@ -5,7 +5,7 @@ import javax.swing.SwingWorker;
 import javax.swing.UIManager;
 
 /**
- * Main entry point for serato-sync.
+ * Main entry point for cdd-sync-pro.
  * Syncs filesystem directory structure to Serato crates.
  */
 public class cdd_sync_main {
@@ -329,7 +329,7 @@ public class cdd_sync_main {
 
         if (dupeCount > 0) {
             cdd_sync_log.info("Found " + dupeCount
-                    + " duplicate file groups on hard drive. See logs/ser-sync-dupe-files-*.log for details.");
+                    + " duplicate file groups on hard drive. See logs/cdd-sync-dupe-files-*.log for details.");
         } else {
             cdd_sync_log.info("No hard drive duplicates found.");
         }
