@@ -36,6 +36,7 @@ harddrive.dupe.scan.enabled=true
 # - keep-oldest: Keep the oldest file (by modification date), move newer duplicates
 # - false: Disable duplicate moving
 # Only works when harddrive.dupe.scan.enabled=true
+# Note: legacy values 'true' and 'oldest' are treated as 'keep-newest' for backward compatibility.
 harddrive.dupe.move.enabled=keep-oldest
 
 # Duplicate detection strategy: name-and-size, name-only, or off (default: off)

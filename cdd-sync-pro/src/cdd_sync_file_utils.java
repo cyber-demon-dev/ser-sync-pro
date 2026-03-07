@@ -1,22 +1,21 @@
 import java.io.File;
 
 /**
- * File and directory utilities for serato-sync.
+ * File and directory utilities for cdd-sync-pro.
  */
 public class cdd_sync_file_utils {
 
     /**
      * Deletes all files in a directory (not subdirectories).
      */
-    @SuppressWarnings({ "ResultOfMethodCallIgnored" })
     public static void deleteAllFilesInDirectory(String directoryPath) {
         File directory = new File(directoryPath);
         if (directory.isDirectory()) {
             File[] all = directory.listFiles();
             if (all != null) {
                 for (File file : all) {
-                    if (file.isFile()) {
-                        file.delete();
+                    if (file.isFile() && !file.delete()) {
+                        cdd_sync_log.error("Failed to delete file: " + file.getAbsolutePath());
                     }
                 }
             }
@@ -26,8 +25,10 @@ public class cdd_sync_file_utils {
     /**
      * Deletes a single file.
      */
-    @SuppressWarnings({ "ResultOfMethodCallIgnored" })
     public static void deleteFile(String filePath) {
-        new File(filePath).delete();
+        File file = new File(filePath);
+        if (file.exists() && !file.delete()) {
+            cdd_sync_log.error("Failed to delete file: " + filePath);
+        }
     }
 }

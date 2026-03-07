@@ -14,16 +14,8 @@ public class cdd_sync_log {
     private static cdd_sync_log_window_handler WINDOW_HANDLER;
     private static PrintWriter FILE_WRITER;
     private static PrintWriter DUPE_WRITER;
-    private static String LOG_FILE = "cdd-sync-pro.log";
     private static final String DUPE_FILE = "cdd-sync-dupe-files.log";
     private static String LOG_DIR = null; // null = use CWD-relative "logs/"
-
-    /**
-     * Sets the log file name. Must be called before any logging methods.
-     */
-    public static synchronized void setLogFile(String filename) {
-        LOG_FILE = filename;
-    }
 
     /**
      * Sets the log directory path. If set, logs are written to this directory
@@ -47,9 +39,9 @@ public class cdd_sync_log {
     }
 
     // Progress tracking state
-    private static long progressStartTime = 0;
-    private static String lastProgressTask = "";
-    private static int lastProgressPercent = -1;
+    private static volatile long progressStartTime = 0;
+    private static volatile String lastProgressTask = "";
+    private static volatile int lastProgressPercent = -1;
 
     /**
      * Displays progress with percentage and estimated time remaining.
@@ -59,7 +51,7 @@ public class cdd_sync_log {
      * @param current Current item number (1-based)
      * @param total   Total number of items
      */
-    public static void progress(String task, int current, int total) {
+    public static synchronized void progress(String task, int current, int total) {
         if (total <= 0)
             return;
 
@@ -232,7 +224,7 @@ public class cdd_sync_log {
         }
     }
 
-    private static void writeToFile(String message) {
+    private static synchronized void writeToFile(String message) {
         if (FILE_WRITER != null) {
             FILE_WRITER.println(message);
             FILE_WRITER.flush();
