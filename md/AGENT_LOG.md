@@ -2,6 +2,18 @@
 
 <!-- Newest entries go at the top, below this comment. Do NOT delete old entries. -->
 
+## 2026-03-06 — Class Rename Plan: ser_sync_*→ cdd_sync_*
+
+- **Task**: Scope and document the Java class rename refactor as a phased action plan for another agent to execute
+- **Files Changed**:
+  - `md/actions/RENAME_CLASSES_PLAN.md` [NEW] — 30-phase plan: git mv + sed cascade for 24 source files + 2 test files + build.xml
+  - `md/actions/EXECUTE.md` [MODIFIED] — Execution prompt rewritten for this plan
+  - `md/actions/RENAME_CLASSES_AUDIT.md` [NEW] — Pre-filled audit skeleton (30 rows)
+  - `md/TODO.md` [MODIFIED] — Class rename added to Backlog
+  - `md/AGENT_LOG.md` [MODIFIED] — This entry
+- **What Was Done**: Audited the full `ser_sync_*` reference graph across 27 Java files and `build.xml`. Identified correct rename ordering to exploit substring-match cascade (e.g. Phase 6 on `ser_sync_log_window` automatically updates `ser_sync_log_window_handler` references via sed). Produced a zero-ambiguity 30-phase plan with verbatim commands and verify steps. No source code changed — plan only.
+- **Docs to Update**: None — all updated here.
+
 ## 2026-03-06 — Rename Audit + Javadoc Cleanup
 
 - **Task**: Audit previous rename agent's execution; fix remaining `ser-sync-pro` leaks missed by plan scope

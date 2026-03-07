@@ -7,6 +7,7 @@
 ## Backlog
 
 - [ ] Document Windows-specific path handling and testing notes
+- [ ] Rename all `ser_sync_*` Java classes → `cdd_sync_*` (plan: `md/actions/RENAME_CLASSES_PLAN.md`)
 
 ## Ideas / Future
 
