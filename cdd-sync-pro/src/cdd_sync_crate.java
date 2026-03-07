@@ -211,24 +211,33 @@ public class cdd_sync_crate {
                     }
                     in.skipExactString("brev");
                     result.setSortingRev(in.readLongValue(5));
+                } else {
+                    // Unknown chunk (e.g. orvc) — skip by length
+                    int unknownLen = in.readIntegerValue();
+                    in.skipBytes(unknownLen);
                 }
             }
 
-            // Read tracks
-            boolean firstTrack = true;
+            // Read tracks — loop over all remaining chunks, skip non-otrk ones
             for (;;) {
-                if (!firstTrack) {
-                    boolean eof = in.skipExactString("otrk");
-                    if (eof)
-                        break;
+                byte[] chunkTag = new byte[4];
+                int read = in.read(chunkTag);
+                if (read < 4) {
+                    break; // EOF
                 }
-                firstTrack = false;
+                String chunkType = new String(chunkTag);
 
-                in.readIntegerValue(); // record length
-                in.skipExactString("ptrk");
-                int nameLength = in.readIntegerValue();
-                String trackPath = in.readStringUTF16(nameLength);
-                result.addTrack(trackPath);
+                if ("otrk".equals(chunkType)) {
+                    in.readIntegerValue(); // record length
+                    in.skipExactString("ptrk");
+                    int nameLength = in.readIntegerValue();
+                    String trackPath = in.readStringUTF16(nameLength);
+                    result.addTrack(trackPath);
+                } else {
+                    // Unknown chunk between tracks (e.g. orvc) — skip by length
+                    int unknownLen = in.readIntegerValue();
+                    in.skipBytes(unknownLen);
+                }
             }
 
         } catch (Exception e) {
