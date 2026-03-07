@@ -1,4 +1,4 @@
-# TODO — ser-sync-pro
+# TODO — cdd-sync-pro
 
 > Backlog and planned work for the project.
 

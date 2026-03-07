@@ -1,6 +1,6 @@
-# ser-sync-pro Codebase Guide
+# cdd-sync-pro Codebase Guide
 
-This document provides a comprehensive overview of the **ser-sync-pro** repository structure, modules, entry points, and dependencies. Use this as a reference for navigating and understanding the codebase.
+This document provides a comprehensive overview of the **cdd-sync-pro** repository structure, modules, entry points, and dependencies. Use this as a reference for navigating and understanding the codebase.
 
 ---
 
@@ -19,7 +19,7 @@ This document provides a comprehensive overview of the **ser-sync-pro** reposito
 
 ## Project Overview
 
-**ser-sync-pro** is a Serato DJ crate synchronization tool that:
+**cdd-sync-pro** is a Serato DJ crate synchronization tool that:
 
 - Mirrors filesystem directory structures to Serato crates
 - Fixes broken file paths in crates and session files
@@ -28,7 +28,7 @@ This document provides a comprehensive overview of the **ser-sync-pro** reposito
 
 The project contains **two distinct applications**:
 
-1. **ser-sync-pro** — Main sync tool (filesystem → Serato crates)
+1. **cdd-sync-pro** — Main sync tool (filesystem → Serato crates)
 2. **session-fixer** — Standalone tool to repair session file paths
 
 ---
@@ -36,9 +36,9 @@ The project contains **two distinct applications**:
 ## Directory Structure
 
 ```text
-ser-sync-pro/
+cdd-sync-pro/
 ├── shared/src/                         # Shared source files (used by both apps, 9 files)
-├── ser-sync-pro/src/                   # Main sync app source files (12 files)
+├── cdd-sync-pro/src/                   # Main sync app source files (12 files)
 │   └── ser-sync.properties.template    # Config template for main sync tool
 ├── session-fixer/                      # Session-fixer silo (standalone tool)
 │   ├── src/                            # Session-fixer source files (4 files)
@@ -57,12 +57,12 @@ ser-sync-pro/
 
 | Module | Source Dir | Entry Point | Purpose | Key Dependencies |
 |--------|-----------|-------------|---------|------------------|
-| **Main Sync** | `ser-sync-pro/src/` | `ser_sync_main.java` | Syncs filesystem to Serato crates | `ser_sync_config`, `ser_sync_media_library`, `ser_sync_library`, `ser_sync_crate` |
+| **Main Sync** | `cdd-sync-pro/src/` | `ser_sync_main.java` | Syncs filesystem to Serato crates | `ser_sync_config`, `ser_sync_media_library`, `ser_sync_library`, `ser_sync_crate` |
 | **Session Fixer** | `session-fixer/src/` | `session_fixer_main.java` | [See session-fixer/CODEBASE_GUIDE.md](session-fixer/CODEBASE_GUIDE.md) | Uses shared modules |
-| **Crate Management** | `ser-sync-pro/src/` | `ser_sync_crate.java` | Read/write Serato `.crate` files | `ser_sync_input_stream`, `ser_sync_output_stream`, `ser_sync_database` |
+| **Crate Management** | `cdd-sync-pro/src/` | `ser_sync_crate.java` | Read/write Serato `.crate` files | `ser_sync_input_stream`, `ser_sync_output_stream`, `ser_sync_database` |
 | **Database Parser** | `shared/src/` | `ser_sync_database.java` | Parse Serato `database V2` file | — |
 | **Media Library** | `shared/src/` | `ser_sync_media_library.java` | Scan filesystem for audio/video files | — |
-| **Path Fixers** | `ser-sync-pro/src/` + `shared/src/` | `ser_sync_crate_fixer.java`, `ser_sync_database_fixer.java` | Repair broken paths | `ser_sync_media_library`, `ser_sync_database` |
+| **Path Fixers** | `cdd-sync-pro/src/` + `shared/src/` | `ser_sync_crate_fixer.java`, `ser_sync_database_fixer.java` | Repair broken paths | `ser_sync_media_library`, `ser_sync_database` |
 | **I/O Utilities** | `shared/src/` | `ser_sync_input_stream.java`, `ser_sync_output_stream.java` | Binary stream helpers for Serato format | — |
 | **Logging** | `shared/src/` | `ser_sync_log.java` | GUI/CLI logging, file output | `ser_sync_log_window` |
 
@@ -70,7 +70,7 @@ ser-sync-pro/
 
 ## Module Details
 
-### 1. Main Entry Point (`ser-sync-pro/src/`)
+### 1. Main Entry Point (`cdd-sync-pro/src/`)
 
 #### `ser_sync_main.java`
 
@@ -111,7 +111,7 @@ ser-sync-pro/
 
 ---
 
-### 2. Configuration (`ser-sync-pro/src/`)
+### 2. Configuration (`cdd-sync-pro/src/`)
 
 #### `ser_sync_config.java`
 
@@ -135,7 +135,7 @@ ser-sync-pro/
 
 ---
 
-### 3. Crate Management (`ser-sync-pro/src/`)
+### 3. Crate Management (`cdd-sync-pro/src/`)
 
 #### `ser_sync_crate.java`
 
@@ -177,7 +177,7 @@ ser-sync-pro/
 
 ---
 
-### 5. Path Fixers (`ser-sync-pro/src/` + `shared/src/`)
+### 5. Path Fixers (`cdd-sync-pro/src/` + `shared/src/`)
 
 #### `ser_sync_crate_fixer.java`
 
@@ -252,7 +252,7 @@ ser-sync-pro/
   - `keep-newest` — Keep newest file (by modification time), move older duplicates
   - `keep-oldest` — Keep oldest file (by modification time), move newer duplicates
 - **Detection Strategies**: Supports `name-and-size` (strict) or `name-only` (catches different versions/edits with same name)
-- **Output**: `ser-sync-pro/dupes/<timestamp>/dupes.log` + moved files with preserved paths
+- **Output**: `cdd-sync-pro/dupes/<timestamp>/dupes.log` + moved files with preserved paths
 - **Flow**: Runs early in sync process (before crate building), triggers library rescan after moving
 - **Dependencies**: `ser_sync_media_library`, `ser_sync_log`, `ser_sync_config`
 - **Key Methods**:
@@ -285,8 +285,8 @@ ser-sync-pro/
 #### `ser_sync_log.java` / `ser_sync_log_window.java`
 
 - Logging with GUI and CLI support
-- Configurable log directory via `setLogDirectory()` — defaults to `<volume>/ser-sync-pro/logs/`
-- Timestamped logs to `ser-sync-pro-<timestamp>.log`
+- Configurable log directory via `setLogDirectory()` — defaults to `<volume>/cdd-sync-pro/logs/`
+- Timestamped logs to `cdd-sync-pro-<timestamp>.log`
 - Duplicate file logging to `ser-sync-dupe-files-<timestamp>.log`
 - `ser_sync_log_window` is the shared base class (protected fields for subclassing)
 - `ser_sync_log_window_handler` supports custom window injection via `install()`
@@ -363,9 +363,9 @@ All Serato binary files (crates, database, sessions) share similar structure:
 | `ant all` | Clean and build both applications |
 | `ant compile` | Compile all source files (Java 11) |
 | `ant test` | Compile and run unit tests (JUnit 5, Java 11) |
-| `ant jar` | Create ser-sync-pro.jar |
+| `ant jar` | Create cdd-sync-pro.jar |
 | `ant session-fixer-jar` | Create session-fixer.jar |
-| `ant run` | Build and run ser-sync-pro |
+| `ant run` | Build and run cdd-sync-pro |
 | `ant session-fixer-run` | Build and run session-fixer |
 | `ant clean` | Remove all generated files |
 
@@ -374,7 +374,7 @@ All Serato binary files (crates, database, sessions) share similar structure:
 ```bash
 ant all      # Build everything
 ant test     # Run all tests (26 tests)
-ant run      # Build and run ser-sync-pro
+ant run      # Build and run cdd-sync-pro
 ```
 
 ### CI / GitHub Actions
@@ -393,26 +393,26 @@ ant run      # Build and run ser-sync-pro
 
 ### Output Artifacts
 
-- `distr/ser-sync-pro/ser-sync-pro.jar` — Main sync tool
+- `distr/cdd-sync-pro/cdd-sync-pro.jar` — Main sync tool
 - `distr/session-fixer/session-fixer.jar` — Session fixer
 
 ---
 
 ## Key Data Flows
 
-### Sync Flow (ser-sync-pro)
+### Sync Flow (cdd-sync-pro)
 
 ```text
 ser_sync_config
        |
        v
-ser_sync_backup ──────────────> ser-sync-pro/backup/
+ser_sync_backup ──────────────> cdd-sync-pro/backup/
        |
        v
 ser_sync_media_library ───────> Audio/Video files
        |
        v
-ser_sync_dupe_mover ──────────> ser-sync-pro/dupes/<timestamp>/
+ser_sync_dupe_mover ──────────> cdd-sync-pro/dupes/<timestamp>/
        |                        (if harddrive.dupe.move.enabled=true)
        | (removes moved files from library)
        v
@@ -447,7 +447,7 @@ ser_sync_session_fixer ───────> Updated .session files
 
 This codebase contains two main applications sharing common infrastructure:
 
-1. **ser-sync-pro**: Syncs filesystem structure to Serato crates
+1. **cdd-sync-pro**: Syncs filesystem structure to Serato crates
 2. **session-fixer**: Repairs broken paths in Serato session files
 
 **Core shared modules**:

@@ -106,10 +106,10 @@ public class ser_sync_main {
 
         // Set log directory to volume (alongside backup and dupes)
         File seratoDir = new File(seratoPath);
-        File volumeLogDir = new File(seratoDir.getParentFile(), "ser-sync-pro/logs");
+        File volumeLogDir = new File(seratoDir.getParentFile(), "cdd-sync-pro/logs");
         ser_sync_log.setLogDirectory(volumeLogDir.getAbsolutePath());
 
-        ser_sync_log.info("ser-sync-pro started");
+        ser_sync_log.info("cdd-sync-pro started");
 
         // Backup Serato folder
         if (config.isBackupEnabled()) {

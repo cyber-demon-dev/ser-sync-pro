@@ -12,13 +12,13 @@ import java.util.*;
  * Preserves the original folder structure within the dupes folder.
  * 
  * Output structure:
- * ser-sync-pro/dupes/<timestamp>/
+ * cdd-sync-pro/dupes/<timestamp>/
  * ├── dupes.log
  * └── <relative-path>/filename
  */
 public class ser_sync_dupe_mover {
 
-    private static final String DUPES_FOLDER = "ser-sync-pro/dupes";
+    private static final String DUPES_FOLDER = "cdd-sync-pro/dupes";
     private List<String> logEntries = new ArrayList<>();
     private Map<String, String> movedToKeptMap = new HashMap<>(); // moved path -> kept path
     private int totalGroupsFound = 0;
