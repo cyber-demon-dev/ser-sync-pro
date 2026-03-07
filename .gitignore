@@ -1,7 +1,5 @@
 # ── Build / Output ──────────────────────────────────────────
 out/
-distr/cdd-sync-pro/
-distr/session-fixer/
 build/
 
 # ── Runtime / Scratch ────────────────────────────────────────
