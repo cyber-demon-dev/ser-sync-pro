@@ -218,7 +218,13 @@ public class cdd_sync_crate {
                 }
             }
 
-            // Read tracks — loop over all remaining chunks, skip non-otrk ones
+            // The metadata loop already consumed the first 'otrk' tag — read its body now.
+            in.readIntegerValue(); // record length
+            in.skipExactString("ptrk");
+            int firstNameLength = in.readIntegerValue();
+            result.addTrack(in.readStringUTF16(firstNameLength));
+
+            // Read all remaining chunks — skip non-otrk ones
             for (;;) {
                 byte[] chunkTag = new byte[4];
                 int read = in.read(chunkTag);
@@ -231,10 +237,9 @@ public class cdd_sync_crate {
                     in.readIntegerValue(); // record length
                     in.skipExactString("ptrk");
                     int nameLength = in.readIntegerValue();
-                    String trackPath = in.readStringUTF16(nameLength);
-                    result.addTrack(trackPath);
+                    result.addTrack(in.readStringUTF16(nameLength));
                 } else {
-                    // Unknown chunk between tracks (e.g. orvc) — skip by length
+                    // Unknown chunk between tracks — skip by length
                     int unknownLen = in.readIntegerValue();
                     in.skipBytes(unknownLen);
                 }
