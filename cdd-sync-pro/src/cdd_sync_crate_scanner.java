@@ -70,7 +70,7 @@ public class cdd_sync_crate_scanner {
                 in.close();
             }
         } catch (IOException e) {
-            // Skip this crate file, continue with others
+            cdd_sync_log.error("Skipping unreadable crate: " + crateFile.getName() + " — " + e.getMessage());
         }
     }
 
@@ -143,10 +143,7 @@ public class cdd_sync_crate_scanner {
         for (int i = 0; i < data.length - 8; i++) {
             if (data[i] == 'p' && data[i + 1] == 't' && data[i + 2] == 'r' && data[i + 3] == 'k') {
                 // Found ptrk tag
-                int len = ((data[i + 4] & 0xFF) << 24) |
-                        ((data[i + 5] & 0xFF) << 16) |
-                        ((data[i + 6] & 0xFF) << 8) |
-                        (data[i + 7] & 0xFF);
+                int len = cdd_sync_binary_utils.readInt(data, i + 4);
 
                 if (i + 8 + len <= data.length) {
                     try {

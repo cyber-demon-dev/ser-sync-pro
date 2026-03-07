@@ -49,20 +49,7 @@ public class cdd_sync_crate {
         String key = normalizeForDedup(trackPath);
         if (!normalizedPaths.contains(key)) {
             normalizedPaths.add(key);
-            // If database is set, try to use Serato's original filename encoding
-            // to prevent duplicate entries from encoding mismatches
-            String trackToAdd = trackPath;
-            if (database != null) {
-                String seratoFilename = database.getSeratoFilename(trackPath);
-                if (seratoFilename != null) {
-                    // Replace filesystem filename with Serato's encoded filename
-                    java.io.File f = new java.io.File(trackPath);
-                    String dir = f.getParent();
-                    if (dir != null) {
-                        trackToAdd = dir + java.io.File.separator + seratoFilename;
-                    }
-                }
-            }
+            String trackToAdd = cdd_sync_binary_utils.resolveSeratoPath(trackPath, database);
             tracks.add(trackToAdd);
         }
     }
@@ -88,19 +75,7 @@ public class cdd_sync_crate {
             File f = new File(track);
             String size = cdd_sync_binary_utils.formatSize(f.length());
             if (!index.shouldSkipTrack(track, size)) {
-                // Try to use Serato's original filename encoding to match database
-                String trackToAdd = track;
-                if (database != null) {
-                    String seratoFilename = database.getSeratoFilename(track);
-                    if (seratoFilename != null) {
-                        // Replace filesystem filename with Serato's encoded filename
-                        String dir = f.getParent();
-                        if (dir != null) {
-                            trackToAdd = dir + File.separator + seratoFilename;
-                        }
-                    }
-                }
-                tracks.add(trackToAdd);
+                tracks.add(cdd_sync_binary_utils.resolveSeratoPath(track, database));
             }
         }
     }
