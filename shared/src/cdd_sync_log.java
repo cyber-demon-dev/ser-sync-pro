@@ -7,11 +7,11 @@ import java.util.Scanner;
  * Logging utility for cdd-sync-pro.
  * Supports GUI and command-line modes, with optional file logging.
  */
-public class ser_sync_log {
+public class cdd_sync_log {
 
     private static boolean GUI_INITIALIZED = false;
     private static boolean GUI_MODE = true;
-    private static ser_sync_log_window_handler WINDOW_HANDLER;
+    private static cdd_sync_log_window_handler WINDOW_HANDLER;
     private static PrintWriter FILE_WRITER;
     private static PrintWriter DUPE_WRITER;
     private static String LOG_FILE = "cdd-sync-pro.log";
@@ -169,7 +169,7 @@ public class ser_sync_log {
             WINDOW_HANDLER.fatalError();
         }
         closeLogFile();
-        throw new ser_sync_fatal_exception("Fatal error");
+        throw new cdd_sync_fatal_exception("Fatal error");
     }
 
     public static void success() {
@@ -200,7 +200,7 @@ public class ser_sync_log {
         if (!GUI_INITIALIZED) {
             if (GUI_MODE) {
                 try {
-                    WINDOW_HANDLER = ser_sync_log_window_handler.getInstance();
+                    WINDOW_HANDLER = cdd_sync_log_window_handler.getInstance();
                 } catch (Exception e) {
                     GUI_MODE = false;
                 }

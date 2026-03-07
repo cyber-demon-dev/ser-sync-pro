@@ -10,7 +10,7 @@ import java.util.Properties;
  * Extends the base log window with interactive config controls.
  * Dark theme matching Music Timestamp Agent style.
  */
-public class ser_sync_pro_window extends ser_sync_log_window {
+public class cdd_sync_pro_window extends cdd_sync_log_window {
 
     // Theme colors
     private static final Color BG_DARK = new Color(0x3C, 0x3F, 0x41);
@@ -49,7 +49,7 @@ public class ser_sync_pro_window extends ser_sync_log_window {
     private volatile boolean syncCancelled = false;
     private Runnable onStartCallback;
 
-    public ser_sync_pro_window() {
+    public cdd_sync_pro_window() {
         super("cdd-sync-pro", 750, 700);
 
         // Remove the default content from base class
@@ -371,10 +371,10 @@ public class ser_sync_pro_window extends ser_sync_log_window {
      */
     public void saveToFile() {
         Properties props = collectProperties();
-        try (FileOutputStream out = new FileOutputStream(ser_sync_config.CONFIG_FILE)) {
+        try (FileOutputStream out = new FileOutputStream(cdd_sync_config.CONFIG_FILE)) {
             props.store(out, "cdd-sync-pro configuration");
         } catch (IOException e) {
-            ser_sync_log.error("Failed to save config: " + e.getMessage());
+            cdd_sync_log.error("Failed to save config: " + e.getMessage());
         }
     }
 

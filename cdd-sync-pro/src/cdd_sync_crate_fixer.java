@@ -16,7 +16,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * scanning existing .crate files and fixing broken filepaths
  * by looking up files in the media library by filename.
  */
-public class ser_sync_crate_fixer {
+public class cdd_sync_crate_fixer {
 
     // Thread pool for parallel crate processing
     private static final int NUM_THREADS = Runtime.getRuntime().availableProcessors();
@@ -33,9 +33,9 @@ public class ser_sync_crate_fixer {
      * @param dupeMoveMode "keep-newest", "keep-oldest", or "false" - controls which
      *                     duplicate entry to fix based on date added
      */
-    public static void fixBrokenPaths(String seratoPath, ser_sync_media_library library,
-            ser_sync_database database, String dupeMoveMode) {
-        ser_sync_log.info("Checking for broken filepaths in crates...");
+    public static void fixBrokenPaths(String seratoPath, cdd_sync_media_library library,
+            cdd_sync_database database, String dupeMoveMode) {
+        cdd_sync_log.info("Checking for broken filepaths in crates...");
 
         // Determine volume root from seratoPath (e.g. /Volumes/Name/_Serato_ ->
         // /Volumes/Name/)
@@ -61,7 +61,7 @@ public class ser_sync_crate_fixer {
         // 2. Scan for .crate files
         File subcratesDir = new File(seratoPath + "/Subcrates");
         if (!subcratesDir.exists() || !subcratesDir.isDirectory()) {
-            ser_sync_log.info("No Subcrates directory found, skipping path fixer.");
+            cdd_sync_log.info("No Subcrates directory found, skipping path fixer.");
             return;
         }
 
@@ -72,7 +72,7 @@ public class ser_sync_crate_fixer {
         });
 
         if (crateFiles == null || crateFiles.length == 0) {
-            ser_sync_log.info("No crate files found to check.");
+            cdd_sync_log.info("No crate files found to check.");
             return;
         }
 
@@ -91,7 +91,7 @@ public class ser_sync_crate_fixer {
                 processCrateFile(crateFile, libraryFiles, database, finalVolumeRoot, pathFixes, crateUpdates,
                         seratoPath, dupeMoveMode);
                 int done = processedCount.incrementAndGet();
-                ser_sync_log.progress("Checking crates for broken paths", done, totalCrates);
+                cdd_sync_log.progress("Checking crates for broken paths", done, totalCrates);
             }));
         }
 
@@ -100,24 +100,24 @@ public class ser_sync_crate_fixer {
             try {
                 future.get();
             } catch (InterruptedException | ExecutionException e) {
-                ser_sync_log.error("Error processing crate: " + e.getMessage());
+                cdd_sync_log.error("Error processing crate: " + e.getMessage());
             }
         }
 
-        ser_sync_log.progressComplete("Checking crates");
+        cdd_sync_log.progressComplete("Checking crates");
 
         // 4. Update database V2 file with all path fixes
         if (!pathFixes.isEmpty()) {
-            ser_sync_log.info("Updating database V2 with " + pathFixes.size() + " path fixes...");
+            cdd_sync_log.info("Updating database V2 with " + pathFixes.size() + " path fixes...");
             String databasePath = seratoPath + "/database V2";
-            int dbUpdated = ser_sync_database_fixer.updatePaths(databasePath, pathFixes);
+            int dbUpdated = cdd_sync_database_fixer.updatePaths(databasePath, pathFixes);
             if (dbUpdated > 0) {
-                ser_sync_log.info("Updated " + dbUpdated + " paths in database V2");
+                cdd_sync_log.info("Updated " + dbUpdated + " paths in database V2");
             } else {
-                ser_sync_log.info("No database paths were updated (paths not found in database)");
+                cdd_sync_log.info("No database paths were updated (paths not found in database)");
             }
         } else {
-            ser_sync_log.info("No broken paths found to update in database V2.");
+            cdd_sync_log.info("No broken paths found to update in database V2.");
         }
 
         // 5. Now update all crate files
@@ -128,14 +128,14 @@ public class ser_sync_crate_fixer {
             File crateFile = entry.getKey();
             List<String> newTracks = entry.getValue();
 
-            ser_sync_crate originalCrate;
+            cdd_sync_crate originalCrate;
             try {
-                originalCrate = ser_sync_crate.readFrom(crateFile);
-            } catch (ser_sync_exception e) {
+                originalCrate = cdd_sync_crate.readFrom(crateFile);
+            } catch (cdd_sync_exception e) {
                 continue;
             }
 
-            ser_sync_crate newCrate = new ser_sync_crate();
+            cdd_sync_crate newCrate = new cdd_sync_crate();
             newCrate.setVersion(originalCrate.getVersion());
             newCrate.setSorting(originalCrate.getSorting());
             newCrate.setSortingRev(originalCrate.getSortingRev());
@@ -148,15 +148,15 @@ public class ser_sync_crate_fixer {
                 newCrate.writeTo(crateFile);
                 totalFixedCrates++;
                 totalFixedTracks += newTracks.size();
-            } catch (ser_sync_exception e) {
-                ser_sync_log.error("Failed to write fixed crate: " + crateFile.getName());
+            } catch (cdd_sync_exception e) {
+                cdd_sync_log.error("Failed to write fixed crate: " + crateFile.getName());
             }
         }
 
         if (totalFixedCrates > 0) {
-            ser_sync_log.info("Fixed " + totalFixedCrates + " crate files.");
+            cdd_sync_log.info("Fixed " + totalFixedCrates + " crate files.");
         } else {
-            ser_sync_log.info("No broken paths found to update the .crate files.");
+            cdd_sync_log.info("No broken paths found to update the .crate files.");
         }
     }
 
@@ -165,15 +165,15 @@ public class ser_sync_crate_fixer {
      * Thread-safe - can be called from multiple threads.
      */
     private static void processCrateFile(File crateFile, Map<String, String> libraryFiles,
-            ser_sync_database database, String volumeRoot,
+            cdd_sync_database database, String volumeRoot,
             Map<String, String> pathFixes, Map<File, List<String>> crateUpdates,
             String seratoPath, String dupeMoveMode) {
 
-        ser_sync_crate crate;
+        cdd_sync_crate crate;
         try {
-            crate = ser_sync_crate.readFrom(crateFile);
-        } catch (ser_sync_exception e) {
-            ser_sync_log.error("Failed to read crate: " + crateFile.getName());
+            crate = cdd_sync_crate.readFrom(crateFile);
+        } catch (cdd_sync_exception e) {
+            cdd_sync_log.error("Failed to read crate: " + crateFile.getName());
             return;
         }
 
@@ -230,12 +230,12 @@ public class ser_sync_crate_fixer {
                         String dbPath = null;
                         if (database != null) {
                             boolean usePreference = dupeMoveMode != null &&
-                                    !ser_sync_config.DUPE_MOVE_OFF.equals(dupeMoveMode);
+                                    !cdd_sync_config.DUPE_MOVE_OFF.equals(dupeMoveMode);
                             if (usePreference) {
-                                boolean keepNewest = ser_sync_config.DUPE_MOVE_KEEP_NEWEST.equals(dupeMoveMode);
+                                boolean keepNewest = cdd_sync_config.DUPE_MOVE_KEEP_NEWEST.equals(dupeMoveMode);
                                 String dbFile = seratoPath + "/database V2";
                                 String trackFilename = new File(trackPath).getName();
-                                dbPath = ser_sync_database_entry_selector.getPathByDatePreference(dbFile, trackFilename,
+                                dbPath = cdd_sync_database_entry_selector.getPathByDatePreference(dbFile, trackFilename,
                                         keepNewest);
                             } else {
                                 dbPath = database.getOriginalPathByFilename(trackPath);
@@ -259,8 +259,8 @@ public class ser_sync_crate_fixer {
                 // However, resolvedPath is absolute (e.g. /Volumes/...) while trackPath might
                 // be relative (Serato style).
 
-                String normalizedResolved = ser_sync_crate.getUniformTrackName(resolvedPath);
-                String normalizedOriginal = ser_sync_crate.getUniformTrackName(trackPath);
+                String normalizedResolved = cdd_sync_crate.getUniformTrackName(resolvedPath);
+                String normalizedOriginal = cdd_sync_crate.getUniformTrackName(trackPath);
 
                 // If they normalize to the same string (handling separators, volume prefixes,
                 // etc.),
@@ -269,7 +269,7 @@ public class ser_sync_crate_fixer {
                     newTracks.add(trackPath);
                 } else {
                     // They are genuinely different (filename casing, different folder, etc.)
-                    // Use resolvedPath (ser_sync_crate.writeTo will handle relativization for us)
+                    // Use resolvedPath (cdd_sync_crate.writeTo will handle relativization for us)
                     newTracks.add(resolvedPath);
                     tracksChanged = true;
                 }
@@ -280,7 +280,7 @@ public class ser_sync_crate_fixer {
                     String dbPath = database.getOriginalPathByFilename(trackPath);
                     if (dbPath != null) {
                         // Normalize both paths for accurate comparison
-                        String normalizedDbPath = ser_sync_crate.getUniformTrackName(dbPath);
+                        String normalizedDbPath = cdd_sync_crate.getUniformTrackName(dbPath);
                         if (!normalizedDbPath.equals(normalizedOriginal)) {
                             // Database has different path - update it to match crate
                             pathFixes.put(dbPath, trackPath);

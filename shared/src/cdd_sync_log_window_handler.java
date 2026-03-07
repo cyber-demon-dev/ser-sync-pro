@@ -2,34 +2,34 @@ import javax.swing.*;
 
 /**
  * Singleton handler for the log window.
- * In cdd-sync-pro GUI mode, a ser_sync_pro_window is used instead.
+ * In cdd-sync-pro GUI mode, a cdd_sync_pro_window is used instead.
  */
-public class ser_sync_log_window_handler {
+public class cdd_sync_log_window_handler {
 
-    private ser_sync_log_window window = null;
-    private static ser_sync_log_window_handler handler = null;
+    private cdd_sync_log_window window = null;
+    private static cdd_sync_log_window_handler handler = null;
 
-    private ser_sync_log_window_handler() {
+    private cdd_sync_log_window_handler() {
         if (window == null) {
-            window = new ser_sync_log_window("cdd-sync-pro logging window", 700, 400);
+            window = new cdd_sync_log_window("cdd-sync-pro logging window", 700, 400);
         }
     }
 
     /**
-     * Package-private constructor for ser_sync_pro_window to inject its own window
+     * Package-private constructor for cdd_sync_pro_window to inject its own window
      */
-    ser_sync_log_window_handler(ser_sync_log_window existingWindow) {
+    cdd_sync_log_window_handler(cdd_sync_log_window existingWindow) {
         this.window = existingWindow;
     }
 
-    /** Install a custom handler (used by ser_sync_pro_window) */
-    public static synchronized void install(ser_sync_log_window_handler customHandler) {
+    /** Install a custom handler (used by cdd_sync_pro_window) */
+    public static synchronized void install(cdd_sync_log_window_handler customHandler) {
         handler = customHandler;
     }
 
-    public static synchronized ser_sync_log_window_handler getInstance() {
+    public static synchronized cdd_sync_log_window_handler getInstance() {
         if (handler == null) {
-            handler = new ser_sync_log_window_handler();
+            handler = new cdd_sync_log_window_handler();
         }
         return handler;
     }

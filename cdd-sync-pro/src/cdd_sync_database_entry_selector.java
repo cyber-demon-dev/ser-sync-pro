@@ -7,9 +7,9 @@ import java.util.*;
  * Based on user preference (keep-oldest or keep-newest by "date added").
  * 
  * This is a standalone utility that does NOT modify the existing
- * ser_sync_database.java.
+ * cdd_sync_database.java.
  */
-public class ser_sync_database_entry_selector {
+public class cdd_sync_database_entry_selector {
 
     /**
      * Holds a database entry with path and date added.
@@ -44,10 +44,10 @@ public class ser_sync_database_entry_selector {
         String lowerFilename = filename.toLowerCase();
 
         try {
-            byte[] data = ser_sync_binary_utils.readFile(dbFile);
+            byte[] data = cdd_sync_binary_utils.readFile(dbFile);
             scanForEntries(data, lowerFilename, entries);
         } catch (IOException e) {
-            ser_sync_log.error("Error scanning database V2: " + e.getMessage());
+            cdd_sync_log.error("Error scanning database V2: " + e.getMessage());
             return null;
         }
 
@@ -89,7 +89,7 @@ public class ser_sync_database_entry_selector {
                     data[pos + 2] == otrkMarker[2] && data[pos + 3] == otrkMarker[3]) {
 
                 // Read record length
-                int recordLen = ser_sync_binary_utils.readInt(data, pos + 4);
+                int recordLen = cdd_sync_binary_utils.readInt(data, pos + 4);
                 if (pos + 8 + recordLen > data.length) {
                     break;
                 }
@@ -116,7 +116,7 @@ public class ser_sync_database_entry_selector {
 
         while (pos + 8 < end) {
             String tag = new String(data, pos, 4, StandardCharsets.US_ASCII);
-            int fieldLen = ser_sync_binary_utils.readInt(data, pos + 4);
+            int fieldLen = cdd_sync_binary_utils.readInt(data, pos + 4);
             pos += 8;
 
             if (pos + fieldLen > end) {
@@ -132,7 +132,7 @@ public class ser_sync_database_entry_selector {
             }
 
             if ("uadd".equals(tag) && fieldLen == 4) {
-                dateAdded = ser_sync_binary_utils.readInt(data, pos) & 0xFFFFFFFFL;
+                dateAdded = cdd_sync_binary_utils.readInt(data, pos) & 0xFFFFFFFFL;
             }
 
             pos += fieldLen;
@@ -140,7 +140,7 @@ public class ser_sync_database_entry_selector {
 
         // Check if this entry matches our filename
         if (path != null) {
-            String entryFilename = ser_sync_binary_utils.getFilename(path);
+            String entryFilename = cdd_sync_binary_utils.getFilename(path);
             if (entryFilename.equals(lowerFilename)) {
                 entries.add(new DbEntry(path, dateAdded));
             }

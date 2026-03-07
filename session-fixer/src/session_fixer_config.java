@@ -108,7 +108,7 @@ public class session_fixer_config {
     private String getRequiredOption(String name) {
         String result = properties.getProperty(name);
         if (result == null || result.trim().length() <= 0) {
-            throw new ser_sync_fatal_exception("Required config option missing: " + name);
+            throw new cdd_sync_fatal_exception("Required config option missing: " + name);
         }
         return result.trim();
     }

@@ -3,13 +3,13 @@
  * error.
  * Replaces System.exit() calls to allow proper cleanup and testability.
  */
-public class ser_sync_fatal_exception extends RuntimeException {
+public class cdd_sync_fatal_exception extends RuntimeException {
 
-    public ser_sync_fatal_exception(String message) {
+    public cdd_sync_fatal_exception(String message) {
         super(message);
     }
 
-    public ser_sync_fatal_exception(String message, Throwable cause) {
+    public cdd_sync_fatal_exception(String message, Throwable cause) {
         super(message, cause);
     }
 }

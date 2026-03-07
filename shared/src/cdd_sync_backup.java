@@ -5,7 +5,7 @@ import java.nio.file.*;
  * Handles backup of Serato folder before sync operations.
  * Creates timestamped backup directories in a sibling folder.
  */
-public class ser_sync_backup {
+public class cdd_sync_backup {
 
     private static final String BACKUP_FOLDER_NAME = "cdd-sync-pro/backup";
 
@@ -20,7 +20,7 @@ public class ser_sync_backup {
         File seratoDir = new File(seratoPath);
 
         if (!seratoDir.exists() || !seratoDir.isDirectory()) {
-            ser_sync_log.error("Serato folder does not exist: " + seratoPath);
+            cdd_sync_log.error("Serato folder does not exist: " + seratoPath);
             return null;
         }
 
@@ -33,26 +33,26 @@ public class ser_sync_backup {
         String backupName = timestamp + "_Serato_";
         File backupDir = new File(backupRoot, backupName);
 
-        ser_sync_log.info("Creating backup: " + backupDir.getAbsolutePath());
+        cdd_sync_log.info("Creating backup: " + backupDir.getAbsolutePath());
 
         try {
             // Create backup directory
             if (!backupDir.mkdirs()) {
-                ser_sync_log.error("Failed to create backup directory: " + backupDir.getAbsolutePath());
+                cdd_sync_log.error("Failed to create backup directory: " + backupDir.getAbsolutePath());
                 return null;
             }
 
             // Copy all files and directories
             long totalBytes = copyDirectory(seratoDir, backupDir);
 
-            String sizeStr = ser_sync_binary_utils.formatSize(totalBytes);
-            ser_sync_log.info("Backup complete (" + sizeStr + ")");
+            String sizeStr = cdd_sync_binary_utils.formatSize(totalBytes);
+            cdd_sync_log.info("Backup complete (" + sizeStr + ")");
 
             return backupDir.getAbsolutePath();
 
         } catch (IOException e) {
-            ser_sync_log.error("Backup failed: " + e.getMessage());
-            ser_sync_log.error(e);
+            cdd_sync_log.error("Backup failed: " + e.getMessage());
+            cdd_sync_log.error(e);
             return null;
         }
     }

@@ -7,7 +7,7 @@ import java.util.Properties;
  * Configuration loader for serato-sync.
  * Reads settings from ser-sync.properties file.
  */
-public class ser_sync_config {
+public class cdd_sync_config {
 
     public static final String CONFIG_FILE = "ser-sync.properties";
     public static final String CONFIG_FILE_ALT = "ser-sync.properties.txt";
@@ -16,7 +16,7 @@ public class ser_sync_config {
     private boolean dryRun = false;
 
     /** File-based constructor for CLI mode */
-    public ser_sync_config() throws IOException {
+    public cdd_sync_config() throws IOException {
         properties = new Properties();
         try (FileInputStream in = openConfigFile()) {
             properties.load(in);
@@ -32,7 +32,7 @@ public class ser_sync_config {
     }
 
     /** Properties-based constructor for GUI mode */
-    public ser_sync_config(Properties props) {
+    public cdd_sync_config(Properties props) {
         this.properties = props;
     }
 
@@ -75,9 +75,9 @@ public class ser_sync_config {
         path = path.trim();
         // Reject nested paths
         if (path.contains("%%")) {
-            ser_sync_log.error("Invalid 'crate.parent.path': nested paths are not supported.");
-            ser_sync_log.error("Use a single crate name like 'Current', not 'Current%%2025'.");
-            throw new ser_sync_fatal_exception("Invalid crate.parent.path: nested paths not supported");
+            cdd_sync_log.error("Invalid 'crate.parent.path': nested paths are not supported.");
+            cdd_sync_log.error("Use a single crate name like 'Current', not 'Current%%2025'.");
+            throw new cdd_sync_fatal_exception("Invalid crate.parent.path: nested paths not supported");
         }
         return path;
     }
@@ -103,7 +103,7 @@ public class ser_sync_config {
     public String getDedupMode() {
         String mode = properties.getProperty("database.dupe.detection.mode");
         if (mode == null || mode.trim().isEmpty()) {
-            return ser_sync_track_index.MODE_PATH; // default
+            return cdd_sync_track_index.MODE_PATH; // default
         }
         return mode.trim().toLowerCase();
     }
@@ -173,7 +173,7 @@ public class ser_sync_config {
     private String getRequiredOption(String name) {
         String result = properties.getProperty(name);
         if (result == null || result.trim().length() <= 0) {
-            throw new ser_sync_fatal_exception("Required config option missing: " + name);
+            throw new cdd_sync_fatal_exception("Required config option missing: " + name);
         }
         return result;
     }

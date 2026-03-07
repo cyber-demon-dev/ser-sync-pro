@@ -6,7 +6,7 @@ import java.text.Normalizer;
  * Consolidates duplicated readInt, readFile, writeFile, getFilename, and
  * formatSize methods.
  */
-public class ser_sync_binary_utils {
+public class cdd_sync_binary_utils {
 
     /**
      * Reads a 4-byte big-endian integer from a byte array.

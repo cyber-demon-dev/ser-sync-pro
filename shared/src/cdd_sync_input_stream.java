@@ -6,23 +6,23 @@ import java.io.UnsupportedEncodingException;
 /**
  * Binary input stream for reading Serato crate and database files.
  */
-public class ser_sync_input_stream extends DataInputStream {
+public class cdd_sync_input_stream extends DataInputStream {
 
-    public ser_sync_input_stream(InputStream in) {
+    public cdd_sync_input_stream(InputStream in) {
         super(in);
     }
 
     /**
      * Reads variable number of bytes as a long value.
      */
-    public long readLongValue(int bytes) throws ser_sync_exception {
+    public long readLongValue(int bytes) throws cdd_sync_exception {
         long value = 0;
         for (int i = 0; i < bytes; i++) {
             value <<= 8;
             try {
                 value += readUnsignedByte();
             } catch (IOException e) {
-                throw new ser_sync_exception(e);
+                throw new cdd_sync_exception(e);
             }
         }
         return value;
@@ -31,14 +31,14 @@ public class ser_sync_input_stream extends DataInputStream {
     /**
      * Reads 4 bytes as an integer value.
      */
-    public int readIntegerValue() throws ser_sync_exception {
+    public int readIntegerValue() throws cdd_sync_exception {
         int value = 0;
         for (int i = 0; i < 4; i++) {
             value <<= 8;
             try {
                 value += readUnsignedByte();
             } catch (IOException e) {
-                throw new ser_sync_exception(e);
+                throw new cdd_sync_exception(e);
             }
         }
         return value;
@@ -49,7 +49,7 @@ public class ser_sync_input_stream extends DataInputStream {
      * 
      * @return true if EOF reached
      */
-    public boolean skipExactString(String expected) throws ser_sync_exception {
+    public boolean skipExactString(String expected) throws cdd_sync_exception {
         byte[] data = new byte[expected.length()];
         try {
             int read = read(data);
@@ -57,14 +57,14 @@ public class ser_sync_input_stream extends DataInputStream {
                 return true;
             }
             if (read != data.length) {
-                throw new ser_sync_exception("Expected '" + expected + "', but read only " + read + " bytes");
+                throw new cdd_sync_exception("Expected '" + expected + "', but read only " + read + " bytes");
             }
         } catch (IOException e) {
-            throw new ser_sync_exception(e);
+            throw new cdd_sync_exception(e);
         }
         String dataAsString = new String(data);
         if (!expected.equals(dataAsString)) {
-            throw new ser_sync_exception("Expected '" + expected + "' but found '" + dataAsString + "'");
+            throw new cdd_sync_exception("Expected '" + expected + "' but found '" + dataAsString + "'");
         }
         return false;
     }
@@ -74,7 +74,7 @@ public class ser_sync_input_stream extends DataInputStream {
      * 
      * @return true if EOF reached
      */
-    public boolean skipExactStringUTF16(String expected) throws ser_sync_exception {
+    public boolean skipExactStringUTF16(String expected) throws cdd_sync_exception {
         byte[] data = new byte[expected.length() << 1];
         try {
             int read = read(data);
@@ -82,19 +82,19 @@ public class ser_sync_input_stream extends DataInputStream {
                 return true;
             }
             if (read != data.length) {
-                throw new ser_sync_exception("Expected '" + expected + "', but read only " + read + " bytes");
+                throw new cdd_sync_exception("Expected '" + expected + "', but read only " + read + " bytes");
             }
         } catch (IOException e) {
-            throw new ser_sync_exception(e);
+            throw new cdd_sync_exception(e);
         }
         String dataAsString;
         try {
             dataAsString = new String(data, "UTF-16");
         } catch (UnsupportedEncodingException e) {
-            throw new ser_sync_exception(e);
+            throw new cdd_sync_exception(e);
         }
         if (!expected.equals(dataAsString)) {
-            throw new ser_sync_exception("Expected '" + expected + "' but found '" + dataAsString + "'");
+            throw new cdd_sync_exception("Expected '" + expected + "' but found '" + dataAsString + "'");
         }
         return false;
     }
@@ -104,7 +104,7 @@ public class ser_sync_input_stream extends DataInputStream {
      * 
      * @return true if EOF reached
      */
-    public boolean skipExactByte(byte expected) throws ser_sync_exception {
+    public boolean skipExactByte(byte expected) throws cdd_sync_exception {
         byte[] data = new byte[1];
         try {
             int read = read(data);
@@ -112,14 +112,14 @@ public class ser_sync_input_stream extends DataInputStream {
                 return true;
             }
             if (read != data.length) {
-                throw new ser_sync_exception(
+                throw new cdd_sync_exception(
                         "Expected a single byte '" + expected + "', but was unable to read anything");
             }
         } catch (IOException e) {
-            throw new ser_sync_exception(e);
+            throw new cdd_sync_exception(e);
         }
         if (data[0] != expected) {
-            throw new ser_sync_exception("Expected a single byte " + expected + " but found '" + data[0] + "'");
+            throw new cdd_sync_exception("Expected a single byte " + expected + " but found '" + data[0] + "'");
         }
         return false;
     }
@@ -127,35 +127,35 @@ public class ser_sync_input_stream extends DataInputStream {
     /**
      * Reads a UTF-16 string of specified byte length.
      */
-    public String readStringUTF16(int length) throws ser_sync_exception {
+    public String readStringUTF16(int length) throws cdd_sync_exception {
         byte[] data = new byte[length];
         try {
             int read = read(data);
             if (read != length) {
-                throw new ser_sync_exception("Expected to read " + length + " bytes, but read only " + read);
+                throw new cdd_sync_exception("Expected to read " + length + " bytes, but read only " + read);
             }
         } catch (IOException e) {
-            throw new ser_sync_exception(e);
+            throw new cdd_sync_exception(e);
         }
         try {
             return new String(data, "UTF-16");
         } catch (UnsupportedEncodingException e) {
-            throw new ser_sync_exception(e);
+            throw new cdd_sync_exception(e);
         }
     }
 
     /**
      * Reads a string of specified byte length.
      */
-    public String readString(int length) throws ser_sync_exception {
+    public String readString(int length) throws cdd_sync_exception {
         byte[] data = new byte[length];
         try {
             int read = read(data);
             if (read != length) {
-                throw new ser_sync_exception("Expected to read " + length + " bytes, but read only " + read);
+                throw new cdd_sync_exception("Expected to read " + length + " bytes, but read only " + read);
             }
         } catch (IOException e) {
-            throw new ser_sync_exception(e);
+            throw new cdd_sync_exception(e);
         }
         return new String(data);
     }

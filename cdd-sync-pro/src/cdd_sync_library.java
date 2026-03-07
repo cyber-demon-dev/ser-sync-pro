@@ -5,25 +5,25 @@ import java.util.*;
  * Builds and manages Serato crate library.
  * Maps filesystem structure to crate hierarchy.
  */
-public class ser_sync_library {
+public class cdd_sync_library {
 
-    private Map<ser_sync_crate, String> crateFileName = new HashMap<>();
-    private ser_sync_crate root;
-    private List<ser_sync_crate> crates = new ArrayList<>();
-    private List<ser_sync_crate> subCrates = new ArrayList<>();
-    private ser_sync_track_index trackIndex;
+    private Map<cdd_sync_crate, String> crateFileName = new HashMap<>();
+    private cdd_sync_crate root;
+    private List<cdd_sync_crate> crates = new ArrayList<>();
+    private List<cdd_sync_crate> subCrates = new ArrayList<>();
+    private cdd_sync_track_index trackIndex;
 
-    public static ser_sync_library createFrom(ser_sync_media_library fsLibrary) {
+    public static cdd_sync_library createFrom(cdd_sync_media_library fsLibrary) {
         return createFrom(fsLibrary, null, null);
     }
 
-    public static ser_sync_library createFrom(ser_sync_media_library fsLibrary, String parentCratePath) {
+    public static cdd_sync_library createFrom(cdd_sync_media_library fsLibrary, String parentCratePath) {
         return createFrom(fsLibrary, parentCratePath, null);
     }
 
-    public static ser_sync_library createFrom(ser_sync_media_library fsLibrary, String parentCratePath,
-            ser_sync_track_index index) {
-        ser_sync_library result = new ser_sync_library();
+    public static cdd_sync_library createFrom(cdd_sync_media_library fsLibrary, String parentCratePath,
+            cdd_sync_track_index index) {
+        cdd_sync_library result = new cdd_sync_library();
         result.trackIndex = index;
 
         // If parentCratePath is specified, use it as prefix for all crate names
@@ -33,7 +33,7 @@ public class ser_sync_library {
         return result;
     }
 
-    private SortedSet<String> buildLibrary(ser_sync_media_library fsLibrary, int level, String crateName,
+    private SortedSet<String> buildLibrary(cdd_sync_media_library fsLibrary, int level, String crateName,
             boolean includeSubcrateTracks) {
         SortedSet<String> all = new TreeSet<String>();
 
@@ -41,7 +41,7 @@ public class ser_sync_library {
         all.addAll(fsLibrary.getTracks());
 
         // Build for every sub-directory
-        for (ser_sync_media_library child : fsLibrary.getChildren()) {
+        for (cdd_sync_media_library child : fsLibrary.getChildren()) {
             String crateNameNext = crateName.length() > 0 ? crateName + "%%" + child.getDirectory()
                     : child.getDirectory();
             SortedSet<String> children = buildLibrary(child, level + 1, crateNameNext, includeSubcrateTracks);
@@ -51,7 +51,7 @@ public class ser_sync_library {
             }
         }
 
-        ser_sync_crate crate = new ser_sync_crate();
+        cdd_sync_crate crate = new cdd_sync_crate();
 
         // Set database reference for path encoding lookup
         if (trackIndex != null && trackIndex.getDatabase() != null) {
@@ -66,7 +66,7 @@ public class ser_sync_library {
         if (trackIndex != null) {
             for (String track : all) {
                 java.io.File f = new java.io.File(track);
-                String size = ser_sync_binary_utils.formatSize(f.length());
+                String size = cdd_sync_binary_utils.formatSize(f.length());
                 trackIndex.shouldSkipTrack(track, size); // Just counts, doesn't skip
             }
         }
@@ -83,11 +83,11 @@ public class ser_sync_library {
         return all;
     }
 
-    public void writeTo(String seratoLibraryPath, boolean clearLibraryBeforeSync) throws ser_sync_exception {
+    public void writeTo(String seratoLibraryPath, boolean clearLibraryBeforeSync) throws cdd_sync_exception {
         if (clearLibraryBeforeSync) {
-            ser_sync_file_utils.deleteAllFilesInDirectory(seratoLibraryPath + "/Crates");
-            ser_sync_file_utils.deleteAllFilesInDirectory(seratoLibraryPath + "/Subcrates");
-            ser_sync_file_utils.deleteFile(seratoLibraryPath + "/database V2");
+            cdd_sync_file_utils.deleteAllFilesInDirectory(seratoLibraryPath + "/Crates");
+            cdd_sync_file_utils.deleteAllFilesInDirectory(seratoLibraryPath + "/Subcrates");
+            cdd_sync_file_utils.deleteFile(seratoLibraryPath + "/database V2");
         }
 
         int total = crates.size() + subCrates.size();
@@ -96,9 +96,9 @@ public class ser_sync_library {
         int skippedCount = 0;
 
         // Write parent crates
-        for (ser_sync_crate crate : crates) {
+        for (cdd_sync_crate crate : crates) {
             current++;
-            ser_sync_log.progress("Processing crates", current, total);
+            cdd_sync_log.progress("Processing crates", current, total);
             if (writeCrateSmart(crate, seratoLibraryPath, crateFileName.get(crate))) {
                 updatedCount++;
             } else {
@@ -107,9 +107,9 @@ public class ser_sync_library {
         }
 
         // Write sub-crates
-        for (ser_sync_crate crate : subCrates) {
+        for (cdd_sync_crate crate : subCrates) {
             current++;
-            ser_sync_log.progress("Processing crates", current, total);
+            cdd_sync_log.progress("Processing crates", current, total);
             if (writeCrateSmart(crate, seratoLibraryPath, crateFileName.get(crate))) {
                 updatedCount++;
             } else {
@@ -117,12 +117,12 @@ public class ser_sync_library {
             }
         }
 
-        ser_sync_log.progressComplete("Writing crates");
+        cdd_sync_log.progressComplete("Writing crates");
 
         if (updatedCount > 0) {
-            ser_sync_log.info("Updated " + updatedCount + " crates (Skipped " + skippedCount + " unchanged).");
+            cdd_sync_log.info("Updated " + updatedCount + " crates (Skipped " + skippedCount + " unchanged).");
         } else {
-            ser_sync_log.info("No crate files needed updating (Skipped " + skippedCount + " unchanged).");
+            cdd_sync_log.info("No crate files needed updating (Skipped " + skippedCount + " unchanged).");
         }
     }
 
@@ -130,14 +130,14 @@ public class ser_sync_library {
      * Writes crate to disk only if content has changed.
      * Returns true if written, false if skipped.
      */
-    private boolean writeCrateSmart(ser_sync_crate crate, String seratoLibraryPath, String fileName)
-            throws ser_sync_exception {
+    private boolean writeCrateSmart(cdd_sync_crate crate, String seratoLibraryPath, String fileName)
+            throws cdd_sync_exception {
         File crateFile = new File(seratoLibraryPath + "/Subcrates/" + fileName);
 
         // Check if exists and matches
         if (crateFile.exists()) {
             try {
-                ser_sync_crate existing = ser_sync_crate.readFrom(crateFile);
+                cdd_sync_crate existing = cdd_sync_crate.readFrom(crateFile);
                 if (existing.equals(crate)) {
                     return false; // No change needed
                 }
@@ -150,8 +150,8 @@ public class ser_sync_library {
             crateFile.getParentFile().mkdirs();
             crate.writeTo(crateFile);
             return true;
-        } catch (ser_sync_exception e) {
-            throw new ser_sync_exception("Error serializing crate '" + fileName + "'", e);
+        } catch (cdd_sync_exception e) {
+            throw new cdd_sync_exception("Error serializing crate '" + fileName + "'", e);
         }
     }
 
@@ -165,10 +165,10 @@ public class ser_sync_library {
 
     public int getTotalTracksWritten() {
         int total = 0;
-        for (ser_sync_crate crate : crates) {
+        for (cdd_sync_crate crate : crates) {
             total += crate.getTrackCount();
         }
-        for (ser_sync_crate crate : subCrates) {
+        for (cdd_sync_crate crate : subCrates) {
             total += crate.getTrackCount();
         }
         return total;
@@ -180,13 +180,13 @@ public class ser_sync_library {
      */
     public List<String> getAllCrateNames() {
         List<String> names = new ArrayList<>();
-        for (ser_sync_crate crate : crates) {
+        for (cdd_sync_crate crate : crates) {
             String fileName = crateFileName.get(crate);
             if (fileName != null && fileName.endsWith(".crate")) {
                 names.add(fileName.substring(0, fileName.length() - 6));
             }
         }
-        for (ser_sync_crate crate : subCrates) {
+        for (cdd_sync_crate crate : subCrates) {
             String fileName = crateFileName.get(crate);
             if (fileName != null && fileName.endsWith(".crate")) {
                 names.add(fileName.substring(0, fileName.length() - 6));

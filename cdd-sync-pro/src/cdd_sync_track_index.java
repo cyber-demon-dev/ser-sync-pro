@@ -4,14 +4,14 @@ import java.io.File;
  * Unified track index that combines data from database V2 and crate files.
  * Provides deduplication lookups in path or filename mode.
  */
-public class ser_sync_track_index {
+public class cdd_sync_track_index {
 
     public static final String MODE_PATH = "path";
     public static final String MODE_FILENAME = "filename";
     public static final String MODE_OFF = "off";
 
-    private ser_sync_database database;
-    private ser_sync_crate_scanner crateScanner;
+    private cdd_sync_database database;
+    private cdd_sync_crate_scanner crateScanner;
     private String mode;
     private int skippedCount = 0;
 
@@ -20,31 +20,31 @@ public class ser_sync_track_index {
      * 
      * @param seratoPath Path to _Serato_ folder
      * @param mode       Deduplication mode: "path", "filename", or "off"
-     * @return ser_sync_track_index instance
+     * @return cdd_sync_track_index instance
      */
-    public static ser_sync_track_index createFrom(String seratoPath, String mode) {
-        ser_sync_track_index index = new ser_sync_track_index();
+    public static cdd_sync_track_index createFrom(String seratoPath, String mode) {
+        cdd_sync_track_index index = new cdd_sync_track_index();
         index.mode = mode != null ? mode.toLowerCase() : MODE_FILENAME;
 
         if (MODE_OFF.equals(index.mode)) {
-            ser_sync_log.info("Deduplication disabled");
+            cdd_sync_log.info("Deduplication disabled");
             return index;
         }
 
         // Load database V2
         String dbPath = seratoPath + "/database V2";
         if (new File(dbPath).exists()) {
-            ser_sync_log.info("Loading database V2 for duplicate detection...");
-            index.database = ser_sync_database.readFrom(dbPath);
+            cdd_sync_log.info("Loading database V2 for duplicate detection...");
+            index.database = cdd_sync_database.readFrom(dbPath);
             if (index.database != null) {
-                ser_sync_log.info("Found " + index.database.getTrackCount() + " tracks in database V2");
+                cdd_sync_log.info("Found " + index.database.getTrackCount() + " tracks in database V2");
             }
         }
 
         // Scan crate files
-        ser_sync_log.info("Scanning existing crate files...");
-        index.crateScanner = ser_sync_crate_scanner.scanFrom(seratoPath);
-        ser_sync_log.info("Found " + index.crateScanner.getTrackCount() + " tracks in " +
+        cdd_sync_log.info("Scanning existing crate files...");
+        index.crateScanner = cdd_sync_crate_scanner.scanFrom(seratoPath);
+        cdd_sync_log.info("Found " + index.crateScanner.getTrackCount() + " tracks in " +
                 index.crateScanner.getCrateCount() + " crate files");
 
         return index;
@@ -112,7 +112,7 @@ public class ser_sync_track_index {
     /**
      * Returns the database reference for path encoding lookup.
      */
-    public ser_sync_database getDatabase() {
+    public cdd_sync_database getDatabase() {
         return database;
     }
 }
