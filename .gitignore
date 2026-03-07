@@ -1,24 +1,63 @@
-# Build output
+# ── Build / Output ──────────────────────────────────────────
 out/
-distr/
+distr/cdd-sync-pro/
+distr/session-fixer/
+build/
+
+# ── Runtime / Scratch ────────────────────────────────────────
 temp/
 pvt/
+logs/
+*.log
+
+# ── Scripts / Private ────────────────────────────────────────
 scripts/
 
-# IDE
+# ── Agent Actions (generated plans, not source) ──────────────
+md/actions/
+
+# ── Secrets / Local Configs ──────────────────────────────────
+# Keep *.template files — ignore the live copies
+cdd-sync-pro/cdd-sync.properties
+session-fixer/session-fixer.properties
+s3-smart-sync/.env
+s3-smart-sync/config.json
+
+# ── Python ───────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ── Java / Ant ───────────────────────────────────────────────
+*.class
+*.jar
+# (keep build.xml — that's source)
+
+# ── IDE — IntelliJ ───────────────────────────────────────────
 .idea/
 *.iml
+
+# ── IDE — Eclipse / Ant workspace ────────────────────────────
 .classpath
 .project
 .settings/
 
-# OS
-.DS_Store
+# ── IDE — VS Code ────────────────────────────────────────────
+.vscode/
 
-# Logs
-logs/
-*.log
+# ── OS ───────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Shell helpers ────────────────────────────────────────────
 *.command
 
-# Guides
+# ── Private docs (not for repo) ──────────────────────────────
 DATABASE_GUIDE.md
