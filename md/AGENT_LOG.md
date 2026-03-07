@@ -2,6 +2,19 @@
 
 <!-- Newest entries go at the top, below this comment. Do NOT delete old entries. -->
 
+## 2026-03-06 — Rename Audit + Javadoc Cleanup
+
+- **Task**: Audit previous rename agent's execution; fix remaining `ser-sync-pro` leaks missed by plan scope
+- **Files Changed**:
+  - `shared/src/ser_sync_binary_utils.java` [MODIFIED] — Javadoc comment (last stale reference in codebase)
+  - `shared/src/ser_sync_log.java` [MODIFIED] — Log filename + startup/finish messages (prior session, commit `2f22625`)
+  - `shared/src/ser_sync_backup.java` [MODIFIED] — `BACKUP_FOLDER_NAME` on-disk path (prior session)
+  - `shared/src/ser_sync_log_window_handler.java` [MODIFIED] — Window + confirm dialog title (prior session)
+  - `session-fixer/CODEBASE_GUIDE.md` + `README.md` [MODIFIED] — Stale cross-references (prior session)
+  - `md/AGENT_LOG.md` [MODIFIED] — Added this entry
+- **What Was Done**: Audit confirmed rename plan's `shared/` exclusion was too broad — three shared files had functional product-name strings (log paths, backup paths, window titles) that were wrong at runtime. Prior session fixed 4 of 5 (commit `2f22625`). This session cleared the last Javadoc reference and filed the missing log entry.
+- **Docs to Update**: None
+
 ## 2026-03-06 — Project Rename: ser-sync-pro → cdd-sync-pro
 
 - **Task**: Execute `RENAME_TO_CDD_SYNC_PRO.md` — full product rename across source silo, build system, Java runtime strings, IDE project files, and all documentation
