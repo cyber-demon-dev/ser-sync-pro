@@ -20,6 +20,7 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
     private static final Color FG_TEXT = new Color(0xBB, 0xBB, 0xBB);
     private static final Color FG_LABEL = new Color(0xDD, 0xDD, 0xDD);
     private static final Color ACCENT_GREEN = new Color(0x5F, 0xA8, 0x5F);
+    private static final Color ACCENT_AMBER = new Color(0xC8, 0x96, 0x2A);
     private static final Color ACCENT_RED = new Color(0xC7, 0x5F, 0x5F);
     private static final Color BORDER_COLOR = new Color(0x55, 0x58, 0x5A);
 
@@ -42,12 +43,14 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
 
     // Action buttons
     private JButton startButton;
+    private JButton fixPathsButton;
     private JButton cancelButton;
 
     // Sync state
     private volatile boolean syncRunning = false;
     private volatile boolean syncCancelled = false;
     private Runnable onStartCallback;
+    private Runnable onFixPathsCallback;
 
     public cdd_sync_pro_window() {
         super("cdd-sync-pro", 750, 700);
@@ -102,9 +105,31 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
         syncGrid.setBackground(BG_DARK);
 
         backupCheck = createDarkCheckBox("Backup before sync", true);
+        backupCheck.setToolTipText("<html><b>[DEBUG] Backup before sync</b><br>"
+                + "Creates a timestamped ZIP of the entire _Serato_ folder before any changes.<br>"
+                + "Stored alongside _Serato_ in cdd-sync-pro/backups/.<br>"
+                + "If backup fails, sync is aborted. Disable to skip for faster dev cycles.</html>");
+
         skipExistingCheck = createDarkCheckBox("Skip existing tracks", true);
+        skipExistingCheck.setToolTipText("<html><b>[DEBUG] Skip existing tracks</b><br>"
+                + "Builds a track index from existing .crate files before writing new ones.<br>"
+                + "Tracks already in the library (matched by Dedup mode) are excluded from new crates.<br>"
+                + "Config key: database.skip.existing.tracks</html>");
+
         fixBrokenPathsCheck = createDarkCheckBox("Fix broken filepaths", false);
+        fixBrokenPathsCheck.setToolTipText("<html><b>[DEBUG] Fix broken filepaths</b><br>"
+                + "Runs cdd_sync_crate_fixer.fixBrokenPaths() AFTER crates are written.<br>"
+                + "Scans all .crate files for paths that no longer exist on disk<br>"
+                + "and re-resolves them using database V2 + fsLibrary as sources of truth.<br>"
+                + "Also patches database V2 for any moved duplicate files.<br>"
+                + "Config key: database.fix.broken.paths</html>");
+
         sortCratesCheck = createDarkCheckBox("Sort crates alphabetically", false);
+        sortCratesCheck.setToolTipText("<html><b>[DEBUG] Sort crates alphabetically</b><br>"
+                + "Runs cdd_sync_pref_sorter.sort() AFTER sync completes.<br>"
+                + "Rewrites neworder.pref in the _Serato_ folder so crates appear A→Z in Serato.<br>"
+                + "Has no effect on crate contents — display order only.<br>"
+                + "Config key: crate.sorting.alphabetical</html>");
 
         syncGrid.add(backupCheck);
         syncGrid.add(skipExistingCheck);
@@ -116,6 +141,11 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
         dedupRow.setBackground(BG_DARK);
         dedupRow.add(createDarkLabel("Dedup mode:"));
         dedupModeCombo = createDarkComboBox(new String[] { "path", "filename" });
+        dedupModeCombo.setToolTipText("<html><b>[DEBUG] Dedup mode (skip existing tracks)</b><br>"
+                + "<b>path</b> — tracks matched by full relative path (default, most precise)<br>"
+                + "<b>filename</b> — tracks matched by filename only (looser, catches renames)<br>"
+                + "Used by cdd_sync_track_index when 'Skip existing tracks' is enabled.<br>"
+                + "Config key: database.dupe.detection.mode</html>");
         dedupRow.add(dedupModeCombo);
         syncPanel.add(dedupRow, BorderLayout.SOUTH);
 
@@ -129,6 +159,12 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
         dupeContent.setBackground(BG_DARK);
 
         dupeScanCheck = createDarkCheckBox("Scan for duplicates", false);
+        dupeScanCheck.setToolTipText("<html><b>[DEBUG] Scan for duplicates</b><br>"
+                + "Enables the hard-drive duplicate scanner (cdd_sync_dupe_mover).<br>"
+                + "When Move mode is active: dupes are physically moved before crates are built,<br>"
+                + "then database V2 is patched and the media library is rescanned.<br>"
+                + "When Move mode is 'false': scan runs log-only AFTER crates are written.<br>"
+                + "Config key: harddrive.dupe.scan.enabled</html>");
         JPanel scanRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         scanRow.setBackground(BG_DARK);
         scanRow.add(dupeScanCheck);
@@ -138,10 +174,21 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
         dupeDropdowns.setBackground(BG_DARK);
         dupeDropdowns.add(createDarkLabel("Detection:"));
         dupeDetectionCombo = createDarkComboBox(new String[] { "name-and-size", "name-only", "off" });
+        dupeDetectionCombo.setToolTipText("<html><b>[DEBUG] Dupe detection strategy</b><br>"
+                + "<b>name-and-size</b> — filename + file size must match (safest)<br>"
+                + "<b>name-only</b> — filename match only (catches bitrate variants)<br>"
+                + "<b>off</b> — detection disabled (scan check ignored)<br>"
+                + "Config key: harddrive.dupe.detection.mode</html>");
         dupeDropdowns.add(dupeDetectionCombo);
         dupeDropdowns.add(Box.createHorizontalStrut(15));
         dupeDropdowns.add(createDarkLabel("Move mode:"));
         dupeMoveCombo = createDarkComboBox(new String[] { "keep-oldest", "keep-newest", "false" });
+        dupeMoveCombo.setToolTipText("<html><b>[DEBUG] Dupe move mode</b><br>"
+                + "<b>keep-oldest</b> — keeps the oldest file, moves newer dupe to /dupes/<br>"
+                + "<b>keep-newest</b> — keeps the newest file, moves older dupe to /dupes/<br>"
+                + "<b>false</b> — no files moved; scan is log-only<br>"
+                + "Moves happen BEFORE crates are built. database V2 is patched post-move.<br>"
+                + "Config key: harddrive.dupe.move.enabled</html>");
         dupeDropdowns.add(dupeMoveCombo);
         dupeContent.add(dupeDropdowns);
 
@@ -196,7 +243,7 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
         panel.add(progressPanel, BorderLayout.NORTH);
 
         // Buttons
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 8));
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 8));
         buttonPanel.setBackground(BG_DARK);
 
         startButton = new JButton("  Start  ");
@@ -205,8 +252,19 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
         startButton.setOpaque(true);
         startButton.setFocusPainted(false);
         startButton.setFont(new Font("SansSerif", Font.BOLD, 14));
-        startButton.setPreferredSize(new Dimension(140, 34));
+        startButton.setPreferredSize(new Dimension(130, 34));
+        startButton.setToolTipText("Full sync: write crates + fix paths");
         startButton.addActionListener(e -> onStartClicked());
+
+        fixPathsButton = new JButton("Fix Paths");
+        fixPathsButton.setBackground(ACCENT_AMBER);
+        fixPathsButton.setForeground(Color.WHITE);
+        fixPathsButton.setOpaque(true);
+        fixPathsButton.setFocusPainted(false);
+        fixPathsButton.setFont(new Font("SansSerif", Font.BOLD, 14));
+        fixPathsButton.setPreferredSize(new Dimension(130, 34));
+        fixPathsButton.setToolTipText("Fix broken paths in existing crates only — no new crates written");
+        fixPathsButton.addActionListener(e -> onFixPathsClicked());
 
         cancelButton = new JButton("  Cancel  ");
         cancelButton.setBackground(BG_INPUT);
@@ -214,11 +272,12 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
         cancelButton.setOpaque(true);
         cancelButton.setFocusPainted(false);
         cancelButton.setFont(new Font("SansSerif", Font.BOLD, 14));
-        cancelButton.setPreferredSize(new Dimension(140, 34));
+        cancelButton.setPreferredSize(new Dimension(130, 34));
         cancelButton.setEnabled(false);
         cancelButton.addActionListener(e -> onCancelClicked());
 
         buttonPanel.add(startButton);
+        buttonPanel.add(fixPathsButton);
         buttonPanel.add(cancelButton);
         panel.add(buttonPanel, BorderLayout.SOUTH);
 
@@ -397,6 +456,13 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
     }
 
     /**
+     * Sets the callback to invoke when Fix Paths is clicked.
+     */
+    public void setOnFixPathsCallback(Runnable callback) {
+        this.onFixPathsCallback = callback;
+    }
+
+    /**
      * Returns true if the user has requested cancellation.
      */
     public boolean isCancelled() {
@@ -422,6 +488,7 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
         syncCancelled = false;
         setControlsEnabled(false);
         startButton.setEnabled(false);
+        fixPathsButton.setEnabled(false);
         cancelButton.setEnabled(true);
         cancelButton.setBackground(ACCENT_RED);
         progressLabel.setText("Starting sync...");
@@ -429,6 +496,33 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
 
         if (onStartCallback != null) {
             onStartCallback.run();
+        }
+    }
+
+    private void onFixPathsClicked() {
+        if (musicFolderField.getText().trim().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Music Folder is required.", "Validation", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (seratoPathField.getText().trim().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Serato Path is required.", "Validation", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        saveToFile();
+
+        syncRunning = true;
+        syncCancelled = false;
+        setControlsEnabled(false);
+        startButton.setEnabled(false);
+        fixPathsButton.setEnabled(false);
+        cancelButton.setEnabled(true);
+        cancelButton.setBackground(ACCENT_RED);
+        progressLabel.setText("Fixing broken paths...");
+        textArea.setText("");
+
+        if (onFixPathsCallback != null) {
+            onFixPathsCallback.run();
         }
     }
 
@@ -446,6 +540,7 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
             syncRunning = false;
             setControlsEnabled(true);
             startButton.setEnabled(true);
+            fixPathsButton.setEnabled(true);
             cancelButton.setEnabled(false);
             cancelButton.setBackground(BG_INPUT);
         });
@@ -463,5 +558,6 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
         dupeScanCheck.setEnabled(enabled);
         dupeDetectionCombo.setEnabled(enabled);
         dupeMoveCombo.setEnabled(enabled);
+        fixPathsButton.setEnabled(enabled);
     }
 }
