@@ -19,6 +19,10 @@
     <property name="session.props.template" value="session-fixer/session-fixer.properties.template"/>
     <property name="main.class" value="cdd_sync_main"/>
     <property name="session.main.class" value="session_fixer_main"/>
+    <property name="datefixer.dist.dir" value="distr/date-fixer"/>
+    <property name="datefixer.jar.name" value="date-fixer.jar"/>
+    <property name="datefixer.props.template" value="date-fixer/date-fixer.properties.template"/>
+    <property name="datefixer.main.class" value="date_fixer_main"/>
     
     <!-- Compiler settings -->
     <property name="java.source" value="11"/>
@@ -29,12 +33,13 @@
         <delete dir="${build.dir}"/>
         <delete dir="${dist.dir}"/>
         <delete dir="${session.dist.dir}"/>
+        <delete dir="${datefixer.dist.dir}"/>
     </target>
     
     <!-- Compile target -->
     <target name="compile" description="Compile source files">
         <mkdir dir="${build.dir}"/>
-        <javac srcdir="${shared.dir}:${src.dir}:session-fixer/src" 
+        <javac srcdir="${shared.dir}:${src.dir}:session-fixer/src:date-fixer/src" 
                destdir="${build.dir}" 
                source="${java.source}" 
                target="${java.target}"
@@ -79,8 +84,26 @@
         <java jar="${session.dist.dir}/${session.jar.name}" fork="true"/>
     </target>
     
+    <!-- Package date-fixer -->
+    <target name="date-fixer-jar" depends="compile" description="Create date-fixer JAR file">
+        <mkdir dir="${datefixer.dist.dir}"/>
+        <jar destfile="${datefixer.dist.dir}/${datefixer.jar.name}" basedir="${build.dir}">
+            <manifest>
+                <attribute name="Main-Class" value="${datefixer.main.class}"/>
+                <attribute name="Built-By" value="${user.name}"/>
+                <attribute name="Build-Date" value="${TODAY}"/>
+            </manifest>
+        </jar>
+        <copy file="${datefixer.props.template}" tofile="${datefixer.dist.dir}/date-fixer.properties"/>
+    </target>
+
+    <!-- Run date-fixer -->
+    <target name="date-fixer-run" depends="date-fixer-jar" description="Run date-fixer">
+        <java jar="${datefixer.dist.dir}/${datefixer.jar.name}" fork="true"/>
+    </target>
+
     <!-- Build all applications -->
-    <target name="all" depends="clean, jar, session-fixer-jar" description="Clean and build everything"/>
+    <target name="all" depends="clean, jar, session-fixer-jar, date-fixer-jar" description="Clean and build everything"/>
     
     <!-- Compile and run tests -->
     <target name="test" depends="compile" description="Run unit tests">
