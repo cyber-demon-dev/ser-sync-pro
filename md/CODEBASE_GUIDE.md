@@ -188,15 +188,15 @@ cdd-sync-pro/
 
 #### `cdd_sync_crate_fixer.java`
 
-- **Purpose**: Fix broken paths in `.crate` files and sync database V2
-- **Features**:
-  - Scans all crates for broken paths (files that don't exist)
-  - Looks up correct path by filename in the media library
-  - Uses database path as search key for exact byte matching
-  - Syncs database V2 when crate paths differ from database paths (prevents Serato duplicates)
-- **Dependencies**: `cdd_sync_media_library`, `cdd_sync_database`, `cdd_sync_database_fixer`
-- **Key Methods**:
-  - `fixBrokenPaths(seratoPath, library, database)` — Scan and fix all crates + update database
+- **Purpose**: Implements the four-step sync pipeline that replaces the old monolithic `cdd_sync_library.writeTo()` call
+- **Steps**:
+  1. `updateDatabasePaths(seratoPath, library)` — Fixes broken `pfil` paths in database V2. Runs first so the DB is authoritative before any crate work.
+  2. `fixExistingCrates(seratoPath, library)` — Reads every `.crate` file, re-resolves broken paths by filename lookup, writes only crates that changed. Uses `setTracksRaw()` — dedup never runs, no track removal.
+  3. `appendNewTracksToMatchingCrates(seratoPath, library, parentCratePath, trackIndex)` — For each folder-mapped crate already on disk, adds new tracks from that folder using `addTrack()` (filename dedup prevents duplicates). Never removes existing tracks.
+  4. `createNewCrates(seratoPath, library, parentCratePath, trackIndex)` — Creates `.crate` files for folders with no matching crate on disk. Skips if the file already exists — Step 3 handles those.
+- **Key invariant**: Steps 3 & 4 are mutually exclusive per crate file. An existing crate is never overwritten.
+- **Facade**: `fixBrokenPaths(seratoPath, library, database, dupeMoveMode)` — backward-compatible wrapper over Steps 1 + 2 only. Used by `runFixPaths()` (Fix Paths button).
+- **Dependencies**: `cdd_sync_media_library`, `cdd_sync_database`, `cdd_sync_database_fixer`, `cdd_sync_track_index`
 
 > **Session Fixer**: In `session-fixer/src/session_fixer_core_logic.java`. See [session-fixer/CODEBASE_GUIDE.md](../session-fixer/CODEBASE_GUIDE.md).
 
@@ -293,7 +293,16 @@ cdd-sync-pro/
 
 - Logging with GUI and CLI support
 - Configurable log directory via `setLogDirectory()` — defaults to `<volume>/cdd-sync-pro/logs/`
-- Timestamped logs to `cdd-sync-pro-<timestamp>.log`
+- Each session opens **seven** timestamped log files:
+  - `cdd-sync-pro-*.log` — main log (INFO + ERROR)
+  - `cdd-sync-dupe-files-*.log` — duplicate file scan output
+  - `cdd-sync-path-fixes-*.log` — general path-fix records
+  - `cdd-sync-step1-db-fix-*.log` — database V2 broken-path fixes (Step 1)
+  - `cdd-sync-step2-crate-fix-*.log` — existing crate broken-path fixes (Step 2)
+  - `cdd-sync-step3-append-*.log` — tracks appended to existing crates (Step 3)
+  - `cdd-sync-step4-create-*.log` — new crates created (Step 4)
+- Per-step detail is file-only — never published to the GUI to avoid flooding
+- `progress(task, current, total)` — throttled percentage + ETA display, updates in-place on CLI
 - `cdd_sync_log_window` is the shared base class (protected fields for subclassing)
 - `cdd_sync_log_window_handler` — `java.util.logging` handler bridging to the GUI log window; installed via `install()`
 
@@ -416,17 +425,18 @@ cdd_sync_config
 cdd_sync_backup ──────────────> <volume>/cdd-sync-pro/backup/
        |
        v
-cdd_sync_media_library ───────> Audio/Video files
+cdd_sync_media_library ───────> Audio/Video files (absolute paths)
        |
        v
 cdd_sync_dupe_mover ──────────> cdd-sync-pro/dupes/<timestamp>/
-       |                        (if harddrive.dupe.move.enabled=true)
-       | (removes moved files from library)
+       |                         (if harddrive.dupe.move.enabled=true)
+       | (patches DB + rescans library)
        v
-cdd_sync_track_index <───────── cdd_sync_database
-       |                        cdd_sync_crate_scanner
-       v
-cdd_sync_library ─────────────> .crate files (no broken paths!)
+cdd_sync_crate_fixer
+  Step 1: updateDatabasePaths()   ──> database V2 (broken pfil paths fixed)
+  Step 2: fixExistingCrates()     ──> existing .crate files (setTracksRaw, no dedup)
+  Step 3: appendNewTracksToMatchingCrates() ──> existing .crate files (addTrack dedup)
+  Step 4: createNewCrates()       ──> new .crate files for new library folders
        |
        v
 cdd_sync_pref_sorter ─────────> neworder.pref

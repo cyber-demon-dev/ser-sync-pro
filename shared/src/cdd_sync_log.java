@@ -14,6 +14,11 @@ public class cdd_sync_log {
     private static cdd_sync_log_window_handler WINDOW_HANDLER;
     private static PrintWriter FILE_WRITER;
     private static PrintWriter DUPE_WRITER;
+    private static PrintWriter FIX_WRITER;
+    private static PrintWriter STEP1_WRITER;
+    private static PrintWriter STEP2_WRITER;
+    private static PrintWriter STEP3_WRITER;
+    private static PrintWriter STEP4_WRITER;
     private static final String DUPE_FILE = "cdd-sync-dupe-files.log";
     private static String LOG_DIR = null; // null = use CWD-relative "logs/"
 
@@ -23,6 +28,12 @@ public class cdd_sync_log {
      */
     public static synchronized void setLogDirectory(String directory) {
         LOG_DIR = directory;
+        // Close any existing log writers before the next run opens fresh ones.
+        // Resetting GUI_INITIALIZED causes initLogFile() to be called again on
+        // the next log write — necessary for repeated GUI sync runs in the same
+        // JVM session (e.g. clicking Start twice in the config window).
+        closeLogFile();
+        GUI_INITIALIZED = false;
     }
 
     public static void info(String message) {
@@ -127,6 +138,55 @@ public class cdd_sync_log {
         }
     }
 
+    /**
+     * Logs a detailed path-fix or crate-change record to the fix log file only.
+     * Does NOT publish to the GUI — safe to call from parallel threads at high volume.
+     * Use this for per-path and per-crate detail that would flood the GUI if shown.
+     */
+    public static synchronized void fix(String message) {
+        initGui();
+        if (FIX_WRITER != null) {
+            FIX_WRITER.println(getTimestamp() + " " + message);
+            FIX_WRITER.flush();
+        }
+    }
+
+    /** Step 1 — database V2 path fixes. */
+    public static synchronized void step1(String message) {
+        initGui();
+        if (STEP1_WRITER != null) {
+            STEP1_WRITER.println(getTimestamp() + " " + message);
+            STEP1_WRITER.flush();
+        }
+    }
+
+    /** Step 2 — existing crate path fixes. */
+    public static synchronized void step2(String message) {
+        initGui();
+        if (STEP2_WRITER != null) {
+            STEP2_WRITER.println(getTimestamp() + " " + message);
+            STEP2_WRITER.flush();
+        }
+    }
+
+    /** Step 3 — append new tracks to existing crates. */
+    public static synchronized void step3(String message) {
+        initGui();
+        if (STEP3_WRITER != null) {
+            STEP3_WRITER.println(getTimestamp() + " " + message);
+            STEP3_WRITER.flush();
+        }
+    }
+
+    /** Step 4 — create new crates. */
+    public static synchronized void step4(String message) {
+        initGui();
+        if (STEP4_WRITER != null) {
+            STEP4_WRITER.println(getTimestamp() + " " + message);
+            STEP4_WRITER.flush();
+        }
+    }
+
     public static void error(String message) {
         initGui();
         String timestamped = getTimestamp() + " [ERROR] " + message;
@@ -219,6 +279,30 @@ public class cdd_sync_log {
             FILE_WRITER.flush();
             String dupeLogPath = new File(logsDir, "cdd-sync-dupe-files-" + timestamp + ".log").getAbsolutePath();
             DUPE_WRITER = new PrintWriter(new FileWriter(dupeLogPath, false));
+            String fixLogPath = new File(logsDir, "cdd-sync-path-fixes-" + timestamp + ".log").getAbsolutePath();
+            FIX_WRITER = new PrintWriter(new FileWriter(fixLogPath, false));
+            FIX_WRITER.println(getTimestamp() + " [FIX-LOG] cdd-sync-pro path fix log started");
+            FIX_WRITER.flush();
+
+            STEP1_WRITER = new PrintWriter(new FileWriter(
+                    new File(logsDir, "cdd-sync-step1-db-fix-" + timestamp + ".log").getAbsolutePath(), false));
+            STEP1_WRITER.println(getTimestamp() + " [STEP1] Database V2 path fix log started");
+            STEP1_WRITER.flush();
+
+            STEP2_WRITER = new PrintWriter(new FileWriter(
+                    new File(logsDir, "cdd-sync-step2-crate-fix-" + timestamp + ".log").getAbsolutePath(), false));
+            STEP2_WRITER.println(getTimestamp() + " [STEP2] Existing crate path fix log started");
+            STEP2_WRITER.flush();
+
+            STEP3_WRITER = new PrintWriter(new FileWriter(
+                    new File(logsDir, "cdd-sync-step3-append-" + timestamp + ".log").getAbsolutePath(), false));
+            STEP3_WRITER.println(getTimestamp() + " [STEP3] Crate append log started");
+            STEP3_WRITER.flush();
+
+            STEP4_WRITER = new PrintWriter(new FileWriter(
+                    new File(logsDir, "cdd-sync-step4-create-" + timestamp + ".log").getAbsolutePath(), false));
+            STEP4_WRITER.println(getTimestamp() + " [STEP4] New crate creation log started");
+            STEP4_WRITER.flush();
         } catch (IOException e) {
             // Can't write log file - continue without it
         }
@@ -238,6 +322,21 @@ public class cdd_sync_log {
         }
         if (DUPE_WRITER != null) {
             DUPE_WRITER.close();
+        }
+        if (FIX_WRITER != null) {
+            FIX_WRITER.close();
+        }
+        if (STEP1_WRITER != null) {
+            STEP1_WRITER.close();
+        }
+        if (STEP2_WRITER != null) {
+            STEP2_WRITER.close();
+        }
+        if (STEP3_WRITER != null) {
+            STEP3_WRITER.close();
+        }
+        if (STEP4_WRITER != null) {
+            STEP4_WRITER.close();
         }
     }
 

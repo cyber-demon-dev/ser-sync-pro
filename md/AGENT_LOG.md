@@ -2,6 +2,20 @@
 
 <!-- Newest entries go at the top, below this comment. Do NOT delete old entries. -->
 
+## 2026-03-30 — 4-Step Sync Pipeline + Log Re-Init Bug Fix
+
+- **Task**: Replace monolithic `cdd_sync_library.writeTo()` with a 4-step decoupled pipeline; fix log writer re-initialization bug for multi-run GUI sessions
+- **Files Changed**:
+  - `cdd-sync-pro/src/cdd_sync_crate_fixer.java` [MODIFIED] — New 4-step API: `updateDatabasePaths()`, `fixExistingCrates()` (uses `setTracksRaw()`), `appendNewTracksToMatchingCrates()`, `createNewCrates()`; backward-compat `fixBrokenPaths()` facade retained
+  - `cdd-sync-pro/src/cdd_sync_main.java` [MODIFIED] — `runSync()` replaced `cdd_sync_library` call with explicit Steps 1–4; `runFixPaths()` added for Fix Paths button mode
+  - `cdd-sync-pro/src/cdd_sync_pro_window.java` [MODIFIED] — Amber **Fix Paths** button added; all controls wired with `[DEBUG]` tooltips; `clearLibraryCheck` guarded with confirmation dialog
+  - `shared/src/cdd_sync_log.java` [MODIFIED] — (bug fix) `GUI_INITIALIZED` reset on `setLogDirectory()` so repeat GUI runs open fresh log files; 7-writer structure (step1–step4 + fix + dupe + main)
+  - `md/CHANGELOG.md` [MODIFIED] — 4-step pipeline + Fix Paths + diagnostic logs added to [Unreleased]
+  - `md/CODEBASE_GUIDE.md` [MODIFIED] — Sync flow diagram replaced; crate_fixer module detail updated to 4-step; log module updated to 7-writer
+  - `md/AGENT_LOG.md` [MODIFIED] — This entry
+- **What Was Done**: Completed decoupling of the sync pipeline so no step can overwrite another's work. Diagnosed and fixed a re-entrant log initialization bug where clicking Start twice in the GUI resulted in the second run writing to already-closed log file handles (silent NPE). Fix: `setLogDirectory()` now resets `GUI_INITIALIZED` to false so `initLogFile()` is called fresh on the next log write.
+- **Docs to Update**: None — all updated here
+
 ## 2026-03-07 — Docs Refresh: README + md/
 
 - **Task**: Refresh `README.md` and all `md/` documentation files to match current codebase state
