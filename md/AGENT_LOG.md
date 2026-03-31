@@ -2,6 +2,39 @@
 
 <!-- Newest entries go at the top, below this comment. Do NOT delete old entries. -->
 
+## 2026-03-31 — Audit + Dead Code Removal (processCrateFile)
+
+- **Task**: Audit the last two agent sessions; remove dead `processCrateFile()` method found during scoring
+- **Files Changed**:
+  - `cdd-sync-pro/src/cdd_sync_crate_fixer.java` [MODIFIED] — Removed orphaned `processCrateFile()` (62 lines, superseded multi-threaded Step 2 implementation with `ConcurrentHashMap`/ambiguity logic); removed stale duplicate Javadoc on `fixExistingCrates()`; corrected swapped internal section-header comments (`Step 1`/`Step 3` labels were inverted vs. actual pipeline execution order)
+  - `md/CHANGELOG.md` [MODIFIED] — Added per-step pipeline debug toggle entry to [Unreleased] (deferred from 2026-03-31 session)
+- **What Was Done**:
+  1. Audited 2026-03-31 session (Per-Step Pipeline Debug Toggles) — all 3 audit targets passed clean. `canFix`/`isFixBrokenPathsEnabled` zero hits, all 5 step gates confirmed, `fixBrokenPathsCheck` zero hits, Pipeline Steps panel has 8 items in correct order. Only finding: `CHANGELOG.md` entry deferred by prior agent.
+  2. Audited 2026-03-30 session (4-Step Sync Pipeline + Log Re-Init Bug Fix) — scored 9.2/10. Log re-init fix confirmed, 7-writer structure confirmed, all 4 public step methods confirmed. Finding: `processCrateFile()` was dead private code never called after Step 2 was rewritten as a flat-map single-pass loop.
+  3. Patched `cdd_sync_crate_fixer.java`: deleted dead method, fixed section headers, removed stale Javadoc. `ant compile` → BUILD SUCCESSFUL.
+- **Docs to Update**: None — all updated here
+
+## 2026-03-31 — Per-Step Pipeline Debug Toggles
+
+- **Task**: Add independent on/off switches for each step of the sync pipeline so individual steps can be isolated during debugging without running the full pipeline
+- **Files Changed**:
+  - `cdd-sync-pro/src/cdd_sync_config.java` [MODIFIED] — Added `// Pipeline Step Toggles` section with 5 new getters: `isStep0Enabled()` → `isStep4Enabled()`; all read `sync.stepN.enabled` properties, default `true`
+  - `cdd-sync-pro/src/cdd_sync_main.java` [MODIFIED] — All 5 pipeline sites in `runSync()` now gated by their respective step toggles; `canFix` variable removed — Steps 1 & 2 are now gated solely by `!isClearLibraryBeforeSync()` + their own step toggle; skip log messages added per step
+  - `cdd-sync-pro/src/cdd_sync_pro_window.java` [MODIFIED] — "Sync Options" panel removed; all controls (backup, clear library, step toggles, sort crates) merged into a single **Pipeline Steps** panel in execution order (Pre-1 → Pre-2 → Step 0 → Step 1 → Step 2 → Step 3 → Step 4 → Post); `fixBrokenPathsCheck` field fully removed (field, init, grid.add, load, collect, setEnabled); all `database.fix.broken.paths` writes removed from GUI
+  - `cdd-sync-pro/cdd-sync.properties.template` [MODIFIED] — Added `# Debug — Pipeline Steps` block documenting all 5 `sync.stepN.enabled` keys
+- **What Was Done**:
+  1. Added 5 boolean config getters (`isStep0Enabled()`–`isStep4Enabled()`).
+  2. Gated all 5 execution sites in `runSync()`: Step 0 (both early dupe-move block and late log-only scan), Steps 1–4. Each site logs a specific skip message when toggled off.
+  3. Removed the redundant `database.fix.broken.paths` master gate — Steps 1 & 2 already have their own toggles. The only remaining guard for Steps 1 & 2 is "Clear Library" (which deletes the database, making path-fixing a no-op).
+  4. Merged "Sync Options" panel into "Pipeline Steps" panel; all 8 controls (Pre-1 Backup, Pre-2 Clear Library, Step 0–4, Post Sort) are now visible in a single labeled grid in execution order.
+  5. `ant compile` verified clean after each of the 4 phases (config, main, window, template).
+- **Architecture Note**: Step 0 (duplicate management) gates **both** occurrence sites: the early dupe-move block (before Step 1) and the late log-only scan (after Step 4). Step 0 only logs a skip message when `harddrive.dupe.scan.enabled=true` — otherwise it's a no-op regardless.
+- **Audit Targets** (for another agent to verify):
+  - `cdd_sync_main.java` → `runSync()`: confirm no reference to `canFix` or `isFixBrokenPathsEnabled()` remains; confirm all 5 step sites are gated; confirm Step 0 early + late sites both check `isStep0Enabled()`
+  - `cdd_sync_pro_window.java` → confirm zero references to `fixBrokenPathsCheck`; confirm `buildPipelineStepsPanel()` returns 8 items in execution order; confirm `loadFromProperties()` / `collectProperties()` / `setControlsEnabled()` have no stale references
+  - `cdd_sync_config.java` → confirm 5 step getters present in `// Pipeline Step Toggles` section; all default `true`
+- **Docs to Update**: `CHANGELOG.md` (user-facing: new debug step toggles in GUI)
+
 ## 2026-03-30 — 4-Step Sync Pipeline + Log Re-Init Bug Fix
 
 - **Task**: Replace monolithic `cdd_sync_library.writeTo()` with a 4-step decoupled pipeline; fix log writer re-initialization bug for multi-run GUI sessions

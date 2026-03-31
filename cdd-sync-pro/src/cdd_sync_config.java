@@ -148,6 +148,33 @@ public class cdd_sync_config {
         return getBooleanOption("database.fix.broken.paths", false);
     }
 
+    // ==================== Pipeline Step Toggles ====================
+
+    /** Step 0: Duplicate management (move + log-only scan). Default true. */
+    public boolean isStep0Enabled() {
+        return getBooleanOption("sync.step0.enabled", true);
+    }
+
+    /** Step 1: Fix broken paths in database V2. Default true. */
+    public boolean isStep1Enabled() {
+        return getBooleanOption("sync.step1.enabled", true);
+    }
+
+    /** Step 2: Fix broken paths in existing crates. Default true. */
+    public boolean isStep2Enabled() {
+        return getBooleanOption("sync.step2.enabled", true);
+    }
+
+    /** Step 3: Append new tracks to existing crates. Default true. */
+    public boolean isStep3Enabled() {
+        return getBooleanOption("sync.step3.enabled", true);
+    }
+
+    /** Step 4: Create new crates for new library paths. Default true. */
+    public boolean isStep4Enabled() {
+        return getBooleanOption("sync.step4.enabled", true);
+    }
+
     // ==================== Helper Methods ====================
 
     private boolean getBooleanOption(String name, boolean defaultValue) {

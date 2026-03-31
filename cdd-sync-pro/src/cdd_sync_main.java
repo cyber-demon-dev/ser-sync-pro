@@ -160,9 +160,10 @@ public class cdd_sync_main {
         cdd_sync_log.info("Found " + fsLibrary.getTotalNumberOfTracks() + " tracks in " +
                 fsLibrary.getTotalNumberOfDirectories() + " directories");
 
-        // Move duplicate files BEFORE building crates (so crates don't point to moved
-        // files)
-        if (config.isHardDriveDupeScanEnabled()) {
+        // ── Step 0: Duplicate management (move + log-only scan) ──────────────────
+        // Early move block runs before Step 1 so crates never point to moved files.
+        // Toggle sync.step0.enabled=false to skip entirely for debugging.
+        if (config.isHardDriveDupeScanEnabled() && config.isStep0Enabled()) {
             if (config.isDupeMoveEnabled()) {
                 if (config.isDryRun()) {
                     cdd_sync_log.info("[DRY RUN] Would have: scanned and moved duplicate files ("
@@ -185,6 +186,8 @@ public class cdd_sync_main {
             } else {
                 // Log-only mode runs after crates are built (doesn't affect anything)
             }
+        } else if (config.isHardDriveDupeScanEnabled() && !config.isStep0Enabled()) {
+            cdd_sync_log.info("Step 0 skipped: duplicate management toggle is off.");
         }
 
         cdd_sync_log.info("Writing files into serato library " + seratoPath + "...");
@@ -268,8 +271,6 @@ public class cdd_sync_main {
         // Load track index — provides database V2 reference for path encoding in crates
         cdd_sync_track_index trackIndex = cdd_sync_track_index.createFrom(seratoPath);
 
-        boolean canFix = config.isFixBrokenPathsEnabled() && !config.isClearLibraryBeforeSync();
-
         // Clear library if requested (nuke before full rebuild via steps 3 & 4)
         if (config.isClearLibraryBeforeSync()) {
             if (config.isDryRun()) {
@@ -283,14 +284,17 @@ public class cdd_sync_main {
 
         // ── Step 1: Fix broken paths in database V2 ──────────────────────────────
         // Updates stale pfil paths in the database. No crate files touched.
-        if (canFix) {
+        // Skipped when Clear Library is on (database was just deleted).
+        if (!config.isClearLibraryBeforeSync() && config.isStep1Enabled()) {
             if (config.isDryRun()) {
                 cdd_sync_log.info("[DRY RUN] Would have: updated broken paths in database V2");
             } else {
                 cdd_sync_crate_fixer.updateDatabasePaths(seratoPath, fsLibrary);
             }
+        } else if (!config.isStep1Enabled()) {
+            cdd_sync_log.info("Step 1 skipped: step1 toggle is off.");
         } else {
-            cdd_sync_log.info("Step 1 skipped: Fix Broken Paths is disabled or Clear Library is on.");
+            cdd_sync_log.info("Step 1 skipped: Clear Library is on (database was deleted).");
         }
 
         // ── Step 2: Fix broken paths in existing crates via database V2 ───────────
@@ -298,7 +302,8 @@ public class cdd_sync_main {
         // in every crate, replaces the stored path with the database path if they
         // differ. Covers ALL crates — hand-curated Live sets included — because
         // there are no filesystem existence checks involved.
-        if (canFix) {
+        // Skipped when Clear Library is on (crates and database were just deleted).
+        if (!config.isClearLibraryBeforeSync() && config.isStep2Enabled()) {
             if (config.isDryRun()) {
                 cdd_sync_log.info("[DRY RUN] Would have: updated crate paths from database V2");
             } else {
@@ -307,33 +312,44 @@ public class cdd_sync_main {
                         seratoPath + "/database V2");
                 cdd_sync_crate_fixer.fixExistingCrates(seratoPath, updatedDatabase);
             }
+        } else if (!config.isStep2Enabled()) {
+            cdd_sync_log.info("Step 2 skipped: step2 toggle is off.");
         } else {
-            cdd_sync_log.info("Step 2 skipped: Fix Broken Paths is disabled or Clear Library is on.");
+            cdd_sync_log.info("Step 2 skipped: Clear Library is on (crates were deleted).");
         }
 
         // ── Step 3: Append new tracks to existing crates matching filepath ─────────
         // For each folder-mapped crate already on disk, adds any new tracks from
         // that folder. addTrack() dedup prevents duplicates. No removal.
-        if (config.isDryRun()) {
-            cdd_sync_log.info("[DRY RUN] Would have: appended new tracks to existing crates");
+        if (config.isStep3Enabled()) {
+            if (config.isDryRun()) {
+                cdd_sync_log.info("[DRY RUN] Would have: appended new tracks to existing crates");
+            } else {
+                cdd_sync_crate_fixer.appendNewTracksToMatchingCrates(
+                        seratoPath, fsLibrary, parentCratePath, trackIndex);
+            }
         } else {
-            cdd_sync_crate_fixer.appendNewTracksToMatchingCrates(
-                    seratoPath, fsLibrary, parentCratePath, trackIndex);
+            cdd_sync_log.info("Step 3 skipped: step3 toggle is off.");
         }
 
         // ── Step 4: Create new crates for new library paths (skip existing) ────────
         // Only writes a .crate if no file with that name exists on disk.
         // Existing crates (hand-curated or folder-mapped) are never touched.
-        if (config.isDryRun()) {
-            cdd_sync_log.info("[DRY RUN] Would have: created new crates for new library paths");
+        if (config.isStep4Enabled()) {
+            if (config.isDryRun()) {
+                cdd_sync_log.info("[DRY RUN] Would have: created new crates for new library paths");
+            } else {
+                cdd_sync_crate_fixer.createNewCrates(
+                        seratoPath, fsLibrary, parentCratePath, trackIndex);
+            }
         } else {
-            cdd_sync_crate_fixer.createNewCrates(
-                    seratoPath, fsLibrary, parentCratePath, trackIndex);
+            cdd_sync_log.info("Step 4 skipped: step4 toggle is off.");
         }
 
-
-        // Log-only duplicate scan (if move disabled, we still want to log them)
-        if (config.isHardDriveDupeScanEnabled() && !config.isDupeMoveEnabled()) {
+        // ── Step 0 (late): Log-only duplicate scan ───────────────────────────────
+        // Runs after crates are built. Only active when move mode is off.
+        if (config.isHardDriveDupeScanEnabled() && !config.isDupeMoveEnabled()
+                && config.isStep0Enabled()) {
             scanForHardDriveDuplicates(fsLibrary);
         }
 

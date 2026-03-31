@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+- **Per-step pipeline debug toggles**: Each of the five sync pipeline steps (Step 0–4) can now be independently enabled or disabled from the **Pipeline Steps** panel in the GUI. All previous sync option controls (Backup, Clear Library, Sort Crates) have been merged into this single panel, displayed in execution order (Pre-1 → Pre-2 → Step 0 → Step 1 → Step 2 → Step 3 → Step 4 → Post). Toggles are also exposed as `sync.step0.enabled`–`sync.step4.enabled` properties for CLI/config-file use. Allows any single step to be isolated without running the full pipeline.
+
 - **Fix: Step 2 now processes ALL crates including hand-curated Live sets**: Replaced the multi-threaded, ambiguous-lookup Step 2 implementation with a simple sequential loop. All `.crate` files in `Subcrates/` are now processed regardless of whether they map to a filesystem folder. The database V2 (already patched by Step 1) is the sole source of truth — if a track's filename resolves to a different path in the DB, the crate is updated. Previously, custom crates were silently skipped due to a flawed directory-mapping gate.
   - `cdd_sync_crate_fixer.java`: Removed `ExecutorService`, `ConcurrentHashMap`, and multi-value ambiguity logic. Replaced with flat `Map<String, String>` index and single `for` loop.
   - `cdd_sync_main.java`: Added explicit log messages when Step 1 or Step 2 are skipped so the pipeline is never silently bypassed.

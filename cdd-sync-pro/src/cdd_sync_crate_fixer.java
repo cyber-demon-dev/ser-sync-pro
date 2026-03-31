@@ -17,19 +17,8 @@ import java.util.Map;
 public class cdd_sync_crate_fixer {
 
     // =========================================================================
-    // Step 1 — Fix existing .crate files (no database, no dedup)
+    // Step 2 — Fix existing .crate files (database V2 as source of truth)
     // =========================================================================
-
-    /**
-     * Scans every .crate file in _Serato_/Subcrates, finds tracks whose paths no
-     * longer exist on disk, and re-resolves them by filename from the media library.
-     * Writes only crates that actually changed.
-     *
-     * Uses setTracksRaw() — NOT addTracks() — so dedup never removes a valid track.
-     *
-     * @param seratoPath Path to the _Serato_ folder
-     * @param library    Scanned media library for filename lookups
-     */
     /**
      * Scans every .crate file in _Serato_/Subcrates and updates track paths
      * using the Serato database V2 as the sole source of truth.
@@ -138,80 +127,8 @@ public class cdd_sync_crate_fixer {
                 + fixedCrates + " crates.");
     }
 
-    /**
-     * Processes a single crate file against the pre-built database index.
-     * For each track: look up its filename in the multi-value index.
-     *   - Not found  → keep crate path unchanged.
-     *   - Ambiguous  → skip (log it, keep crate path unchanged).
-     *   - Exact match→ no change needed.
-     *   - Different  → replace crate path with the database path.
-     * Thread-safe: only writes to the concurrent crateUpdates map.
-     */
-    private static void processCrateFile(File crateFile,
-            Map<String, List<String>> dbIndex,
-            Map<File, cdd_sync_crate> crateUpdates) {
-
-        cdd_sync_crate crate;
-        try {
-            crate = cdd_sync_crate.readFrom(crateFile);
-        } catch (cdd_sync_exception e) {
-            cdd_sync_log.error("Failed to read crate: " + crateFile.getName());
-            return;
-        }
-
-        List<String> originalTracks = new ArrayList<>(crate.getTracks());
-        List<String> newTracks = new ArrayList<>(originalTracks.size());
-        boolean tracksChanged = false;
-
-        for (String trackPath : originalTracks) {
-            String filename = cdd_sync_binary_utils.getFilename(trackPath);
-            List<String> candidates = dbIndex.get(filename);
-
-            if (candidates == null || candidates.isEmpty()) {
-                // Track not in database at all — keep the crate path as-is.
-                cdd_sync_log.step2("[NOT IN DB] " + crateFile.getName()
-                        + " | KEPT: " + trackPath);
-                newTracks.add(trackPath);
-            } else if (candidates.size() > 1) {
-                // Multiple files share this filename — can't safely resolve.
-                cdd_sync_log.step2("[AMBIGUOUS] " + crateFile.getName()
-                        + " | " + candidates.size() + " candidates for: " + filename
-                        + " | KEPT: " + trackPath);
-                newTracks.add(trackPath);
-            } else {
-                String dbPath = candidates.get(0);
-                if (dbPath.equals(trackPath)) {
-                    // Database agrees with the crate — no change needed.
-                    newTracks.add(trackPath);
-                } else {
-                    // Database has a different path — update the crate.
-                    cdd_sync_log.step2("[PATH FIX] " + crateFile.getName()
-                            + " | OLD: " + trackPath
-                            + " -> NEW: " + dbPath);
-                    newTracks.add(dbPath);
-                    tracksChanged = true;
-                }
-            }
-        }
-
-        if (tracksChanged) {
-            // Build updated crate, preserving all metadata exactly.
-            // Use setTracksRaw() — dedup would silently drop tracks that share
-            // a filename across folders, which is common in DJ libraries.
-            cdd_sync_crate fixedCrate = new cdd_sync_crate();
-            fixedCrate.setVersion(crate.getVersion());
-            fixedCrate.setSorting(crate.getSorting());
-            fixedCrate.setSortingRev(crate.getSortingRev());
-            for (String col : crate.getColumns()) {
-                fixedCrate.addColumn(col);
-            }
-            fixedCrate.setTracksRaw(newTracks);
-            crateUpdates.put(crateFile, fixedCrate);
-        }
-    }
-
     // =========================================================================
-    // Step 3 — Update database V2 paths (runs after new crates are written)
+    // Step 1 — Update database V2 paths (runs before crate fixes)
     // =========================================================================
 
     /**

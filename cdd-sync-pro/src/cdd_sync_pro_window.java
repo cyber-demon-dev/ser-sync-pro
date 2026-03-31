@@ -32,8 +32,14 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
     // Sync option controls
     private JCheckBox backupCheck;
     private JCheckBox clearLibraryCheck;
-    private JCheckBox fixBrokenPathsCheck;
     private JCheckBox sortCratesCheck;
+
+    // Pipeline step toggles (debug)
+    private JCheckBox step0Check;
+    private JCheckBox step1Check;
+    private JCheckBox step2Check;
+    private JCheckBox step3Check;
+    private JCheckBox step4Check;
 
     // Duplicate management controls
     private JCheckBox dupeScanCheck;
@@ -98,64 +104,8 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
         panel.add(buildPathRow("Parent Crate:", parentCrateField = createDarkTextField(), false));
         panel.add(Box.createVerticalStrut(8));
 
-        // --- Sync Options ---
-        JPanel syncPanel = createTitledPanel("Sync Options");
-        JPanel syncGrid = new JPanel(new GridLayout(0, 2, 10, 2));
-        syncGrid.setBackground(BG_DARK);
-
-        backupCheck = createDarkCheckBox("Backup before sync", true);
-        backupCheck.setToolTipText("<html><b>[DEBUG] Backup before sync</b><br>"
-                + "Creates a timestamped ZIP of the entire _Serato_ folder before any changes.<br>"
-                + "Stored alongside _Serato_ in cdd-sync-pro/backups/.<br>"
-                + "If backup fails, sync is aborted. Disable to skip for faster dev cycles.</html>");
-
-        clearLibraryCheck = createDarkCheckBox("Clear library before sync", false);
-        clearLibraryCheck.setToolTipText("<html><b>⚠️ DESTRUCTIVE — Clear library before sync</b><br>"
-                + "Deletes ALL Crates, Subcrates, and database V2 before writing new ones.<br>"
-                + "Results in a clean rebuild from scratch — all existing crates are lost.<br>"
-                + "<b>Note:</b> 'Fix broken filepaths' is skipped when this is enabled.<br>"
-                + "Requires confirmation before it can be enabled.<br>"
-                + "Config key: music.library.database.clear-before-sync</html>");
-        clearLibraryCheck.addItemListener(e -> {
-            if (e.getStateChange() == java.awt.event.ItemEvent.SELECTED) {
-                int choice = JOptionPane.showConfirmDialog(
-                        this,
-                        "⚠️  This will DELETE all existing Serato crates and database V2 before sync.\n\n"
-                                + "All crate structure will be rebuilt from scratch.\n"
-                                + "This cannot be undone (unless backup is enabled).\n\n"
-                                + "Are you sure you want to enable this?",
-                        "Destructive Option — Confirm",
-                        JOptionPane.YES_NO_OPTION,
-                        JOptionPane.WARNING_MESSAGE);
-                if (choice != JOptionPane.YES_OPTION) {
-                    clearLibraryCheck.setSelected(false);
-                }
-            }
-        });
-
-        fixBrokenPathsCheck = createDarkCheckBox("Fix broken filepaths", false);
-        fixBrokenPathsCheck.setToolTipText("<html><b>[DEBUG] Fix broken filepaths</b><br>"
-                + "Runs cdd_sync_crate_fixer.fixBrokenPaths() BEFORE new crates are written.<br>"
-                + "Scans pre-existing .crate files for paths that no longer exist on disk<br>"
-                + "and re-resolves them using database V2 as the authoritative path source.<br>"
-                + "Skipped automatically when 'Clear library before sync' is enabled.<br>"
-                + "Also patches database V2 for any moved duplicate files.<br>"
-                + "Config key: database.fix.broken.paths</html>");
-
-        sortCratesCheck = createDarkCheckBox("Sort crates alphabetically", false);
-        sortCratesCheck.setToolTipText("<html><b>[DEBUG] Sort crates alphabetically</b><br>"
-                + "Runs cdd_sync_pref_sorter.sort() AFTER sync completes.<br>"
-                + "Rewrites neworder.pref in the _Serato_ folder so crates appear A→Z in Serato.<br>"
-                + "Has no effect on crate contents — display order only.<br>"
-                + "Config key: crate.sorting.alphabetical</html>");
-
-        syncGrid.add(backupCheck);
-        syncGrid.add(clearLibraryCheck);
-        syncGrid.add(fixBrokenPathsCheck);
-        syncGrid.add(sortCratesCheck);
-        syncPanel.add(syncGrid, BorderLayout.NORTH);
-
-        panel.add(syncPanel);
+        // --- Pipeline Steps (all controls in execution order) ---
+        panel.add(buildPipelineStepsPanel());
         panel.add(Box.createVerticalStrut(6));
 
         // --- Duplicate Management ---
@@ -201,6 +151,87 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
         dupePanel.add(dupeContent, BorderLayout.CENTER);
         panel.add(dupePanel);
 
+        return panel;
+    }
+
+    private JPanel buildPipelineStepsPanel() {
+        JPanel panel = createTitledPanel("Pipeline Steps");
+        JPanel grid = new JPanel(new GridLayout(0, 2, 10, 2));
+        grid.setBackground(BG_DARK);
+
+        // --- Pre-steps ---
+        backupCheck = createDarkCheckBox("Pre-1: Backup", true);
+        backupCheck.setToolTipText("<html><b>Pre-1 | music.library.database.backup</b><br>"
+                + "Creates a timestamped ZIP of _Serato_ before any changes.<br>"
+                + "If backup fails, sync is aborted. Disable for faster dev cycles.</html>");
+
+        clearLibraryCheck = createDarkCheckBox("Pre-2: Clear library \u26a0\ufe0f", false);
+        clearLibraryCheck.setToolTipText("<html><b>Pre-2 | music.library.database.clear-before-sync</b><br>"
+                + "<b>DESTRUCTIVE</b> \u2014 Deletes ALL Crates, Subcrates, and database V2 before sync.<br>"
+                + "Clean rebuild from scratch. Disables Steps 1 &amp; 2 (Gate 1+2 has no effect).<br>"
+                + "Requires confirmation.</html>");
+        clearLibraryCheck.addItemListener(e -> {
+            if (e.getStateChange() == java.awt.event.ItemEvent.SELECTED) {
+                int choice = JOptionPane.showConfirmDialog(
+                        this,
+                        "\u26a0\ufe0f  This will DELETE all existing Serato crates and database V2 before sync.\n\n"
+                                + "All crate structure will be rebuilt from scratch.\n"
+                                + "This cannot be undone (unless backup is enabled).\n\n"
+                                + "Are you sure you want to enable this?",
+                        "Destructive Option \u2014 Confirm",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.WARNING_MESSAGE);
+                if (choice != JOptionPane.YES_OPTION) {
+                    clearLibraryCheck.setSelected(false);
+                }
+            }
+        });
+
+        // --- Step 0 + gate for 1 & 2 ---
+        step0Check = createDarkCheckBox("Step 0: Duplicate mgmt", true);
+        step0Check.setToolTipText("<html><b>Step 0 | sync.step0.enabled</b><br>"
+                + "Gates the entire duplicate management block (move + log scan).<br>"
+                + "Runs before Step 1. Only active when 'Scan for duplicates' is also ON.<br>"
+                + "Disable to isolate Steps 1\u20134 without any dupe processing.</html>");
+
+        // --- Steps 1 & 2: path fixing ---
+        step1Check = createDarkCheckBox("Step 1: Fix DB paths", true);
+        step1Check.setToolTipText("<html><b>Step 1 | sync.step1.enabled</b><br>"
+                + "Fix broken pfil paths in database V2.<br>"
+                + "Requires Gate 1+2 (Fix broken paths) to be ON.</html>");
+
+        step2Check = createDarkCheckBox("Step 2: Fix crate paths", true);
+        step2Check.setToolTipText("<html><b>Step 2 | sync.step2.enabled</b><br>"
+                + "Re-resolve broken track paths in all existing .crate files using database V2.<br>"
+                + "Reloads DB from disk after Step 1. Requires Gate 1+2 to be ON.</html>");
+
+        // --- Steps 3 & 4: crate writing ---
+        step3Check = createDarkCheckBox("Step 3: Append tracks", true);
+        step3Check.setToolTipText("<html><b>Step 3 | sync.step3.enabled</b><br>"
+                + "Append new tracks to existing folder-mapped crates.<br>"
+                + "Dedup prevents adding tracks already in the crate.</html>");
+
+        step4Check = createDarkCheckBox("Step 4: Create crates", true);
+        step4Check.setToolTipText("<html><b>Step 4 | sync.step4.enabled</b><br>"
+                + "Create new .crate files for library folders with no matching crate on disk.<br>"
+                + "Skips folders whose crate already exists (Step 3 handles those).</html>");
+
+        // --- Post-step ---
+        sortCratesCheck = createDarkCheckBox("Post: Sort crates A\u2192Z", false);
+        sortCratesCheck.setToolTipText("<html><b>Post | crate.sorting.alphabetical</b><br>"
+                + "Runs after all steps. Rewrites neworder.pref so crates appear A\u2192Z in Serato.<br>"
+                + "Display order only \u2014 no effect on crate contents.</html>");
+
+        // Add in execution order (2-column grid, left-to-right top-to-bottom)
+        grid.add(backupCheck);       // row 1 left
+        grid.add(clearLibraryCheck); // row 1 right
+        grid.add(step0Check);        // row 2 left
+        grid.add(step1Check);        // row 2 right
+        grid.add(step2Check);        // row 3 left
+        grid.add(step3Check);        // row 3 right
+        grid.add(step4Check);        // row 4 left
+        grid.add(sortCratesCheck);   // row 4 right
+        panel.add(grid, BorderLayout.NORTH);
         return panel;
     }
 
@@ -386,10 +417,19 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
                 props.getProperty("music.library.database.backup", "true")));
         clearLibraryCheck.setSelected("true".equalsIgnoreCase(
                 props.getProperty("music.library.database.clear-before-sync", "false")));
-        fixBrokenPathsCheck.setSelected("true".equalsIgnoreCase(
-                props.getProperty("database.fix.broken.paths", "false")));
         sortCratesCheck.setSelected("true".equalsIgnoreCase(
                 props.getProperty("crate.sorting.alphabetical", "false")));
+
+        step0Check.setSelected(!"false".equalsIgnoreCase(
+                props.getProperty("sync.step0.enabled", "true")));
+        step1Check.setSelected(!"false".equalsIgnoreCase(
+                props.getProperty("sync.step1.enabled", "true")));
+        step2Check.setSelected(!"false".equalsIgnoreCase(
+                props.getProperty("sync.step2.enabled", "true")));
+        step3Check.setSelected(!"false".equalsIgnoreCase(
+                props.getProperty("sync.step3.enabled", "true")));
+        step4Check.setSelected(!"false".equalsIgnoreCase(
+                props.getProperty("sync.step4.enabled", "true")));
 
         dupeScanCheck.setSelected("true".equalsIgnoreCase(
                 props.getProperty("harddrive.dupe.scan.enabled", "false")));
@@ -417,8 +457,13 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
 
         props.setProperty("music.library.database.backup", String.valueOf(backupCheck.isSelected()));
         props.setProperty("music.library.database.clear-before-sync", String.valueOf(clearLibraryCheck.isSelected()));
-        props.setProperty("database.fix.broken.paths", String.valueOf(fixBrokenPathsCheck.isSelected()));
         props.setProperty("crate.sorting.alphabetical", String.valueOf(sortCratesCheck.isSelected()));
+
+        props.setProperty("sync.step0.enabled", String.valueOf(step0Check.isSelected()));
+        props.setProperty("sync.step1.enabled", String.valueOf(step1Check.isSelected()));
+        props.setProperty("sync.step2.enabled", String.valueOf(step2Check.isSelected()));
+        props.setProperty("sync.step3.enabled", String.valueOf(step3Check.isSelected()));
+        props.setProperty("sync.step4.enabled", String.valueOf(step4Check.isSelected()));
 
         props.setProperty("harddrive.dupe.scan.enabled", String.valueOf(dupeScanCheck.isSelected()));
         props.setProperty("harddrive.dupe.detection.mode", (String) dupeDetectionCombo.getSelectedItem());
@@ -554,8 +599,12 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
         parentCrateField.setEnabled(enabled);
         backupCheck.setEnabled(enabled);
         clearLibraryCheck.setEnabled(enabled);
-        fixBrokenPathsCheck.setEnabled(enabled);
         sortCratesCheck.setEnabled(enabled);
+        step0Check.setEnabled(enabled);
+        step1Check.setEnabled(enabled);
+        step2Check.setEnabled(enabled);
+        step3Check.setEnabled(enabled);
+        step4Check.setEnabled(enabled);
         dupeScanCheck.setEnabled(enabled);
         dupeDetectionCombo.setEnabled(enabled);
         dupeMoveCombo.setEnabled(enabled);

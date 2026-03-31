@@ -46,6 +46,19 @@ harddrive.dupe.move.enabled=keep-oldest
 # Only works when harddrive.dupe.scan.enabled=true
 harddrive.dupe.detection.mode=name-only
 
+# Debug — Pipeline Steps (all default to true, set false to skip that step)
+# Use these to isolate a single step when debugging a specific issue.
+# Step 0: Duplicate management (move + log-only scan). Only fires if harddrive.dupe.scan.enabled=true.
+sync.step0.enabled=true
+# Step 1: Fix broken paths in database V2. Also requires database.fix.broken.paths=true.
+sync.step1.enabled=true
+# Step 2: Fix broken paths in all existing .crate files. Also requires database.fix.broken.paths=true.
+sync.step2.enabled=true
+# Step 3: Append new tracks to existing folder-mapped crates.
+sync.step3.enabled=true
+# Step 4: Create new .crate files for library folders with no crate on disk.
+sync.step4.enabled=true
+
 # --dry-run
 # Pass --dry-run as a command-line argument (CLI mode only) to preview all sync
 # actions without writing anything to disk. Logs every action with a [DRY RUN] prefix.
