@@ -265,42 +265,63 @@ public class cdd_sync_main {
             }
         }
 
-        // Load track index for deduplication
-        cdd_sync_track_index trackIndex = null;
-        if (config.isSkipExistingTracks()) {
-            trackIndex = cdd_sync_track_index.createFrom(seratoPath, config.getDedupMode());
-        }
+        // Load track index — provides database V2 reference for path encoding in crates
+        cdd_sync_track_index trackIndex = cdd_sync_track_index.createFrom(seratoPath);
 
-        // Build crate library
-        cdd_sync_library crateLibrary = cdd_sync_library.createFrom(fsLibrary, parentCratePath, trackIndex);
+        boolean canFix = config.isFixBrokenPathsEnabled() && !config.isClearLibraryBeforeSync();
 
-        if (config.isDryRun()) {
-            cdd_sync_log.info("[DRY RUN] Would have: written " + crateLibrary.getAllCrateNames().size() + " crates to "
-                    + seratoPath);
-        } else {
-            try {
-                crateLibrary.writeTo(seratoPath, config.isClearLibraryBeforeSync());
-            } catch (cdd_sync_exception e) {
-                cdd_sync_log.error("Error occurred!");
-                cdd_sync_log.error(e);
-                cdd_sync_log.fatalError();
-                return;
-            }
-        }
-
-        // Fix broken paths in crates AFTER writing them (so fixes aren't overwritten)
-        if (config.isFixBrokenPathsEnabled()) {
+        // Clear library if requested (nuke before full rebuild via steps 3 & 4)
+        if (config.isClearLibraryBeforeSync()) {
             if (config.isDryRun()) {
-                cdd_sync_log.info("[DRY RUN] Would have: fixed broken paths in crates and database V2");
+                cdd_sync_log.info("[DRY RUN] Would have: cleared existing Serato library");
             } else {
-                cdd_sync_crate_fixer.fixBrokenPaths(seratoPath, fsLibrary, database, config.getDupeMoveMode());
+                cdd_sync_file_utils.deleteAllFilesInDirectory(seratoPath + "/Crates");
+                cdd_sync_file_utils.deleteAllFilesInDirectory(seratoPath + "/Subcrates");
+                cdd_sync_file_utils.deleteFile(seratoPath + "/database V2");
             }
         }
 
-        // Summary
-        if (trackIndex != null && trackIndex.getSkippedCount() > 0) {
-            cdd_sync_log.info("Skipped " + trackIndex.getSkippedCount() + " duplicate tracks");
+        // ── Step 1: Fix broken paths in database V2 ──────────────────────────────
+        // Updates stale pfil paths in the database. No crate files touched.
+        if (canFix) {
+            if (config.isDryRun()) {
+                cdd_sync_log.info("[DRY RUN] Would have: updated broken paths in database V2");
+            } else {
+                cdd_sync_crate_fixer.updateDatabasePaths(seratoPath, fsLibrary);
+            }
         }
+
+        // ── Step 2: Fix broken paths in existing crates ───────────────────────────
+        // Reads existing .crate files, re-resolves broken paths by filename.
+        // Uses setTracksRaw() — no dedup, no track removal, no new crates written.
+        if (canFix) {
+            if (config.isDryRun()) {
+                cdd_sync_log.info("[DRY RUN] Would have: fixed broken paths in existing crates");
+            } else {
+                cdd_sync_crate_fixer.fixExistingCrates(seratoPath, fsLibrary);
+            }
+        }
+
+        // ── Step 3: Append new tracks to existing crates matching filepath ─────────
+        // For each folder-mapped crate already on disk, adds any new tracks from
+        // that folder. addTrack() dedup prevents duplicates. No removal.
+        if (config.isDryRun()) {
+            cdd_sync_log.info("[DRY RUN] Would have: appended new tracks to existing crates");
+        } else {
+            cdd_sync_crate_fixer.appendNewTracksToMatchingCrates(
+                    seratoPath, fsLibrary, parentCratePath, trackIndex);
+        }
+
+        // ── Step 4: Create new crates for new library paths (skip existing) ────────
+        // Only writes a .crate if no file with that name exists on disk.
+        // Existing crates (hand-curated or folder-mapped) are never touched.
+        if (config.isDryRun()) {
+            cdd_sync_log.info("[DRY RUN] Would have: created new crates for new library paths");
+        } else {
+            cdd_sync_crate_fixer.createNewCrates(
+                    seratoPath, fsLibrary, parentCratePath, trackIndex);
+        }
+
 
         // Log-only duplicate scan (if move disabled, we still want to log them)
         if (config.isHardDriveDupeScanEnabled() && !config.isDupeMoveEnabled()) {

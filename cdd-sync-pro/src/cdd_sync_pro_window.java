@@ -31,10 +31,9 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
 
     // Sync option controls
     private JCheckBox backupCheck;
-    private JCheckBox skipExistingCheck;
+    private JCheckBox clearLibraryCheck;
     private JCheckBox fixBrokenPathsCheck;
     private JCheckBox sortCratesCheck;
-    private JComboBox<String> dedupModeCombo;
 
     // Duplicate management controls
     private JCheckBox dupeScanCheck;
@@ -110,17 +109,36 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
                 + "Stored alongside _Serato_ in cdd-sync-pro/backups/.<br>"
                 + "If backup fails, sync is aborted. Disable to skip for faster dev cycles.</html>");
 
-        skipExistingCheck = createDarkCheckBox("Skip existing tracks", true);
-        skipExistingCheck.setToolTipText("<html><b>[DEBUG] Skip existing tracks</b><br>"
-                + "Builds a track index from existing .crate files before writing new ones.<br>"
-                + "Tracks already in the library (matched by Dedup mode) are excluded from new crates.<br>"
-                + "Config key: database.skip.existing.tracks</html>");
+        clearLibraryCheck = createDarkCheckBox("Clear library before sync", false);
+        clearLibraryCheck.setToolTipText("<html><b>⚠️ DESTRUCTIVE — Clear library before sync</b><br>"
+                + "Deletes ALL Crates, Subcrates, and database V2 before writing new ones.<br>"
+                + "Results in a clean rebuild from scratch — all existing crates are lost.<br>"
+                + "<b>Note:</b> 'Fix broken filepaths' is skipped when this is enabled.<br>"
+                + "Requires confirmation before it can be enabled.<br>"
+                + "Config key: music.library.database.clear-before-sync</html>");
+        clearLibraryCheck.addItemListener(e -> {
+            if (e.getStateChange() == java.awt.event.ItemEvent.SELECTED) {
+                int choice = JOptionPane.showConfirmDialog(
+                        this,
+                        "⚠️  This will DELETE all existing Serato crates and database V2 before sync.\n\n"
+                                + "All crate structure will be rebuilt from scratch.\n"
+                                + "This cannot be undone (unless backup is enabled).\n\n"
+                                + "Are you sure you want to enable this?",
+                        "Destructive Option — Confirm",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.WARNING_MESSAGE);
+                if (choice != JOptionPane.YES_OPTION) {
+                    clearLibraryCheck.setSelected(false);
+                }
+            }
+        });
 
         fixBrokenPathsCheck = createDarkCheckBox("Fix broken filepaths", false);
         fixBrokenPathsCheck.setToolTipText("<html><b>[DEBUG] Fix broken filepaths</b><br>"
-                + "Runs cdd_sync_crate_fixer.fixBrokenPaths() AFTER crates are written.<br>"
-                + "Scans all .crate files for paths that no longer exist on disk<br>"
-                + "and re-resolves them using database V2 + fsLibrary as sources of truth.<br>"
+                + "Runs cdd_sync_crate_fixer.fixBrokenPaths() BEFORE new crates are written.<br>"
+                + "Scans pre-existing .crate files for paths that no longer exist on disk<br>"
+                + "and re-resolves them using database V2 as the authoritative path source.<br>"
+                + "Skipped automatically when 'Clear library before sync' is enabled.<br>"
                 + "Also patches database V2 for any moved duplicate files.<br>"
                 + "Config key: database.fix.broken.paths</html>");
 
@@ -132,22 +150,10 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
                 + "Config key: crate.sorting.alphabetical</html>");
 
         syncGrid.add(backupCheck);
-        syncGrid.add(skipExistingCheck);
+        syncGrid.add(clearLibraryCheck);
         syncGrid.add(fixBrokenPathsCheck);
         syncGrid.add(sortCratesCheck);
         syncPanel.add(syncGrid, BorderLayout.NORTH);
-
-        JPanel dedupRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 2));
-        dedupRow.setBackground(BG_DARK);
-        dedupRow.add(createDarkLabel("Dedup mode:"));
-        dedupModeCombo = createDarkComboBox(new String[] { "path", "filename" });
-        dedupModeCombo.setToolTipText("<html><b>[DEBUG] Dedup mode (skip existing tracks)</b><br>"
-                + "<b>path</b> — tracks matched by full relative path (default, most precise)<br>"
-                + "<b>filename</b> — tracks matched by filename only (looser, catches renames)<br>"
-                + "Used by cdd_sync_track_index when 'Skip existing tracks' is enabled.<br>"
-                + "Config key: database.dupe.detection.mode</html>");
-        dedupRow.add(dedupModeCombo);
-        syncPanel.add(dedupRow, BorderLayout.SOUTH);
 
         panel.add(syncPanel);
         panel.add(Box.createVerticalStrut(6));
@@ -378,15 +384,12 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
 
         backupCheck.setSelected(!"false".equalsIgnoreCase(
                 props.getProperty("music.library.database.backup", "true")));
-        skipExistingCheck.setSelected(!"false".equalsIgnoreCase(
-                props.getProperty("database.skip.existing.tracks", "true")));
+        clearLibraryCheck.setSelected("true".equalsIgnoreCase(
+                props.getProperty("music.library.database.clear-before-sync", "false")));
         fixBrokenPathsCheck.setSelected("true".equalsIgnoreCase(
                 props.getProperty("database.fix.broken.paths", "false")));
         sortCratesCheck.setSelected("true".equalsIgnoreCase(
                 props.getProperty("crate.sorting.alphabetical", "false")));
-
-        String dedupMode = props.getProperty("database.dupe.detection.mode", "path");
-        selectComboItem(dedupModeCombo, dedupMode);
 
         dupeScanCheck.setSelected("true".equalsIgnoreCase(
                 props.getProperty("harddrive.dupe.scan.enabled", "false")));
@@ -413,10 +416,9 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
         }
 
         props.setProperty("music.library.database.backup", String.valueOf(backupCheck.isSelected()));
-        props.setProperty("database.skip.existing.tracks", String.valueOf(skipExistingCheck.isSelected()));
+        props.setProperty("music.library.database.clear-before-sync", String.valueOf(clearLibraryCheck.isSelected()));
         props.setProperty("database.fix.broken.paths", String.valueOf(fixBrokenPathsCheck.isSelected()));
         props.setProperty("crate.sorting.alphabetical", String.valueOf(sortCratesCheck.isSelected()));
-        props.setProperty("database.dupe.detection.mode", (String) dedupModeCombo.getSelectedItem());
 
         props.setProperty("harddrive.dupe.scan.enabled", String.valueOf(dupeScanCheck.isSelected()));
         props.setProperty("harddrive.dupe.detection.mode", (String) dupeDetectionCombo.getSelectedItem());
@@ -551,10 +553,9 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
         seratoPathField.setEnabled(enabled);
         parentCrateField.setEnabled(enabled);
         backupCheck.setEnabled(enabled);
-        skipExistingCheck.setEnabled(enabled);
+        clearLibraryCheck.setEnabled(enabled);
         fixBrokenPathsCheck.setEnabled(enabled);
         sortCratesCheck.setEnabled(enabled);
-        dedupModeCombo.setEnabled(enabled);
         dupeScanCheck.setEnabled(enabled);
         dupeDetectionCombo.setEnabled(enabled);
         dupeMoveCombo.setEnabled(enabled);

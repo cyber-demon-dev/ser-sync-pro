@@ -61,24 +61,22 @@ public class cdd_sync_crate {
     }
 
     /**
-     * Adds tracks with deduplication filtering.
-     * Uses Serato's filename encoding from database when available.
+     * Directly sets the track list for an existing crate being rewritten.
+     * Bypasses filename-based deduplication — use ONLY when rewriting pre-existing
+     * crates where the original track list must be preserved exactly.
+     * addTrack() dedup would silently drop tracks sharing the same filename
+     * across different folders, which is common in DJ libraries.
      */
-    public void addTracksFiltered(Collection<String> trackPaths, cdd_sync_track_index index) {
-        if (index == null) {
-            tracks.addAll(trackPaths);
-            return;
-        }
-        cdd_sync_database database = index.getDatabase();
-
-        for (String track : trackPaths) {
-            File f = new File(track);
-            String size = cdd_sync_binary_utils.formatSize(f.length());
-            if (!index.shouldSkipTrack(track, size)) {
-                tracks.add(cdd_sync_binary_utils.resolveSeratoPath(track, database));
-            }
+    public void setTracksRaw(List<String> rawTracks) {
+        this.tracks.clear();
+        this.normalizedPaths.clear();
+        for (String path : rawTracks) {
+            this.tracks.add(path);
+            this.normalizedPaths.add(normalizeForDedup(path));
         }
     }
+
+
 
     public void setVersion(String version) {
         if (version.length() != 4) {

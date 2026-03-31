@@ -1,112 +1,33 @@
 import java.io.File;
 
 /**
- * Unified track index that combines data from database V2 and crate files.
- * Provides deduplication lookups in path or filename mode.
+ * Loads the Serato database V2 and exposes it for path encoding lookups.
+ * Used by cdd_sync_library to ensure crate track paths match the exact
+ * byte encoding Serato used when it originally indexed the files.
  */
 public class cdd_sync_track_index {
 
-    public static final String MODE_PATH = "path";
-    public static final String MODE_FILENAME = "filename";
-    public static final String MODE_OFF = "off";
-
     private cdd_sync_database database;
-    private cdd_sync_crate_scanner crateScanner;
-    private String mode;
-    private int skippedCount = 0;
 
     /**
-     * Creates a track index from the Serato library.
-     * 
-     * @param seratoPath Path to _Serato_ folder
-     * @param mode       Deduplication mode: "path", "filename", or "off"
-     * @return cdd_sync_track_index instance
+     * Loads the Serato database V2 from the given _Serato_ folder.
+     *
+     * @param seratoPath Path to the _Serato_ folder
+     * @return cdd_sync_track_index instance (database may be null if not found)
      */
-    public static cdd_sync_track_index createFrom(String seratoPath, String mode) {
+    public static cdd_sync_track_index createFrom(String seratoPath) {
         cdd_sync_track_index index = new cdd_sync_track_index();
-        index.mode = mode != null ? mode.toLowerCase() : MODE_FILENAME;
 
-        if (MODE_OFF.equals(index.mode)) {
-            cdd_sync_log.info("Deduplication disabled");
-            return index;
-        }
-
-        // Load database V2
         String dbPath = seratoPath + "/database V2";
         if (new File(dbPath).exists()) {
-            cdd_sync_log.info("Loading database V2 for duplicate detection...");
+            cdd_sync_log.info("Loading database V2 for path encoding...");
             index.database = cdd_sync_database.readFrom(dbPath);
             if (index.database != null) {
                 cdd_sync_log.info("Found " + index.database.getTrackCount() + " tracks in database V2");
             }
         }
 
-        // Scan crate files
-        cdd_sync_log.info("Scanning existing crate files...");
-        index.crateScanner = cdd_sync_crate_scanner.scanFrom(seratoPath);
-        cdd_sync_log.info("Found " + index.crateScanner.getTrackCount() + " tracks in " +
-                index.crateScanner.getCrateCount() + " crate files");
-
         return index;
-    }
-
-    /**
-     * Checks if a track already exists in the Serato library.
-     * 
-     * @param trackPath Full path to the track file
-     * @param fileSize  File size string (can be null)
-     * @return true if track should be skipped (already exists)
-     */
-    public boolean shouldSkipTrack(String trackPath, String fileSize) {
-        if (MODE_OFF.equals(mode)) {
-            return false;
-        }
-
-        boolean exists = false;
-
-        if (MODE_FILENAME.equals(mode)) {
-            // Filename-based matching
-            if (database != null && database.containsTrackByFilename(trackPath, fileSize)) {
-                exists = true;
-            }
-            if (!exists && crateScanner != null && crateScanner.containsTrackByFilename(trackPath)) {
-                exists = true;
-            }
-        } else {
-            // Path-based matching (default)
-            if (database != null && database.containsTrackByPath(trackPath, fileSize)) {
-                exists = true;
-            }
-            if (!exists && crateScanner != null && crateScanner.containsTrackByPath(trackPath)) {
-                exists = true;
-            }
-        }
-
-        if (exists) {
-            // Don't log each skip - just count them
-            skippedCount++;
-        }
-
-        return exists;
-    }
-
-    /**
-     * Returns the number of tracks skipped due to deduplication.
-     */
-    public int getSkippedCount() {
-        return skippedCount;
-    }
-
-    /**
-     * Returns total unique tracks indexed from all sources.
-     */
-    public int getTotalIndexedTracks() {
-        int total = 0;
-        if (database != null) {
-            total += database.getTrackCount();
-        }
-        // Note: crate scanner may have overlapping tracks with database
-        return total;
     }
 
     /**

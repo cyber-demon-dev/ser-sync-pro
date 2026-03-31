@@ -96,18 +96,6 @@ public class cdd_sync_config {
 
     // ==================== Deduplication ====================
 
-    public boolean isSkipExistingTracks() {
-        return getBooleanOption("database.skip.existing.tracks", true);
-    }
-
-    public String getDedupMode() {
-        String mode = properties.getProperty("database.dupe.detection.mode");
-        if (mode == null || mode.trim().isEmpty()) {
-            return cdd_sync_track_index.MODE_PATH; // default
-        }
-        return mode.trim().toLowerCase();
-    }
-
     public boolean isHardDriveDupeScanEnabled() {
         return getBooleanOption("harddrive.dupe.scan.enabled", false);
     }

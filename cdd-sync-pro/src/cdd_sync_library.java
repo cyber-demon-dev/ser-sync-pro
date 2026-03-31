@@ -58,18 +58,8 @@ public class cdd_sync_library {
             crate.setDatabase(trackIndex.getDatabase());
         }
 
-        // Add ALL tracks to crates (crates just contain references)
-        // Even if tracks exist in database, we still want them in our new crates
+        // Add all tracks to the crate (crates are just path references).
         crate.addTracks(all);
-
-        // Count existing tracks for statistics only (doesn't block from crate)
-        if (trackIndex != null) {
-            for (String track : all) {
-                java.io.File f = new java.io.File(track);
-                String size = cdd_sync_binary_utils.formatSize(f.length());
-                trackIndex.shouldSkipTrack(track, size); // Just counts, doesn't skip
-            }
-        }
 
         if (level == 0) {
             root = crate;
@@ -139,6 +129,8 @@ public class cdd_sync_library {
             try {
                 cdd_sync_crate existing = cdd_sync_crate.readFrom(crateFile);
                 if (existing.equals(crate)) {
+                    cdd_sync_log.fix("[CRATE SKIPPED] " + fileName
+                            + " (" + crate.getTrackCount() + " tracks, unchanged)");
                     return false; // No change needed
                 }
             } catch (Exception e) {
@@ -149,6 +141,8 @@ public class cdd_sync_library {
         try {
             crateFile.getParentFile().mkdirs();
             crate.writeTo(crateFile);
+            cdd_sync_log.fix("[CRATE WRITTEN] " + fileName
+                    + " (" + crate.getTrackCount() + " tracks)");
             return true;
         } catch (cdd_sync_exception e) {
             throw new cdd_sync_exception("Error serializing crate '" + fileName + "'", e);

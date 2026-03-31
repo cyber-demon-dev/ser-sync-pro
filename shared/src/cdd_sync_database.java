@@ -220,6 +220,14 @@ public class cdd_sync_database {
     }
 
     /**
+     * Returns all track paths stored in the database (relative, no volume prefix).
+     * Used to iterate and check each path against the live filesystem.
+     */
+    public List<String> getAllTrackPaths() {
+        return new ArrayList<>(tracksByFilenameOnly.values());
+    }
+
+    /**
      * Gets the original database path for a track by filename.
      * This returns the EXACT path encoding from the database.
      * 
