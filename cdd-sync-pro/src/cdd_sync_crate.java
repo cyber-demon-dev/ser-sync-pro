@@ -1,5 +1,4 @@
 import java.io.*;
-import java.text.Normalizer;
 import java.util.*;
 
 /**
@@ -18,7 +17,6 @@ public class cdd_sync_crate {
     private long sortingRev = Integer.MIN_VALUE;
     private List<String> columns = new ArrayList<>();
     private List<String> tracks = new ArrayList<>();
-    private Set<String> normalizedPaths = new HashSet<>(); // For deduplication
     private cdd_sync_database database; // Reference to database for path lookup
 
     public cdd_sync_crate() {
@@ -33,25 +31,9 @@ public class cdd_sync_crate {
         this.database = db;
     }
 
-    /**
-     * Extracts filename for deduplication comparison.
-     * Normalizes to NFC for consistent comparison regardless of source encoding.
-     */
-    private static String normalizeForDedup(String path) {
-        // Get just the filename
-        int lastSlash = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
-        String filename = lastSlash >= 0 ? path.substring(lastSlash + 1) : path;
-        // Normalize to NFC for consistent comparison (handles both NFC and NFD inputs)
-        return Normalizer.normalize(filename.toLowerCase(), Normalizer.Form.NFC);
-    }
-
     public void addTrack(String trackPath) {
-        String key = normalizeForDedup(trackPath);
-        if (!normalizedPaths.contains(key)) {
-            normalizedPaths.add(key);
-            String trackToAdd = cdd_sync_binary_utils.resolveSeratoPath(trackPath, database);
-            tracks.add(trackToAdd);
-        }
+        String trackToAdd = cdd_sync_binary_utils.resolveSeratoPath(trackPath, database);
+        tracks.add(trackToAdd);
     }
 
     public void addTracks(Collection<String> trackPaths) {
@@ -69,11 +51,7 @@ public class cdd_sync_crate {
      */
     public void setTracksRaw(List<String> rawTracks) {
         this.tracks.clear();
-        this.normalizedPaths.clear();
-        for (String path : rawTracks) {
-            this.tracks.add(path);
-            this.normalizedPaths.add(normalizeForDedup(path));
-        }
+        this.tracks.addAll(rawTracks);
     }
 
 

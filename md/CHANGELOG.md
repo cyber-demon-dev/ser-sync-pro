@@ -6,6 +6,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+- **Fix: Step 2 now processes ALL crates including hand-curated Live sets**: Replaced the multi-threaded, ambiguous-lookup Step 2 implementation with a simple sequential loop. All `.crate` files in `Subcrates/` are now processed regardless of whether they map to a filesystem folder. The database V2 (already patched by Step 1) is the sole source of truth — if a track's filename resolves to a different path in the DB, the crate is updated. Previously, custom crates were silently skipped due to a flawed directory-mapping gate.
+  - `cdd_sync_crate_fixer.java`: Removed `ExecutorService`, `ConcurrentHashMap`, and multi-value ambiguity logic. Replaced with flat `Map<String, String>` index and single `for` loop.
+  - `cdd_sync_main.java`: Added explicit log messages when Step 1 or Step 2 are skipped so the pipeline is never silently bypassed.
+  - `cdd_sync_crate.java`: Removed unused `listCrateFiles(File)` helper.
+
 - **4-step sync pipeline**: `runSync()` now executes four discrete, non-overlapping steps instead of the old monolithic `cdd_sync_library.writeTo()` approach. Step 1 fixes broken paths in database V2; Step 2 repairs broken paths in existing hand-curated crates (via `setTracksRaw()` — no dedup, no removal); Step 3 appends new tracks to existing folder-mapped crates; Step 4 creates new crates only for directories with no matching crate file on disk. Existing crates are never overwritten.
 - **Fix Paths standalone mode**: New amber **Fix Paths** button in the GUI runs `runFixPaths()` — scans and repairs broken paths in existing crates and database V2 without writing any new crates.
 - **Per-step diagnostic log files**: Each sync session now creates seven timestamped log files: main log, dupe log, path-fix log, and four step-level logs (`step1-db-fix`, `step2-crate-fix`, `step3-append`, `step4-create`). Verbose per-path detail never floods the GUI; it goes to file only.

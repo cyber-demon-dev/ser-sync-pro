@@ -289,17 +289,26 @@ public class cdd_sync_main {
             } else {
                 cdd_sync_crate_fixer.updateDatabasePaths(seratoPath, fsLibrary);
             }
+        } else {
+            cdd_sync_log.info("Step 1 skipped: Fix Broken Paths is disabled or Clear Library is on.");
         }
 
-        // ── Step 2: Fix broken paths in existing crates ───────────────────────────
-        // Reads existing .crate files, re-resolves broken paths by filename.
-        // Uses setTracksRaw() — no dedup, no track removal, no new crates written.
+        // ── Step 2: Fix broken paths in existing crates via database V2 ───────────
+        // Reloads the database (now authoritative after Step 1) and for every track
+        // in every crate, replaces the stored path with the database path if they
+        // differ. Covers ALL crates — hand-curated Live sets included — because
+        // there are no filesystem existence checks involved.
         if (canFix) {
             if (config.isDryRun()) {
-                cdd_sync_log.info("[DRY RUN] Would have: fixed broken paths in existing crates");
+                cdd_sync_log.info("[DRY RUN] Would have: updated crate paths from database V2");
             } else {
-                cdd_sync_crate_fixer.fixExistingCrates(seratoPath, fsLibrary);
+                // Reload database from disk so Step 2 sees Step 1's updates.
+                cdd_sync_database updatedDatabase = cdd_sync_database.readFrom(
+                        seratoPath + "/database V2");
+                cdd_sync_crate_fixer.fixExistingCrates(seratoPath, updatedDatabase);
             }
+        } else {
+            cdd_sync_log.info("Step 2 skipped: Fix Broken Paths is disabled or Clear Library is on.");
         }
 
         // ── Step 3: Append new tracks to existing crates matching filepath ─────────
