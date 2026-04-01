@@ -1,4 +1,5 @@
 import java.io.*;
+import java.text.Normalizer;
 import java.util.*;
 
 /**
@@ -40,12 +41,23 @@ public class cdd_sync_crate {
         this.database = db;
     }
 
+    /**
+     * Extracts the filename leaf and normalizes to NFC+lowercase for dedup.
+     * Filename-only comparison is intentional: it is immune to relative vs absolute
+     * path differences between crate binary paths (relative) and filesystem paths
+     * (absolute), which would cause key mismatches even after volume-prefix stripping.
+     */
+    private static String normalizeForDedup(String path) {
+        int lastSlash = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
+        String filename = lastSlash >= 0 ? path.substring(lastSlash + 1) : path;
+        return Normalizer.normalize(filename.toLowerCase(), Normalizer.Form.NFC);
+    }
+
     public void addTrack(String trackPath) {
-        String trackToAdd = cdd_sync_binary_utils.resolveSeratoPath(trackPath, database);
-        String key = cdd_sync_binary_utils.normalizePath(trackToAdd);
+        String key = normalizeForDedup(trackPath);
         if (normalizedTrackSet.add(key)) {
             // add() returns true only if the key was not already present.
-            tracks.add(trackToAdd);
+            tracks.add(cdd_sync_binary_utils.resolveSeratoPath(trackPath, database));
         }
     }
 
@@ -69,7 +81,7 @@ public class cdd_sync_crate {
         // running after Step 2) correctly sees all paths already in the list.
         this.normalizedTrackSet.clear();
         for (String t : rawTracks) {
-            this.normalizedTrackSet.add(cdd_sync_binary_utils.normalizePath(t));
+            this.normalizedTrackSet.add(normalizeForDedup(t));
         }
     }
 

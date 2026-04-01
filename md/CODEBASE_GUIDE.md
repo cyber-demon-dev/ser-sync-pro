@@ -191,7 +191,7 @@ cdd-sync-pro/
 - **Purpose**: Implements the four-step sync pipeline that replaces the old monolithic `cdd_sync_library.writeTo()` call
 - **Steps**:
   1. `updateDatabasePaths(seratoPath, library)` — Fixes broken `pfil` paths in database V2. Runs first so the DB is authoritative before any crate work.
-  2. `fixExistingCrates(seratoPath, library)` — Reads every `.crate` file, re-resolves broken paths by filename lookup, writes only crates that changed. Uses `setTracksRaw()` — dedup never runs, no track removal.
+  2. `fixExistingCrates(seratoPath, library)` — Reads every `.crate` file, re-resolves broken paths by filename lookup, writes only crates that changed. Uses `setTracksRaw()` — dedup never runs, no track removal. If multiple library paths share the same filename, the **first match is used** (no ambiguity skip — files are moved, not copied, so collisions are not expected in practice).
   3. `appendNewTracksToMatchingCrates(seratoPath, library, parentCratePath, trackIndex)` — For each folder-mapped crate already on disk, adds new tracks from that folder using `addTrack()` (filename dedup prevents duplicates). Never removes existing tracks.
   4. `createNewCrates(seratoPath, library, parentCratePath, trackIndex)` — Creates `.crate` files for folders with no matching crate on disk. Skips if the file already exists — Step 3 handles those.
 - **Key invariant**: Steps 3 & 4 are mutually exclusive per crate file. An existing crate is never overwritten.

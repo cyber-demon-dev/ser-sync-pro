@@ -2,6 +2,16 @@
 
 <!-- Newest entries go at the top, below this comment. Do NOT delete old entries. -->
 
+## 2026-03-31 — Dedup Key Refactor: filename-only NFC normalization
+
+- **Task**: Refine `addTrack()` dedup key from full-path NFC to filename-leaf-only NFC+lowercase; update CODEBASE_GUIDE.md Step 2 note
+- **Files Changed**:
+  - `cdd-sync-pro/src/cdd_sync_crate.java` [MODIFIED] — Extracted `normalizeForDedup()` (filename leaf, NFC+lowercase); `addTrack()` and `setTracksRaw()` use it instead of `cdd_sync_binary_utils.normalizePath()`; `resolveSeratoPath()` call preserved for the stored value
+  - `md/CODEBASE_GUIDE.md` [MODIFIED] — Step 2 note updated: "first match is used (no ambiguity skip)"
+  - `md/CHANGELOG.md` [MODIFIED] — NFC/NFD dedup entry revised to document filename-only key rationale
+- **What Was Done**: Previous dedup key used the full resolved path (NFC+lowercase). That keyed differently for relative crate paths vs. absolute filesystem paths, causing the same physical file to appear under two different keys → insert not blocked. Switching to filename-leaf-only eliminates the relative/absolute mismatch entirely. The resolved/absolute path is still stored as the track value — only the dedup key changed.
+- **Docs to Update**: None — done here
+
 ## 2026-03-31 — Dedup Fix + UI Label Cleanup + Fix Paths Removal
 
 - **Task**: Restore NFC/NFD dedup in `addTrack()`; expand abbreviated GUI labels; remove redundant Fix Paths button

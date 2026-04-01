@@ -6,8 +6,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-- **Fix: Duplicate track insertion for accented filenames (NFC/NFD)**: Tracks with special characters (e.g. `Bota Niña`) were being inserted twice into crates — once from the existing crate (NFC) and once from the filesystem scan (NFD). `addTrack()` now maintains a `Set<String>` of NFC-normalized paths via `normalizePath()` for O(1) dedup. Duplicate insertion silently skipped. `setTracksRaw()` rebuilds the set so Step 3 correctly sees all paths already present after a Step 2 rewrite.
-  - `cdd_sync_crate.java`: Added `normalizedTrackSet` field; `addTrack()` checks set before inserting; `setTracksRaw()` rebuilds set.
+- **Fix: Duplicate track insertion for accented filenames (NFC/NFD)**: Tracks with special characters (e.g. `Bota Niña`) were being inserted twice into crates — once from the existing crate (NFC) and once from the filesystem scan (NFD). `addTrack()` now deduplicates by **filename leaf only** (NFC-normalized, lowercased), making the key immune to relative vs. absolute path differences between crate binary paths and filesystem paths. `setTracksRaw()` rebuilds the set so Step 3 correctly sees all paths already present after a Step 2 rewrite.
+  - `cdd_sync_crate.java`: Extracted `normalizeForDedup()` helper (filename-only NFC+lowercase); `addTrack()` uses it for O(1) dedup key; `setTracksRaw()` rebuilds set using same key.
 
 - **Removed: Fix Paths button**: Amber "Fix Paths" button removed from the GUI. Its functionality (Steps 1+2 only) is fully covered by toggling Steps 3 and 4 off in the Pipeline Steps panel before clicking Start. Removes ~75 lines of duplicated setup logic.
   - `cdd_sync_pro_window.java`: `fixPathsButton`, `onFixPathsCallback`, `onFixPathsClicked()`, `setOnFixPathsCallback()` all removed.
