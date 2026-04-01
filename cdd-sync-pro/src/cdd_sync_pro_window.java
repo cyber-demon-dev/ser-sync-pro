@@ -48,14 +48,12 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
 
     // Action buttons
     private JButton startButton;
-    private JButton fixPathsButton;
     private JButton cancelButton;
 
     // Sync state
     private volatile boolean syncRunning = false;
     private volatile boolean syncCancelled = false;
     private Runnable onStartCallback;
-    private Runnable onFixPathsCallback;
 
     public cdd_sync_pro_window() {
         super("cdd-sync-pro", 750, 700);
@@ -188,36 +186,36 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
         });
 
         // --- Step 0 + gate for 1 & 2 ---
-        step0Check = createDarkCheckBox("Step 0: Duplicate mgmt", true);
+        step0Check = createDarkCheckBox("Step 0: Duplicate Management", true);
         step0Check.setToolTipText("<html><b>Step 0 | sync.step0.enabled</b><br>"
                 + "Gates the entire duplicate management block (move + log scan).<br>"
                 + "Runs before Step 1. Only active when 'Scan for duplicates' is also ON.<br>"
                 + "Disable to isolate Steps 1\u20134 without any dupe processing.</html>");
 
         // --- Steps 1 & 2: path fixing ---
-        step1Check = createDarkCheckBox("Step 1: Fix DB paths", true);
+        step1Check = createDarkCheckBox("Step 1: Fix Database Paths", true);
         step1Check.setToolTipText("<html><b>Step 1 | sync.step1.enabled</b><br>"
                 + "Fix broken pfil paths in database V2.<br>"
                 + "Requires Gate 1+2 (Fix broken paths) to be ON.</html>");
 
-        step2Check = createDarkCheckBox("Step 2: Fix crate paths", true);
+        step2Check = createDarkCheckBox("Step 2: Fix Existing Crate Paths", true);
         step2Check.setToolTipText("<html><b>Step 2 | sync.step2.enabled</b><br>"
                 + "Re-resolve broken track paths in all existing .crate files using database V2.<br>"
                 + "Reloads DB from disk after Step 1. Requires Gate 1+2 to be ON.</html>");
 
         // --- Steps 3 & 4: crate writing ---
-        step3Check = createDarkCheckBox("Step 3: Append tracks", true);
+        step3Check = createDarkCheckBox("Step 3: Append Existing Crates", true);
         step3Check.setToolTipText("<html><b>Step 3 | sync.step3.enabled</b><br>"
                 + "Append new tracks to existing folder-mapped crates.<br>"
                 + "Dedup prevents adding tracks already in the crate.</html>");
 
-        step4Check = createDarkCheckBox("Step 4: Create crates", true);
+        step4Check = createDarkCheckBox("Step 4: Create New Crates", true);
         step4Check.setToolTipText("<html><b>Step 4 | sync.step4.enabled</b><br>"
                 + "Create new .crate files for library folders with no matching crate on disk.<br>"
                 + "Skips folders whose crate already exists (Step 3 handles those).</html>");
 
         // --- Post-step ---
-        sortCratesCheck = createDarkCheckBox("Post: Sort crates A\u2192Z", false);
+        sortCratesCheck = createDarkCheckBox("Post: Reset Crates: A-Z", false);
         sortCratesCheck.setToolTipText("<html><b>Post | crate.sorting.alphabetical</b><br>"
                 + "Runs after all steps. Rewrites neworder.pref so crates appear A\u2192Z in Serato.<br>"
                 + "Display order only \u2014 no effect on crate contents.</html>");
@@ -293,16 +291,6 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
         startButton.setToolTipText("Full sync: write crates + fix paths");
         startButton.addActionListener(e -> onStartClicked());
 
-        fixPathsButton = new JButton("Fix Paths");
-        fixPathsButton.setBackground(ACCENT_AMBER);
-        fixPathsButton.setForeground(Color.WHITE);
-        fixPathsButton.setOpaque(true);
-        fixPathsButton.setFocusPainted(false);
-        fixPathsButton.setFont(new Font("SansSerif", Font.BOLD, 14));
-        fixPathsButton.setPreferredSize(new Dimension(130, 34));
-        fixPathsButton.setToolTipText("Fix broken paths in existing crates only — no new crates written");
-        fixPathsButton.addActionListener(e -> onFixPathsClicked());
-
         cancelButton = new JButton("  Cancel  ");
         cancelButton.setBackground(BG_INPUT);
         cancelButton.setForeground(FG_TEXT);
@@ -314,7 +302,6 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
         cancelButton.addActionListener(e -> onCancelClicked());
 
         buttonPanel.add(startButton);
-        buttonPanel.add(fixPathsButton);
         buttonPanel.add(cancelButton);
         panel.add(buttonPanel, BorderLayout.SOUTH);
 
@@ -502,12 +489,7 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
         this.onStartCallback = callback;
     }
 
-    /**
-     * Sets the callback to invoke when Fix Paths is clicked.
-     */
-    public void setOnFixPathsCallback(Runnable callback) {
-        this.onFixPathsCallback = callback;
-    }
+
 
     /**
      * Returns true if the user has requested cancellation.
@@ -535,7 +517,6 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
         syncCancelled = false;
         setControlsEnabled(false);
         startButton.setEnabled(false);
-        fixPathsButton.setEnabled(false);
         cancelButton.setEnabled(true);
         cancelButton.setBackground(ACCENT_RED);
         progressLabel.setText("Starting sync...");
@@ -546,32 +527,7 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
         }
     }
 
-    private void onFixPathsClicked() {
-        if (musicFolderField.getText().trim().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Music Folder is required.", "Validation", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-        if (seratoPathField.getText().trim().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Serato Path is required.", "Validation", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
 
-        saveToFile();
-
-        syncRunning = true;
-        syncCancelled = false;
-        setControlsEnabled(false);
-        startButton.setEnabled(false);
-        fixPathsButton.setEnabled(false);
-        cancelButton.setEnabled(true);
-        cancelButton.setBackground(ACCENT_RED);
-        progressLabel.setText("Fixing broken paths...");
-        textArea.setText("");
-
-        if (onFixPathsCallback != null) {
-            onFixPathsCallback.run();
-        }
-    }
 
     private void onCancelClicked() {
         syncCancelled = true;
@@ -587,7 +543,6 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
             syncRunning = false;
             setControlsEnabled(true);
             startButton.setEnabled(true);
-            fixPathsButton.setEnabled(true);
             cancelButton.setEnabled(false);
             cancelButton.setBackground(BG_INPUT);
         });
@@ -608,6 +563,5 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
         dupeScanCheck.setEnabled(enabled);
         dupeDetectionCombo.setEnabled(enabled);
         dupeMoveCombo.setEnabled(enabled);
-        fixPathsButton.setEnabled(enabled);
     }
 }

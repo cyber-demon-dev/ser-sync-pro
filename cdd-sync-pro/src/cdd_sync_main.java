@@ -91,29 +91,6 @@ public class cdd_sync_main {
                 };
                 worker.execute();
             });
-
-            // When Fix Paths is clicked, run path-fix-only mode on background thread
-            window.setOnFixPathsCallback(() -> {
-                SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
-                    @Override
-                    protected Void doInBackground() {
-                        try {
-                            Properties guiProps = window.collectProperties();
-                            cdd_sync_config config = new cdd_sync_config(guiProps);
-                            runFixPaths(config);
-                        } catch (cdd_sync_fatal_exception e) {
-                            cdd_sync_log.error("Fatal: " + e.getMessage());
-                        }
-                        return null;
-                    }
-
-                    @Override
-                    protected void done() {
-                        window.syncFinished();
-                    }
-                };
-                worker.execute();
-            });
         });
     }
 
@@ -367,58 +344,6 @@ public class cdd_sync_main {
         }
     }
 
-    /**
-     * Fix-paths-only mode — skips all crate writing.
-     * Scans media library, loads database V2, then runs cdd_sync_crate_fixer
-     * against all existing crates. No new crates are created or modified.
-     */
-    private static void runFixPaths(cdd_sync_config config) {
-        cdd_sync_log.setMode(config.isGuiMode());
-
-        String seratoPath = config.getSeratoLibraryPath();
-        File seratoDir = new File(seratoPath);
-        File volumeLogDir = new File(seratoDir.getParentFile(), "cdd-sync-pro/logs");
-        cdd_sync_log.setLogDirectory(volumeLogDir.getAbsolutePath());
-
-        cdd_sync_log.info("cdd-sync-pro: Fix Paths mode started");
-
-        // Optional backup
-        if (config.isBackupEnabled()) {
-            String backupPath = cdd_sync_backup.createBackup(seratoPath);
-            if (backupPath == null) {
-                cdd_sync_log.error("Backup failed. Aborting fix-paths.");
-                cdd_sync_log.fatalError();
-                return;
-            }
-        }
-
-        // Scan media library (needed to resolve new paths)
-        cdd_sync_log.info("Scanning media library " + config.getMusicLibraryPath() + "...");
-        cdd_sync_media_library fsLibrary = cdd_sync_media_library.readFrom(config.getMusicLibraryPath());
-        if (fsLibrary.getTotalNumberOfTracks() <= 0) {
-            cdd_sync_log.error("No supported files found in media library. Check your Music Folder path.");
-            cdd_sync_log.fatalError();
-            return;
-        }
-        cdd_sync_log.info("Found " + fsLibrary.getTotalNumberOfTracks() + " tracks in "
-                + fsLibrary.getTotalNumberOfDirectories() + " directories");
-
-        // Load Serato database — required as the authoritative path source
-        cdd_sync_database database = cdd_sync_database.readFrom(seratoPath + "/database V2");
-        if (database == null) {
-            cdd_sync_log.error("No Serato database V2 found at: " + seratoPath);
-            cdd_sync_log.error("Fix Paths requires an existing Serato library.");
-            cdd_sync_log.fatalError();
-            return;
-        }
-
-        // Fix broken paths in all existing crates — no new crates written
-        cdd_sync_log.info("Scanning existing crates for broken paths...");
-        cdd_sync_crate_fixer.fixBrokenPaths(seratoPath, fsLibrary, database, config.getDupeMoveMode());
-
-        cdd_sync_log.info("Fix Paths complete.");
-        cdd_sync_log.success();
-    }
 
     private static void scanForHardDriveDuplicates(cdd_sync_media_library library) {
         cdd_sync_log.info("Scanning for hard drive duplicates...");

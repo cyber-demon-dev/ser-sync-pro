@@ -6,6 +6,21 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+- **Fix: Duplicate track insertion for accented filenames (NFC/NFD)**: Tracks with special characters (e.g. `Bota Niña`) were being inserted twice into crates — once from the existing crate (NFC) and once from the filesystem scan (NFD). `addTrack()` now maintains a `Set<String>` of NFC-normalized paths via `normalizePath()` for O(1) dedup. Duplicate insertion silently skipped. `setTracksRaw()` rebuilds the set so Step 3 correctly sees all paths already present after a Step 2 rewrite.
+  - `cdd_sync_crate.java`: Added `normalizedTrackSet` field; `addTrack()` checks set before inserting; `setTracksRaw()` rebuilds set.
+
+- **Removed: Fix Paths button**: Amber "Fix Paths" button removed from the GUI. Its functionality (Steps 1+2 only) is fully covered by toggling Steps 3 and 4 off in the Pipeline Steps panel before clicking Start. Removes ~75 lines of duplicated setup logic.
+  - `cdd_sync_pro_window.java`: `fixPathsButton`, `onFixPathsCallback`, `onFixPathsClicked()`, `setOnFixPathsCallback()` all removed.
+  - `cdd_sync_main.java`: `runFixPaths()` method and wiring block removed.
+
+- **Style: Pipeline Steps and Duplicate Management label expansion**: All abbreviated GUI labels expanded to full descriptive names for clarity.
+  - Step 0: "Duplicate mgmt" → "Duplicate Management"
+  - Step 1: "Fix DB paths" → "Fix Database Paths"
+  - Step 2: "Fix crate paths" → "Fix Existing Crate Paths"
+  - Step 3: "Append tracks" → "Append Existing Crates"
+  - Step 4: "Create crates" → "Create New Crates"
+  - Post: "Sort crates A→Z" → "Reset Crates: A-Z"
+
 - **Fix: Serato crate column widths preserved on round-trip rewrite (Step 2)**: Crates rewritten by Step 2 (path fixer) no longer show as blank in Serato. Root cause: `writeTo()` hardcoded `tvcw = "0"` for all columns, destroying the pixel widths Serato stores per-crate. Fix: `readFrom()` now captures the raw `ovct` and `osrt` TLV payloads as byte arrays; `writeTo()` emits them verbatim when present, bypassing reconstruction. New crates (Step 4) are unaffected — raw payloads absent → existing default logic runs unchanged.
   - `cdd_sync_crate.java`: Added `rawOsrtPayload` / `rawOvctPayloads` fields; `writeTo()` branches on their presence.
 

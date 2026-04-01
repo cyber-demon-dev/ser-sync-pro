@@ -18,6 +18,11 @@ public class cdd_sync_crate {
     private List<String> columns = new ArrayList<>();
     private List<String> tracks = new ArrayList<>();
     private cdd_sync_database database; // Reference to database for path lookup
+    // NFC-normalized path set for O(1) dedup in addTrack().
+    // Keyed by normalizePath() so NFD filesystem paths and NFC crate paths
+    // resolve to the same key (fixes duplicate insertion for filenames with
+    // accented characters like "Bota Ni\u00f1a" where macOS returns NFD).
+    private Set<String> normalizedTrackSet = new HashSet<>();
     // Raw payloads captured during readFrom() — written back verbatim to preserve
     // tvcw column widths and brev encoding set by Serato. Null/empty for new crates.
     private byte[] rawOsrtPayload = null;
@@ -37,7 +42,11 @@ public class cdd_sync_crate {
 
     public void addTrack(String trackPath) {
         String trackToAdd = cdd_sync_binary_utils.resolveSeratoPath(trackPath, database);
-        tracks.add(trackToAdd);
+        String key = cdd_sync_binary_utils.normalizePath(trackToAdd);
+        if (normalizedTrackSet.add(key)) {
+            // add() returns true only if the key was not already present.
+            tracks.add(trackToAdd);
+        }
     }
 
     public void addTracks(Collection<String> trackPaths) {
@@ -56,6 +65,12 @@ public class cdd_sync_crate {
     public void setTracksRaw(List<String> rawTracks) {
         this.tracks.clear();
         this.tracks.addAll(rawTracks);
+        // Rebuild the dedup set so a subsequent addTrack() call (e.g. Step 3
+        // running after Step 2) correctly sees all paths already in the list.
+        this.normalizedTrackSet.clear();
+        for (String t : rawTracks) {
+            this.normalizedTrackSet.add(cdd_sync_binary_utils.normalizePath(t));
+        }
     }
 
 

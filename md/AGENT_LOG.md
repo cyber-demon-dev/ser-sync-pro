@@ -2,6 +2,21 @@
 
 <!-- Newest entries go at the top, below this comment. Do NOT delete old entries. -->
 
+## 2026-03-31 — Dedup Fix + UI Label Cleanup + Fix Paths Removal
+
+- **Task**: Restore NFC/NFD dedup in `addTrack()`; expand abbreviated GUI labels; remove redundant Fix Paths button
+- **Files Changed**:
+  - `cdd-sync-pro/src/cdd_sync_crate.java` [MODIFIED] — Added `normalizedTrackSet HashSet`; `addTrack()` skips duplicates via `normalizePath()` key; `setTracksRaw()` rebuilds set
+  - `cdd-sync-pro/src/cdd_sync_pro_window.java` [MODIFIED] — Removed `fixPathsButton`, `onFixPathsCallback`, `onFixPathsClicked()`, `setOnFixPathsCallback()`; expanded 6 Pipeline Steps labels to full descriptive names
+  - `cdd-sync-pro/src/cdd_sync_main.java` [MODIFIED] — Removed `runFixPaths()` method and SwingWorker wiring block
+  - `md/CHANGELOG.md` [MODIFIED] — Three new entries under [Unreleased]
+- **What Was Done**:
+  1. Diagnosed NFC/NFD duplicate: macOS returns NFD filenames; crate stores NFC. Without normalization, same file appeared as two distinct paths → double insert. Fixed by keying the dedup set via `normalizePath()` (already does NFC + lowercase).
+  2. Confirmed Fix Paths button was a legacy facade calling Steps 1+2 only, predating per-step toggles. Removed entirely — no functionality lost.
+  3. Expanded all 6 Pipeline Steps checkbox labels to full names per user spec.
+  4. `ant jar` → BUILD SUCCESSFUL.
+- **Docs to Update**: CHANGELOG.md — done
+
 ## 2026-03-31 — TLV Parser Refactor + Column Width Round-Trip Fix
 
 - **Task**: Replace fragile two-loop `readFrom()` with a unified TLV walker; fix Step 2 rewriting crates as blank (tvcw column widths destroyed); align Step 2 write pattern with Steps 3 & 4
@@ -17,7 +32,6 @@
   5. `ant all` → BUILD SUCCESSFUL (all 3 JARs). Verified live in Serato — `26-01-17` crate tracks visible again.
 - **Architecture Note**: `readFrom()` is now a true round-trip parser — any block it reads, it can write back bit-for-bit. The `writeTo()` reconstruction path (osrt + ovct defaults) is now the new-crate path only.
 - **Docs to Update**: CHANGELOG.md — done
-
 
 ## 2026-03-31 — Audit Previous Session + Remove Step 2 Ambiguity Guard
 
