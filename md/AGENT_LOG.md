@@ -2,6 +2,22 @@
 
 <!-- Newest entries go at the top, below this comment. Do NOT delete old entries. -->
 
+## 2026-03-31 — Hygiene Audit + Action Plan (hygiene-fixes)
+
+- **Task**: Audit core components for hygiene findings; produce a 5-phase action plan for another agent to execute
+- **Files Changed**:
+  - `md/actions/hygiene-fixes/PLAN.md` [NEW] — 5-phase plan (binary encoding, docs, main guard, GUI, commit)
+  - `md/actions/hygiene-fixes/PHASE_1.md` [NEW] — Parser desync + StandardCharsets + sortingRev sentinel
+  - `md/actions/hygiene-fixes/PHASE_2.md` [NEW] — Stale Javadoc + path sep one-liner
+  - `md/actions/hygiene-fixes/PHASE_3.md` [NEW] — `_Serato_` path guard + FQN cleanup in main
+  - `md/actions/hygiene-fixes/PHASE_4.md` [NEW] — step0 checkbox wiring (6 write sites)
+  - `md/actions/hygiene-fixes/PHASE_5.md` [NEW] — Full clean build + commit
+  - `md/actions/hygiene-fixes/ORCHESTRATE.md` [NEW] — Dispatch guide for orchestrator
+  - `md/actions/hygiene-fixes/AUDIT.md` [NEW] — Pre-filled audit state machine (5 rows, all PENDING)
+  - `md/AGENT_LOG.md` [MODIFIED] — This entry
+- **What Was Done**: Performed a senior-level hygiene audit across 8 core components. Found 22 findings (9 Medium, 13 Low, 0 Critical). Collapsed the highest-value 9 findings into a 5-phase action plan using file-overlap grouping (9 → 5 phases). Produced all 7 action-plan artefacts per skill protocol. Risk assessment: 1.5/10 breakage probability — all changes are non-breaking hygiene (encoding constants, parser safety, doc corrections, UI wiring).
+- **Docs to Update**: None — done here. Execute plan via `md/actions/hygiene-fixes/ORCHESTRATE.md`.
+
 ## 2026-03-31 — Step 2 Crate Fixer: Wire Database Encoding (Match Steps 3 & 4)
 
 - **Task**: Fix Step 2 (`fixExistingCrates`) to use Serato's exact filename encoding from `database V2`, matching the pattern already used by Steps 3 & 4 via `addTrack()` → `resolveSeratoPath()`
