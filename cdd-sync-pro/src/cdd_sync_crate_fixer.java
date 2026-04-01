@@ -21,25 +21,31 @@ public class cdd_sync_crate_fixer {
     // =========================================================================
     /**
      * Scans every .crate file in _Serato_/Subcrates and updates track paths
-     * using the scanned media library (filesystem) as the sole source of truth.
+     * using the scanned media library (filesystem) as the source of truth.
      *
      * For each track in each crate: look up its filename in the library index.
      * If the library holds a different (unambiguous) path for that filename,
      * replace the crate's stored path with the normalized library path.
      * Crates that had no changes are left untouched.
      *
-     * This approach is fully decoupled from the Serato database — crate paths
-     * are fixed even for tracks that Serato has never indexed. It covers ALL
-     * crates including hand-curated Live sets.
+     * When {@code database} is non-null, the resolved path is further refined
+     * via {@link cdd_sync_binary_utils#resolveSeratoPath} so the written path
+     * uses Serato's exact original filename encoding (NFD-preserved). This
+     * prevents Serato from creating orphaned duplicate entries in database V2
+     * when it reads crates written with filesystem-sourced NFC paths.
+     * If database is null, falls back to the raw filesystem path.
      *
+     * Covers ALL crates including hand-curated Live sets.
      * If multiple library paths share the same filename, the first match is used.
-     *
      * Uses setTracksRaw() so dedup never removes a valid track.
      *
      * @param seratoPath Path to the _Serato_ folder
      * @param library    Scanned media library (filesystem source of truth)
+     * @param database   Parsed Serato database V2 for exact encoding lookup;
+     *                   may be null (falls back to filesystem path)
      */
-    public static void fixExistingCrates(String seratoPath, cdd_sync_media_library library) {
+    public static void fixExistingCrates(String seratoPath, cdd_sync_media_library library,
+            cdd_sync_database database) {
         cdd_sync_log.info("Step 2: Rewriting crate paths from filesystem...");
 
         if (library == null) {
@@ -97,9 +103,13 @@ public class cdd_sync_crate_fixer {
                 List<String> candidates = libIndex.get(filename);
 
                 if (candidates != null && !candidates.isEmpty()) {
-                    // Convert absolute filesystem path to the relative form crates expect.
+                    // Prefer Serato's exact filename encoding from database V2 (NFD-preserved).
+                    // Falls back to the raw filesystem path when database is null or has no entry.
+                    String resolvedPath = cdd_sync_binary_utils
+                            .resolveSeratoPath(candidates.get(0), database);
+                    // Convert absolute path to the relative form crates expect.
                     String newRelPath = cdd_sync_binary_utils
-                            .normalizePathForDatabase(candidates.get(0));
+                            .normalizePathForDatabase(resolvedPath);
                     if (!newRelPath.equals(trackPath)) {
                         cdd_sync_log.step2("[PATH FIX] " + crateFile.getName()
                                 + " | OLD: " + trackPath
@@ -229,7 +239,7 @@ public class cdd_sync_crate_fixer {
     public static void fixBrokenPaths(String seratoPath, cdd_sync_media_library library,
             cdd_sync_database database, String dupeMoveMode) {
         updateDatabasePaths(seratoPath, library);
-        fixExistingCrates(seratoPath, library);
+        fixExistingCrates(seratoPath, library, database);
     }
 
     // =========================================================================

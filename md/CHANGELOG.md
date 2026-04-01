@@ -6,6 +6,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+- **Fix: Step 2 crate path fixer now uses Serato's exact filename encoding**: `fixExistingCrates()` previously resolved new track paths purely from the filesystem (`normalizePathForDatabase()`) and never consulted the Serato database. When the filesystem returned NFC-encoded paths and Serato had stored the filename in NFD, the written crate path diverged from `database V2`, causing Serato to silently create an orphaned duplicate record on next open. Fix: Step 2 now calls `resolveSeratoPath()` (already used by Steps 3 & 4 via `addTrack()`) before normalizing, so the database-stored encoding is preferred when available. Falls back to the filesystem path when the database is null or has no entry — no behaviour change for tracks not in the database.
+  - `cdd_sync_crate_fixer.java`: `fixExistingCrates()` gains a `database` parameter; path-fix loop applies `resolveSeratoPath()` before `normalizePathForDatabase()`; `fixBrokenPaths()` facade threads `database` through.
+  - `cdd_sync_main.java`: Step 2 call site updated to pass the already-loaded `database` variable.
+
 - **Fix: Duplicate track insertion for accented filenames (NFC/NFD)**: Tracks with special characters (e.g. `Bota Niña`) were being inserted twice into crates — once from the existing crate (NFC) and once from the filesystem scan (NFD). `addTrack()` now deduplicates by **filename leaf only** (NFC-normalized, lowercased), making the key immune to relative vs. absolute path differences between crate binary paths and filesystem paths. `setTracksRaw()` rebuilds the set so Step 3 correctly sees all paths already present after a Step 2 rewrite.
   - `cdd_sync_crate.java`: Extracted `normalizeForDedup()` helper (filename-only NFC+lowercase); `addTrack()` uses it for O(1) dedup key; `setTracksRaw()` rebuilds set using same key.
 

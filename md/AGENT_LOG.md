@@ -2,6 +2,16 @@
 
 <!-- Newest entries go at the top, below this comment. Do NOT delete old entries. -->
 
+## 2026-03-31 — Step 2 Crate Fixer: Wire Database Encoding (Match Steps 3 & 4)
+
+- **Task**: Fix Step 2 (`fixExistingCrates`) to use Serato's exact filename encoding from `database V2`, matching the pattern already used by Steps 3 & 4 via `addTrack()` → `resolveSeratoPath()`
+- **Files Changed**:
+  - `cdd-sync-pro/src/cdd_sync_crate_fixer.java` [MODIFIED] — `fixExistingCrates()` gains `cdd_sync_database` param; path-fix loop now calls `resolveSeratoPath()` before `normalizePathForDatabase()`; `fixBrokenPaths()` facade passes `database` through (was silently discarding it)
+  - `cdd-sync-pro/src/cdd_sync_main.java` [MODIFIED] — Step 2 call site now passes the already-loaded `database` variable
+  - `md/CHANGELOG.md` [MODIFIED] — New fixed entry under [Unreleased]
+- **What Was Done**: Diagnosed divergence between Step 2 and Steps 3 & 4: Steps 3 & 4 call `crate.setDatabase(db)` + `addTrack()` → `resolveSeratoPath()` to use Serato's raw NFD-encoded filename; Step 2 called `normalizePathForDatabase(candidates.get(0))` directly, producing an NFC filesystem path that Serato couldn't match in its database, triggering silent orphan creation. Added `database` parameter to `fixExistingCrates()`, applied `resolveSeratoPath()` in the resolution loop. `resolveSeratoPath()` is null-safe — no-op when database is null or has no match. `ant test` → 26/26 ✔ BUILD SUCCESSFUL.
+- **Docs to Update**: None — done here
+
 ## 2026-03-31 — Dedup Key Refactor: filename-only NFC normalization
 
 - **Task**: Refine `addTrack()` dedup key from full-path NFC to filename-leaf-only NFC+lowercase; update CODEBASE_GUIDE.md Step 2 note

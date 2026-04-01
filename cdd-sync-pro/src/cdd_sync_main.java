@@ -283,7 +283,7 @@ public class cdd_sync_main {
             if (config.isDryRun()) {
                 cdd_sync_log.info("[DRY RUN] Would have: updated crate paths from filesystem");
             } else {
-                cdd_sync_crate_fixer.fixExistingCrates(seratoPath, fsLibrary);
+                cdd_sync_crate_fixer.fixExistingCrates(seratoPath, fsLibrary, database);
             }
         } else if (!config.isStep2Enabled()) {
             cdd_sync_log.info("Step 2 skipped: step2 toggle is off.");
