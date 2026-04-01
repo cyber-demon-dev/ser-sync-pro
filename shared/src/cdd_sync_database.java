@@ -222,9 +222,14 @@ public class cdd_sync_database {
     /**
      * Returns all track paths stored in the database (relative, no volume prefix).
      * Used to iterate and check each path against the live filesystem.
+     *
+     * Uses tracksByPath (keyed by normalizedPath+size) so every unique track is
+     * returned — including tracks that share filenames across different folders.
+     * tracksByFilenameOnly is intentionally NOT used here because it only holds
+     * one path per filename, silently dropping the rest.
      */
     public List<String> getAllTrackPaths() {
-        return new ArrayList<>(tracksByFilenameOnly.values());
+        return new ArrayList<>(tracksByPath.values());
     }
 
     /**

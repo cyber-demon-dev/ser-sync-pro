@@ -18,6 +18,10 @@ public class cdd_sync_crate {
     private List<String> columns = new ArrayList<>();
     private List<String> tracks = new ArrayList<>();
     private cdd_sync_database database; // Reference to database for path lookup
+    // Raw payloads captured during readFrom() — written back verbatim to preserve
+    // tvcw column widths and brev encoding set by Serato. Null/empty for new crates.
+    private byte[] rawOsrtPayload = null;
+    private List<byte[]> rawOvctPayloads = new ArrayList<>();
 
     public cdd_sync_crate() {
     }
@@ -100,7 +104,9 @@ public class cdd_sync_crate {
     }
 
     /**
-     * Reads crate from file.
+     * Reads crate from file using a single unified TLV pass.
+     * Each top-level block is read into a byte[] payload before dispatch,
+     * so variable-length sub-tags inside ovct/osrt cannot cause stream slippage.
      */
     public static cdd_sync_crate readFrom(File inFile) throws cdd_sync_exception {
         cdd_sync_crate result = new cdd_sync_crate();
@@ -113,86 +119,43 @@ public class cdd_sync_crate {
         }
 
         try {
-            // Version header
+            // --- vrsn header (non-standard: tag + 2-byte literal zero + 8-byte UTF-16 version + rest of block) ---
             in.skipExactString("vrsn");
             in.skipExactByte((byte) 0);
             in.skipExactByte((byte) 0);
             result.setVersion(in.readStringUTF16(8));
             in.skipExactStringUTF16("/Serato ScratchLive Crate");
 
-            // Handle blocks until we hit tracks
-            for (;;) {
-                byte[] typeBytes = new byte[4];
-                int read = in.read(typeBytes);
-                if (read < 4) {
-                    // EOF reached before any tracks found.
-                    // This implies an empty crate or one ending after metadata.
-                    return result;
-                }
-                String type = new String(typeBytes);
+            // --- single TLV pass over remaining blocks ---
+            byte[] tagBytes = new byte[4];
+            while (in.read(tagBytes) == 4) {
+                String tag = new String(tagBytes);
+                int length = in.readIntegerValue();
+                byte[] payload = new byte[length];
+                in.readFully(payload);
 
-                if ("otrk".equals(type)) {
-                    break;
-                }
-
-                if ("ovct".equals(type)) {
-                    in.readIntegerValue(); // Skip ovct value
-                    in.skipExactString("tvcn");
-                    int tvcnValue = in.readIntegerValue();
-                    String column = in.readStringUTF16(tvcnValue);
-                    result.addColumn(column);
-                    in.skipExactString("tvcw");
-                    in.readIntegerValue();
-                    in.skipExactByte((byte) 0);
-                    in.read(); // Skip final byte (usually '0' but can vary in newer versions)
-                } else if ("osrt".equals(type)) {
-                    in.readIntegerValue();
-                    // Peek at next 4 bytes to determine format:
-                    // - Full format: tvcn + sorting name + brev
-                    // - Short format: brev only (no sorting name)
-                    byte[] peekBytes = new byte[4];
-                    in.mark(4);
-                    in.read(peekBytes);
-                    in.reset();
-                    String nextType = new String(peekBytes);
-                    if ("tvcn".equals(nextType)) {
-                        in.skipExactString("tvcn");
-                        int tvcnValue = in.readIntegerValue();
-                        result.setSorting(in.readStringUTF16(tvcnValue));
+                switch (tag) {
+                    case "otrk": {
+                        String path = extractPtrk(payload);
+                        if (path != null) result.addTrack(path);
+                        break;
                     }
-                    in.skipExactString("brev");
-                    result.setSortingRev(in.readLongValue(5));
-                } else {
-                    // Unknown chunk (e.g. orvc) — skip by length
-                    int unknownLen = in.readIntegerValue();
-                    in.skipBytes(unknownLen);
-                }
-            }
-
-            // The metadata loop already consumed the first 'otrk' tag — read its body now.
-            in.readIntegerValue(); // record length
-            in.skipExactString("ptrk");
-            int firstNameLength = in.readIntegerValue();
-            result.addTrack(in.readStringUTF16(firstNameLength));
-
-            // Read all remaining chunks — skip non-otrk ones
-            for (;;) {
-                byte[] chunkTag = new byte[4];
-                int read = in.read(chunkTag);
-                if (read < 4) {
-                    break; // EOF
-                }
-                String chunkType = new String(chunkTag);
-
-                if ("otrk".equals(chunkType)) {
-                    in.readIntegerValue(); // record length
-                    in.skipExactString("ptrk");
-                    int nameLength = in.readIntegerValue();
-                    result.addTrack(in.readStringUTF16(nameLength));
-                } else {
-                    // Unknown chunk between tracks — skip by length
-                    int unknownLen = in.readIntegerValue();
-                    in.skipBytes(unknownLen);
+                    case "ovct": {
+                        String col = extractTvcn(payload);
+                        if (col != null) {
+                            result.addColumn(col);
+                            result.rawOvctPayloads.add(payload); // preserve tvcw etc.
+                        }
+                        break;
+                    }
+                    case "osrt": {
+                        extractOsrt(payload, result);
+                        result.rawOsrtPayload = payload; // preserve brev encoding
+                        break;
+                    }
+                    default:
+                        // Unknown block — payload already consumed, nothing to do.
+                        break;
                 }
             }
 
@@ -212,6 +175,84 @@ public class cdd_sync_crate {
     }
 
     /**
+     * Walks a TLV payload byte[] and returns the value of the first "ptrk" sub-tag
+     * decoded as a UTF-16BE string, or null if not found.
+     */
+    private static String extractPtrk(byte[] payload) throws cdd_sync_exception {
+        return walkPayloadForTag(payload, "ptrk");
+    }
+
+    /**
+     * Walks a TLV payload byte[] and returns the value of the first "tvcn" sub-tag
+     * decoded as a UTF-16BE string, or null if not found.
+     */
+    private static String extractTvcn(byte[] payload) throws cdd_sync_exception {
+        return walkPayloadForTag(payload, "tvcn");
+    }
+
+    /**
+     * Walks an osrt payload byte[] and populates sorting / sortingRev on the crate.
+     * Sub-tags: "tvcn" → sorting name (UTF-16BE); "brev" → sortingRev (big-endian, 5 bytes).
+     */
+    private static void extractOsrt(byte[] payload, cdd_sync_crate target) throws cdd_sync_exception {
+        int pos = 0;
+        while (pos + 8 <= payload.length) {
+            String innerTag = new String(payload, pos, 4);
+            int innerLen = readBigEndianInt(payload, pos + 4);
+            pos += 8;
+            if (pos + innerLen > payload.length) break;
+
+            if ("tvcn".equals(innerTag)) {
+                try {
+                    target.setSorting(new String(payload, pos, innerLen, "UTF-16BE"));
+                } catch (UnsupportedEncodingException e) {
+                    throw new cdd_sync_exception(e);
+                }
+            } else if ("brev".equals(innerTag)) {
+                long rev = 0;
+                for (int i = 0; i < innerLen; i++) {
+                    rev = (rev << 8) | (payload[pos + i] & 0xFF);
+                }
+                target.setSortingRev(rev);
+            }
+            pos += innerLen;
+        }
+    }
+
+    /**
+     * Generic TLV walker over a payload byte[].
+     * Returns the first value whose 4-byte ASCII tag matches {@code targetTag},
+     * decoded as UTF-16BE, or null if the tag is not present.
+     */
+    private static String walkPayloadForTag(byte[] payload, String targetTag) throws cdd_sync_exception {
+        int pos = 0;
+        while (pos + 8 <= payload.length) {
+            String innerTag = new String(payload, pos, 4);
+            int innerLen = readBigEndianInt(payload, pos + 4);
+            pos += 8;
+            if (pos + innerLen > payload.length) break;
+
+            if (targetTag.equals(innerTag)) {
+                try {
+                    return new String(payload, pos, innerLen, "UTF-16BE");
+                } catch (UnsupportedEncodingException e) {
+                    throw new cdd_sync_exception(e);
+                }
+            }
+            pos += innerLen;
+        }
+        return null;
+    }
+
+    /** Reads a big-endian 32-bit int from a byte array at the given offset. */
+    private static int readBigEndianInt(byte[] buf, int offset) {
+        return ((buf[offset] & 0xFF) << 24)
+             | ((buf[offset + 1] & 0xFF) << 16)
+             | ((buf[offset + 2] & 0xFF) << 8)
+             |  (buf[offset + 3] & 0xFF);
+    }
+
+    /**
      * Writes crate to output stream.
      */
     public void writeTo(OutputStream outStream) throws cdd_sync_exception {
@@ -225,26 +266,43 @@ public class cdd_sync_crate {
             out.writeUTF16(getVersion());
             out.writeUTF16("/Serato ScratchLive Crate");
 
-            // Sorting
-            out.writeBytes("osrt");
-            out.writeInt(getSorting().length() * 2 + 17);
-            out.writeBytes("tvcn");
-            out.writeInt(getSorting().length() * 2);
-            out.writeUTF16(getSorting());
-            out.writeBytes("brev");
-            out.writeLong(getSortingRev(), 5);
-
-            // Columns
-            for (String column : getColumns()) {
-                out.writeBytes("ovct");
-                out.writeInt(column.length() * 2 + 18);
+            // Sorting — write raw payload verbatim if captured from an existing crate,
+            // otherwise reconstruct from model (new crates).
+            if (rawOsrtPayload != null) {
+                out.writeBytes("osrt");
+                out.writeInt(rawOsrtPayload.length);
+                out.write(rawOsrtPayload);
+            } else {
+                out.writeBytes("osrt");
+                out.writeInt(getSorting().length() * 2 + 17);
                 out.writeBytes("tvcn");
-                out.writeInt(column.length() * 2);
-                out.writeUTF16(column);
-                out.writeBytes("tvcw");
-                out.writeInt(2);
-                out.write(0);
-                out.write('0');
+                out.writeInt(getSorting().length() * 2);
+                out.writeUTF16(getSorting());
+                out.writeBytes("brev");
+                out.writeLong(getSortingRev(), 5);
+            }
+
+            // Columns — write raw payloads verbatim if captured from an existing crate
+            // (preserves tvcw pixel widths set by Serato). Falls back to default
+            // reconstruction for new crates where raw payloads are not available.
+            if (!rawOvctPayloads.isEmpty()) {
+                for (byte[] ovctPayload : rawOvctPayloads) {
+                    out.writeBytes("ovct");
+                    out.writeInt(ovctPayload.length);
+                    out.write(ovctPayload);
+                }
+            } else {
+                for (String column : getColumns()) {
+                    out.writeBytes("ovct");
+                    out.writeInt(column.length() * 2 + 18);
+                    out.writeBytes("tvcn");
+                    out.writeInt(column.length() * 2);
+                    out.writeUTF16(column);
+                    out.writeBytes("tvcw");
+                    out.writeInt(2);
+                    out.write(0);
+                    out.write('0');
+                }
             }
 
             // Tracks

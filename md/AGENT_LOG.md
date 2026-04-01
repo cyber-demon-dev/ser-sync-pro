@@ -2,6 +2,54 @@
 
 <!-- Newest entries go at the top, below this comment. Do NOT delete old entries. -->
 
+## 2026-03-31 — TLV Parser Refactor + Column Width Round-Trip Fix
+
+- **Task**: Replace fragile two-loop `readFrom()` with a unified TLV walker; fix Step 2 rewriting crates as blank (tvcw column widths destroyed); align Step 2 write pattern with Steps 3 & 4
+- **Files Changed**:
+  - `cdd-sync-pro/src/cdd_sync_crate.java` [MODIFIED] — `readFrom()` replaced with single `while` TLV loop + `readFully()` payload capture; four private helpers (`extractPtrk`, `extractTvcn`, `extractOsrt`, `walkPayloadForTag`, `readBigEndianInt`); added `rawOsrtPayload` / `rawOvctPayloads` fields; `writeTo()` emits raw payloads verbatim for existing crates, falls back to defaults for new crates
+  - `cdd-sync-pro/src/cdd_sync_crate_fixer.java` [MODIFIED] — `fixExistingCrates()` write block replaced: scratch `fixedCrate` copy removed, now mutates read `crate` in-place via `setTracksRaw()` then `crate.writeTo()` — same pattern as Steps 3 & 4
+  - `md/CHANGELOG.md` [MODIFIED] — Three new entries under [Unreleased]
+- **What Was Done**:
+  1. Replaced `readFrom()` two-loop + `mark/reset` with a single unified TLV pass. Each block read via `readFully(byte[] payload)` before dispatch — stream slippage now impossible regardless of `ovct`/`osrt` column count.
+  2. Diagnosed blank crate bug: `writeTo()` hardcodes `tvcw = "0"` for all columns. Confirmed via binary diff: backup has real pixel widths (`"76"`, `"580"`, etc.); post-run live file had `"0"` for all. Serato rendered 0-width columns as blank.
+  3. Fixed via raw block passthrough: `readFrom()` now stores raw `ovct`/`osrt` payloads; `writeTo()` writes them verbatim. Zero parsing of `tvcw` values required. Step 4 (new crates) unaffected — empty raw lists → existing default logic.
+  4. Fixed Step 2 write pattern: scratch `fixedCrate` copy removed; in-place mutation + `crate.writeTo()` matches Steps 3 & 4 exactly.
+  5. `ant all` → BUILD SUCCESSFUL (all 3 JARs). Verified live in Serato — `26-01-17` crate tracks visible again.
+- **Architecture Note**: `readFrom()` is now a true round-trip parser — any block it reads, it can write back bit-for-bit. The `writeTo()` reconstruction path (osrt + ovct defaults) is now the new-crate path only.
+- **Docs to Update**: CHANGELOG.md — done
+
+
+## 2026-03-31 — Audit Previous Session + Remove Step 2 Ambiguity Guard
+
+- **Task**: Audit the last agent session (Step 2 Filesystem Decoupling); confirm/remove the `candidates.size() > 1` ambiguity guard from `fixExistingCrates()` so filenames with multiple library paths resolve to the first match instead of being skipped
+- **Files Changed**:
+  - `md/CODEBASE_GUIDE.md` [MODIFIED] — Step 2 description updated to state "first match is used (no ambiguity skip)" and documents rationale (files are moved, not copied — true collisions rare; skipping silently was the worse failure mode)
+- **What Was Done**:
+  1. Loaded context, confirmed last session's screenshot showing BUILD SUCCESSFUL and "ambiguity guard is gone."
+  2. Audited `cdd_sync_crate_fixer.java` in full. Step 2 already uses `candidates.get(0)` with no size guard — the removal was performed in the previous session (confirmed). Javadoc on line 35 already updated. No Java change required.
+  3. Step 1 (`updateDatabasePaths`) retains its `candidates.size() > 1` guard — intentional; incorrect DB paths are harder to recover from than crate paths.
+  4. `ant compile` → BUILD SUCCESSFUL.
+  5. Patched `CODEBASE_GUIDE.md` Step 2 description.
+- **Architecture Note**: Step 2 now always resolves to the first candidate, not skips. Rationale: files are moved, not copied, so filename collisions don't occur in practice. The old skip was causing orphaned orange tracks — the silent failure was worse than an occasional misresolution.
+- **Docs to Update**: None — updated here
+
+## 2026-03-31 — Step 2 Filesystem Decoupling + getAllTrackPaths Bug Fix
+
+- **Task**: Diagnose why Step 2 only fixed 1 crate path; fix root cause; decouple Step 2 from the database
+- **Files Changed**:
+  - `shared/src/cdd_sync_database.java` [MODIFIED] — `getAllTrackPaths()` was returning `tracksByFilenameOnly.values()` (1 entry per unique filename — later DB entries silently overwrote earlier ones). Fixed to return `tracksByPath.values()` (keyed by `normalizedPath|size` — all unique tracks)
+  - `cdd-sync-pro/src/cdd_sync_crate_fixer.java` [MODIFIED] — `fixExistingCrates()` signature changed from `cdd_sync_database` to `cdd_sync_media_library`; now builds lookup index from the live filesystem via the existing `buildLibraryIndex()` helper; converts absolute paths to relative via `normalizePathForDatabase()` before comparison; `fixBrokenPaths()` facade updated — DB reload between Step 1 and Step 2 removed
+  - `cdd-sync-pro/src/cdd_sync_main.java` [MODIFIED] — Step 2 call site now passes `fsLibrary` directly instead of reloading the database; updated inline comment
+  - `test/cdd_sync_db_scan.java` [NEW] — Read-only diagnostic scanner: parses `database V2`, checks each `pfil` path against the filesystem, groups broken paths by directory. Accepts optional keyword filter. Zero writes.
+- **What Was Done**:
+  1. Diagnosed Step 2 only fixing 1 path: `getAllTrackPaths()` used `tracksByFilenameOnly` — a HashMap that silently kept only the last-parsed entry per filename. A 32,863-track DB was being presented to Step 2 as a fraction of its real size. Fixed to use `tracksByPath` (all unique entries).
+  2. Identified second root cause: even with the DB bug fixed, Step 2 was still DB-dependent — crate paths for tracks Serato had never indexed (no `otrk` record) could not be resolved. Those orphaned crate references caused Serato to generate new `bmis=true` records on next open, perpetuating the orange track cycle.
+  3. Decoupled Step 2 entirely from the database. It now uses the scanned filesystem library as source of truth. The `buildLibraryIndex()` helper already existed in `cdd_sync_crate_fixer` — Step 2 now calls it directly. Ambiguity guard unchanged (2+ files with same filename → skip).
+  4. Added read-only `cdd_sync_db_scan` diagnostic tool to `test/`. Compiles against existing classpath. Run via: `java -cp out/production/cdd-sync-pro cdd_sync_db_scan <serato_path> [filter]`
+  5. `ant compile` → BUILD SUCCESSFUL after each change.
+- **Architecture Note**: Steps 1 and 2 are now fully independent. Step 2 alone (with Step 1 off) is sufficient to fix all crate paths as long as the files exist on the filesystem. Step 1 still recommended to keep the database consistent.
+- **Docs to Update**: `md/CODEBASE_GUIDE.md` — Step 2 description in the crate_fixer module section
+
 ## 2026-03-31 — Audit + Dead Code Removal (processCrateFile)
 
 - **Task**: Audit the last two agent sessions; remove dead `processCrateFile()` method found during scoring

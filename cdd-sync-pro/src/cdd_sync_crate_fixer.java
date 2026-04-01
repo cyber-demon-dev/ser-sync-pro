@@ -21,60 +21,59 @@ public class cdd_sync_crate_fixer {
     // =========================================================================
     /**
      * Scans every .crate file in _Serato_/Subcrates and updates track paths
-     * using the Serato database V2 as the sole source of truth.
+     * using the scanned media library (filesystem) as the sole source of truth.
      *
-     * For each track in each crate: look up its filename in the database.
-     * If the database holds a different path for that filename, replace the
-     * crate's stored path with the database path. Crates that had no changes
-     * are left untouched.
+     * For each track in each crate: look up its filename in the library index.
+     * If the library holds a different (unambiguous) path for that filename,
+     * replace the crate's stored path with the normalized library path.
+     * Crates that had no changes are left untouched.
      *
-     * This approach covers ALL crates — including hand-curated Live sets with
-     * no corresponding filesystem directory — because it relies on the database
-     * (already updated by Step 1) rather than filesystem existence checks.
+     * This approach is fully decoupled from the Serato database — crate paths
+     * are fixed even for tracks that Serato has never indexed. It covers ALL
+     * crates including hand-curated Live sets.
+     *
+     * If multiple library paths share the same filename, the first match is used.
      *
      * Uses setTracksRaw() so dedup never removes a valid track.
      *
      * @param seratoPath Path to the _Serato_ folder
-     * @param database   Database V2 freshly reloaded after Step 1 updated it
+     * @param library    Scanned media library (filesystem source of truth)
      */
-    public static void fixExistingCrates(String seratoPath, cdd_sync_database database) {
-        cdd_sync_log.info("Step 2: Rewriting crate paths from database V2...");
+    public static void fixExistingCrates(String seratoPath, cdd_sync_media_library library) {
+        cdd_sync_log.info("Step 2: Rewriting crate paths from filesystem...");
 
-        if (database == null) {
-            cdd_sync_log.info("No database V2 — skipping Step 2.");
+        if (library == null) {
+            cdd_sync_log.info("No media library — skipping Step 2.");
             return;
         }
 
-        // Build a flat filename -> relative-path map from the authoritative database.
-        // The database is the source of truth after Step 1 patched it.
-        Map<String, String> dbPathByFilename = new HashMap<>();
-        for (String dbPath : database.getAllTrackPaths()) {
-            String filename = cdd_sync_binary_utils.getFilename(dbPath);
-            dbPathByFilename.put(filename, dbPath);
-        }
+        // Build filename -> list of absolute paths from the live filesystem.
+        // List<String> lets us detect filename collisions across folders.
+        Map<String, List<String>> libIndex = buildLibraryIndex(library);
 
-        if (dbPathByFilename.isEmpty()) {
-            cdd_sync_log.info("Database is empty — skipping Step 2.");
+        if (libIndex.isEmpty()) {
+            cdd_sync_log.info("Media library is empty — skipping Step 2.");
             return;
         }
 
-        File subcratesDir = new File(seratoPath + "/Subcrates");
-        if (!subcratesDir.isDirectory()) {
-            cdd_sync_log.info("No Subcrates directory — skipping Step 2.");
+        // Collect ALL .crate files from both Crates/ and Subcrates/ (recursive).
+        // Serato uses Crates/ for top-level crates and Subcrates/ for nested ones;
+        // some hand-curated crates may live in either directory.
+        List<File> crateFiles = new ArrayList<>();
+        collectCrateFiles(new File(seratoPath + "/Crates"),    crateFiles);
+        collectCrateFiles(new File(seratoPath + "/Subcrates"), crateFiles);
+
+        if (crateFiles.isEmpty()) {
+            cdd_sync_log.info("No crate files found in Crates/ or Subcrates/.");
             return;
         }
 
-        // ALL crates — folder-mapped and custom hand-curated alike.
-        File[] crateFiles = subcratesDir.listFiles((d, name) -> name.endsWith(".crate"));
-        if (crateFiles == null || crateFiles.length == 0) {
-            cdd_sync_log.info("No crate files found.");
-            return;
-        }
+        cdd_sync_log.info("Step 2: found " + crateFiles.size() + " crate files to inspect.");
 
         int fixedCrates = 0;
         int fixedPaths  = 0;
 
-        for (File crateFile : crateFiles) {
+        for (File crateFile : crateFiles) {  // crateFiles is now a List<File>
             cdd_sync_crate crate;
             try {
                 crate = cdd_sync_crate.readFrom(crateFile);
@@ -87,36 +86,53 @@ public class cdd_sync_crate_fixer {
             List<String> updated  = new ArrayList<>(original.size());
             boolean changed = false;
 
+            // Debug: log track count for this crate to diagnose skipped crates.
+            cdd_sync_log.step2("[DEBUG] " + crateFile.getName()
+                    + " — loaded " + original.size() + " tracks from disk.");
+
+            int hitCount = 0, missCount = 0, sameCount = 0;
+
             for (String trackPath : original) {
                 String filename = cdd_sync_binary_utils.getFilename(trackPath);
-                String dbPath   = dbPathByFilename.get(filename);
+                List<String> candidates = libIndex.get(filename);
 
-                if (dbPath != null && !dbPath.equals(trackPath)) {
-                    cdd_sync_log.step2("[PATH FIX] " + crateFile.getName()
-                            + " | OLD: " + trackPath
-                            + " -> NEW: " + dbPath);
-                    updated.add(dbPath);
-                    changed = true;
-                    fixedPaths++;
+                if (candidates != null && !candidates.isEmpty()) {
+                    // Convert absolute filesystem path to the relative form crates expect.
+                    String newRelPath = cdd_sync_binary_utils
+                            .normalizePathForDatabase(candidates.get(0));
+                    if (!newRelPath.equals(trackPath)) {
+                        cdd_sync_log.step2("[PATH FIX] " + crateFile.getName()
+                                + " | OLD: " + trackPath
+                                + " -> NEW: " + newRelPath);
+                        updated.add(newRelPath);
+                        changed = true;
+                        fixedPaths++;
+                        hitCount++;
+                    } else {
+                        updated.add(trackPath); // Path already correct.
+                        sameCount++;
+                    }
                 } else {
+                    // File not found in library — keep existing path unchanged.
                     updated.add(trackPath);
+                    missCount++;
                 }
             }
 
+            cdd_sync_log.step2("[DEBUG] " + crateFile.getName()
+                    + " — fixed=" + hitCount + " same=" + sameCount + " notFound=" + missCount);
+
+
             if (changed) {
-                cdd_sync_crate fixedCrate = new cdd_sync_crate();
-                fixedCrate.setVersion(crate.getVersion());
-                fixedCrate.setSorting(crate.getSorting());
-                fixedCrate.setSortingRev(crate.getSortingRev());
-                for (String col : crate.getColumns()) {
-                    fixedCrate.addColumn(col);
-                }
-                fixedCrate.setTracksRaw(updated);
+                // Mutate the already-read crate in place and write back —
+                // same pattern as Steps 3 & 4. Avoids manually re-copying
+                // version / sorting / sortingRev / columns from a scratch object.
+                crate.setTracksRaw(updated);
                 try {
-                    fixedCrate.writeTo(crateFile);
+                    crate.writeTo(crateFile);
                     fixedCrates++;
                     cdd_sync_log.fix("[CRATE FIXED] " + crateFile.getName()
-                            + " (" + fixedCrate.getTrackCount() + " tracks)");
+                            + " (" + crate.getTrackCount() + " tracks)");
                 } catch (cdd_sync_exception e) {
                     cdd_sync_log.error("Failed to write crate: " + crateFile.getName());
                 }
@@ -152,17 +168,21 @@ public class cdd_sync_crate_fixer {
         String volumeRoot = getVolumeRoot(seratoPath);
         Map<String, List<String>> libraryFiles = buildLibraryIndex(library);
 
+        if (volumeRoot == null) {
+            cdd_sync_log.step1("[WARN] Cannot derive volume root from seratoPath: " + seratoPath
+                    + " — file existence checks skipped; resolving by filename only.");
+        }
+
         // Walk every path in the database, find broken ones, collect fixes.
         // Use LinkedHashMap to preserve insertion order for deterministic output.
         Map<String, String> pathFixes = new LinkedHashMap<>();
 
         for (String dbTrackPath : database.getAllTrackPaths()) {
-            String absolutePath = volumeRoot != null
-                    ? volumeRoot + "/" + dbTrackPath
-                    : dbTrackPath;
-
-            if (new File(absolutePath).exists()) {
-                continue; // Still valid — skip.
+            if (volumeRoot != null) {
+                String absolutePath = volumeRoot + "/" + dbTrackPath;
+                if (new File(absolutePath).exists()) {
+                    continue; // Still valid — skip.
+                }
             }
 
             String filename = cdd_sync_binary_utils.getFilename(dbTrackPath);
@@ -204,14 +224,12 @@ public class cdd_sync_crate_fixer {
     /**
      * Facade over the two independent fix steps (steps 1 & 2 only).
      * Kept for backward compatibility with runFixPaths().
+     * Step 2 now uses the filesystem library directly — no database reload needed.
      */
     public static void fixBrokenPaths(String seratoPath, cdd_sync_media_library library,
             cdd_sync_database database, String dupeMoveMode) {
         updateDatabasePaths(seratoPath, library);
-        // Reload DB after Step 1 so Step 2 sees the updated paths.
-        cdd_sync_database updatedDatabase = cdd_sync_database.readFrom(
-                seratoPath + "/database V2");
-        fixExistingCrates(seratoPath, updatedDatabase);
+        fixExistingCrates(seratoPath, library);
     }
 
     // =========================================================================
@@ -395,15 +413,37 @@ public class cdd_sync_crate_fixer {
     // =========================================================================
 
     /**
+     * Recursively collects all .crate files under the given directory into result.
+     * Silently skips directories that don't exist.
+     */
+    private static void collectCrateFiles(File dir, List<File> result) {
+        if (dir == null || !dir.isDirectory()) {
+            return;
+        }
+        File[] entries = dir.listFiles();
+        if (entries == null) {
+            return;
+        }
+        for (File entry : entries) {
+            if (entry.isDirectory()) {
+                collectCrateFiles(entry, result);
+            } else if (entry.getName().endsWith(".crate")) {
+                result.add(entry);
+            }
+        }
+    }
+
+    /**
      * Returns the volume root from a standard _Serato_ path.
      * e.g. /Volumes/Current/_Serato_ -> /Volumes/Current
+     * Returns null if the path does not end in _Serato_ — callers must handle null.
      */
     private static String getVolumeRoot(String seratoPath) {
         File seratoDir = new File(seratoPath);
         if (seratoDir.getName().equalsIgnoreCase("_Serato_")) {
             return seratoDir.getParent();
         }
-        return seratoPath; // fallback: treat seratoPath itself as root
+        return null; // Non-standard path — cannot derive volume root safely.
     }
 
     /**

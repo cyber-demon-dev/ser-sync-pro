@@ -6,6 +6,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+- **Fix: Serato crate column widths preserved on round-trip rewrite (Step 2)**: Crates rewritten by Step 2 (path fixer) no longer show as blank in Serato. Root cause: `writeTo()` hardcoded `tvcw = "0"` for all columns, destroying the pixel widths Serato stores per-crate. Fix: `readFrom()` now captures the raw `ovct` and `osrt` TLV payloads as byte arrays; `writeTo()` emits them verbatim when present, bypassing reconstruction. New crates (Step 4) are unaffected — raw payloads absent → existing default logic runs unchanged.
+  - `cdd_sync_crate.java`: Added `rawOsrtPayload` / `rawOvctPayloads` fields; `writeTo()` branches on their presence.
+
+- **Refactor: `cdd_sync_crate.readFrom()` → unified TLV walker**: Replaced the two-loop, `mark/reset`-peek implementation with a single `while` loop that reads each top-level block into a `byte[] payload` before dispatch. Eliminates stream slippage on variable-length `ovct`/`osrt` blocks (the original cause of certain crates — e.g. `Current%%Base%%2026` — being parsed with 0 tracks). Three private payload-only helpers `extractPtrk`, `extractTvcn`, `extractOsrt` + a shared `walkPayloadForTag` walker replace the bespoke per-tag byte arithmetic.
+  - `cdd_sync_crate.java`: `readFrom()` rewritten; four private helpers added; `writeTo()` / public API unchanged.
+
+- **Fix: Step 2 crate write now uses in-place mutation**: `fixExistingCrates()` previously built a scratch `fixedCrate` object and manually copied version/sorting/columns, risking silent field mismatches. Now mutates the already-read `crate` directly via `setTracksRaw()` and calls `writeTo()` on it — identical pattern to Steps 3 and 4.
+  - `cdd_sync_crate_fixer.java`: Scratch-copy pattern removed.
+
 - **Per-step pipeline debug toggles**: Each of the five sync pipeline steps (Step 0–4) can now be independently enabled or disabled from the **Pipeline Steps** panel in the GUI. All previous sync option controls (Backup, Clear Library, Sort Crates) have been merged into this single panel, displayed in execution order (Pre-1 → Pre-2 → Step 0 → Step 1 → Step 2 → Step 3 → Step 4 → Post). Toggles are also exposed as `sync.step0.enabled`–`sync.step4.enabled` properties for CLI/config-file use. Allows any single step to be isolated without running the full pipeline.
 
 - **Fix: Step 2 now processes ALL crates including hand-curated Live sets**: Replaced the multi-threaded, ambiguous-lookup Step 2 implementation with a simple sequential loop. All `.crate` files in `Subcrates/` are now processed regardless of whether they map to a filesystem folder. The database V2 (already patched by Step 1) is the sole source of truth — if a track's filename resolves to a different path in the DB, the crate is updated. Previously, custom crates were silently skipped due to a flawed directory-mapping gate.

@@ -144,10 +144,6 @@ public class cdd_sync_config {
         return getBooleanOption("crate.sorting.alphabetical", false);
     }
 
-    public boolean isFixBrokenPathsEnabled() {
-        return getBooleanOption("database.fix.broken.paths", false);
-    }
-
     // ==================== Pipeline Step Toggles ====================
 
     /** Step 0: Duplicate management (move + log-only scan). Default true. */

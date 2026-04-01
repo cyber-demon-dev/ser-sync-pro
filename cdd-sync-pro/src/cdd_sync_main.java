@@ -163,7 +163,7 @@ public class cdd_sync_main {
         // ── Step 0: Duplicate management (move + log-only scan) ──────────────────
         // Early move block runs before Step 1 so crates never point to moved files.
         // Toggle sync.step0.enabled=false to skip entirely for debugging.
-        if (config.isHardDriveDupeScanEnabled() && config.isStep0Enabled()) {
+        if (config.isStep0Enabled()) {
             if (config.isDupeMoveEnabled()) {
                 if (config.isDryRun()) {
                     cdd_sync_log.info("[DRY RUN] Would have: scanned and moved duplicate files ("
@@ -183,10 +183,8 @@ public class cdd_sync_main {
                         cdd_sync_log.info("Found " + fsLibrary.getTotalNumberOfTracks() + " tracks remaining.");
                     }
                 }
-            } else {
-                // Log-only mode runs after crates are built (doesn't affect anything)
             }
-        } else if (config.isHardDriveDupeScanEnabled() && !config.isStep0Enabled()) {
+        } else {
             cdd_sync_log.info("Step 0 skipped: duplicate management toggle is off.");
         }
 
@@ -297,20 +295,18 @@ public class cdd_sync_main {
             cdd_sync_log.info("Step 1 skipped: Clear Library is on (database was deleted).");
         }
 
-        // ── Step 2: Fix broken paths in existing crates via database V2 ───────────
-        // Reloads the database (now authoritative after Step 1) and for every track
-        // in every crate, replaces the stored path with the database path if they
-        // differ. Covers ALL crates — hand-curated Live sets included — because
-        // there are no filesystem existence checks involved.
-        // Skipped when Clear Library is on (crates and database were just deleted).
+        // ── Step 2: Fix broken paths in existing crates via filesystem ────────────
+        // For every track in every crate, looks up the filename in the scanned
+        // media library. If the library holds a different (unambiguous) path,
+        // the crate's stored path is replaced. Covers ALL crates — hand-curated
+        // Live sets included. Fully decoupled from the database so tracks that
+        // Serato has never indexed are also fixed.
+        // Skipped when Clear Library is on (crates were just deleted).
         if (!config.isClearLibraryBeforeSync() && config.isStep2Enabled()) {
             if (config.isDryRun()) {
-                cdd_sync_log.info("[DRY RUN] Would have: updated crate paths from database V2");
+                cdd_sync_log.info("[DRY RUN] Would have: updated crate paths from filesystem");
             } else {
-                // Reload database from disk so Step 2 sees Step 1's updates.
-                cdd_sync_database updatedDatabase = cdd_sync_database.readFrom(
-                        seratoPath + "/database V2");
-                cdd_sync_crate_fixer.fixExistingCrates(seratoPath, updatedDatabase);
+                cdd_sync_crate_fixer.fixExistingCrates(seratoPath, fsLibrary);
             }
         } else if (!config.isStep2Enabled()) {
             cdd_sync_log.info("Step 2 skipped: step2 toggle is off.");
