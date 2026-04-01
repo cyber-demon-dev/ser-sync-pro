@@ -168,6 +168,11 @@ public class cdd_sync_crate_fixer {
     public static void updateDatabasePaths(String seratoPath, cdd_sync_media_library library) {
         cdd_sync_log.info("Step 1: Updating broken paths in database V2...");
 
+        if (library == null) {
+            cdd_sync_log.info("No media library — skipping Step 1.");
+            return;
+        }
+
         String databasePath = seratoPath + "/database V2";
         cdd_sync_database database = cdd_sync_database.readFrom(databasePath);
         if (database == null) {
@@ -177,6 +182,11 @@ public class cdd_sync_crate_fixer {
 
         String volumeRoot = getVolumeRoot(seratoPath);
         Map<String, List<String>> libraryFiles = buildLibraryIndex(library);
+
+        if (libraryFiles.isEmpty()) {
+            cdd_sync_log.info("Media library is empty — skipping Step 1.");
+            return;
+        }
 
         if (volumeRoot == null) {
             cdd_sync_log.step1("[WARN] Cannot derive volume root from seratoPath: " + seratoPath

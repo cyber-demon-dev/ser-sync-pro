@@ -35,7 +35,6 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
     private JCheckBox sortCratesCheck;
 
     // Pipeline step toggles (debug)
-    private JCheckBox step0Check;
     private JCheckBox step1Check;
     private JCheckBox step2Check;
     private JCheckBox step3Check;
@@ -158,15 +157,15 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
         grid.setBackground(BG_DARK);
 
         // --- Pre-steps ---
-        backupCheck = createDarkCheckBox("Pre-1: Backup", true);
-        backupCheck.setToolTipText("<html><b>Pre-1 | music.library.database.backup</b><br>"
+        backupCheck = createDarkCheckBox("Backup", true);
+        backupCheck.setToolTipText("<html><b>Backup | music.library.database.backup</b><br>"
                 + "Creates a timestamped ZIP of _Serato_ before any changes.<br>"
                 + "If backup fails, sync is aborted. Disable for faster dev cycles.</html>");
 
-        clearLibraryCheck = createDarkCheckBox("Pre-2: Clear library \u26a0\ufe0f", false);
-        clearLibraryCheck.setToolTipText("<html><b>Pre-2 | music.library.database.clear-before-sync</b><br>"
+        clearLibraryCheck = createDarkCheckBox("Clear Library \u26a0\ufe0f", false);
+        clearLibraryCheck.setToolTipText("<html><b>Clear Library | music.library.database.clear-before-sync</b><br>"
                 + "<b>DESTRUCTIVE</b> \u2014 Deletes ALL Crates, Subcrates, and database V2 before sync.<br>"
-                + "Clean rebuild from scratch. Disables Steps 1 &amp; 2 (Gate 1+2 has no effect).<br>"
+                + "Clean rebuild from scratch. Disables Fix Database Paths &amp; Fix Crate Paths.<br>"
                 + "Requires confirmation.</html>");
         clearLibraryCheck.addItemListener(e -> {
             if (e.getStateChange() == java.awt.event.ItemEvent.SELECTED) {
@@ -185,50 +184,42 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
             }
         });
 
-        // --- Step 0 + gate for 1 & 2 ---
-        step0Check = createDarkCheckBox("Step 0: Duplicate Management", true);
-        step0Check.setToolTipText("<html><b>Step 0 | sync.step0.enabled</b><br>"
-                + "Gates the entire duplicate management block (move + log scan).<br>"
-                + "Runs before Step 1. Only active when 'Scan for duplicates' is also ON.<br>"
-                + "Disable to isolate Steps 1\u20134 without any dupe processing.</html>");
-
-        // --- Steps 1 & 2: path fixing ---
-        step1Check = createDarkCheckBox("Step 1: Fix Database Paths", true);
-        step1Check.setToolTipText("<html><b>Step 1 | sync.step1.enabled</b><br>"
+        // --- Path fixing ---
+        step1Check = createDarkCheckBox("Fix Database Paths", true);
+        step1Check.setToolTipText("<html><b>Fix Database Paths | sync.step1.enabled</b><br>"
                 + "Fix broken pfil paths in database V2.<br>"
                 + "Requires Gate 1+2 (Fix broken paths) to be ON.</html>");
 
-        step2Check = createDarkCheckBox("Step 2: Fix Existing Crate Paths", true);
-        step2Check.setToolTipText("<html><b>Step 2 | sync.step2.enabled</b><br>"
+        step2Check = createDarkCheckBox("Fix Existing Crate Paths", true);
+        step2Check.setToolTipText("<html><b>Fix Existing Crate Paths | sync.step2.enabled</b><br>"
                 + "Re-resolve broken track paths in all existing .crate files using database V2.<br>"
-                + "Reloads DB from disk after Step 1. Requires Gate 1+2 to be ON.</html>");
+                + "Reloads DB from disk after Fix Database Paths. Requires Gate 1+2 to be ON.</html>");
 
-        // --- Steps 3 & 4: crate writing ---
-        step3Check = createDarkCheckBox("Step 3: Append Existing Crates", true);
-        step3Check.setToolTipText("<html><b>Step 3 | sync.step3.enabled</b><br>"
+        // --- Crate writing ---
+        step3Check = createDarkCheckBox("Append Existing Crates", true);
+        step3Check.setToolTipText("<html><b>Append Existing Crates | sync.step3.enabled</b><br>"
                 + "Append new tracks to existing folder-mapped crates.<br>"
                 + "Dedup prevents adding tracks already in the crate.</html>");
 
-        step4Check = createDarkCheckBox("Step 4: Create New Crates", true);
-        step4Check.setToolTipText("<html><b>Step 4 | sync.step4.enabled</b><br>"
+        step4Check = createDarkCheckBox("Create New Crates", true);
+        step4Check.setToolTipText("<html><b>Create New Crates | sync.step4.enabled</b><br>"
                 + "Create new .crate files for library folders with no matching crate on disk.<br>"
-                + "Skips folders whose crate already exists (Step 3 handles those).</html>");
+                + "Skips folders whose crate already exists (Append Existing Crates handles those).</html>");
 
         // --- Post-step ---
-        sortCratesCheck = createDarkCheckBox("Post: Reset Crates: A-Z", false);
-        sortCratesCheck.setToolTipText("<html><b>Post | crate.sorting.alphabetical</b><br>"
+        sortCratesCheck = createDarkCheckBox("Reset Crates: A\u2192Z", false);
+        sortCratesCheck.setToolTipText("<html><b>Reset Crates: A\u2192Z | crate.sorting.alphabetical</b><br>"
                 + "Runs after all steps. Rewrites neworder.pref so crates appear A\u2192Z in Serato.<br>"
                 + "Display order only \u2014 no effect on crate contents.</html>");
 
         // Add in execution order (2-column grid, left-to-right top-to-bottom)
         grid.add(backupCheck);       // row 1 left
         grid.add(clearLibraryCheck); // row 1 right
-        grid.add(step0Check);        // row 2 left
-        grid.add(step1Check);        // row 2 right
-        grid.add(step2Check);        // row 3 left
-        grid.add(step3Check);        // row 3 right
-        grid.add(step4Check);        // row 4 left
-        grid.add(sortCratesCheck);   // row 4 right
+        grid.add(step1Check);        // row 2 left
+        grid.add(step2Check);        // row 2 right
+        grid.add(step3Check);        // row 3 left
+        grid.add(step4Check);        // row 3 right
+        grid.add(sortCratesCheck);   // row 4 left (intentionally last)
         panel.add(grid, BorderLayout.NORTH);
         return panel;
     }
@@ -407,8 +398,6 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
         sortCratesCheck.setSelected("true".equalsIgnoreCase(
                 props.getProperty("crate.sorting.alphabetical", "false")));
 
-        step0Check.setSelected(!"false".equalsIgnoreCase(
-                props.getProperty("sync.step0.enabled", "true")));
         step1Check.setSelected(!"false".equalsIgnoreCase(
                 props.getProperty("sync.step1.enabled", "true")));
         step2Check.setSelected(!"false".equalsIgnoreCase(
@@ -446,7 +435,6 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
         props.setProperty("music.library.database.clear-before-sync", String.valueOf(clearLibraryCheck.isSelected()));
         props.setProperty("crate.sorting.alphabetical", String.valueOf(sortCratesCheck.isSelected()));
 
-        props.setProperty("sync.step0.enabled", String.valueOf(step0Check.isSelected()));
         props.setProperty("sync.step1.enabled", String.valueOf(step1Check.isSelected()));
         props.setProperty("sync.step2.enabled", String.valueOf(step2Check.isSelected()));
         props.setProperty("sync.step3.enabled", String.valueOf(step3Check.isSelected()));
@@ -555,7 +543,6 @@ public class cdd_sync_pro_window extends cdd_sync_log_window {
         backupCheck.setEnabled(enabled);
         clearLibraryCheck.setEnabled(enabled);
         sortCratesCheck.setEnabled(enabled);
-        step0Check.setEnabled(enabled);
         step1Check.setEnabled(enabled);
         step2Check.setEnabled(enabled);
         step3Check.setEnabled(enabled);
