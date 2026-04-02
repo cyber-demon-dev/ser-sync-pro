@@ -2,6 +2,25 @@
 
 <!-- Newest entries go at the top, below this comment. Do NOT delete old entries. -->
 
+## 2026-04-02 — Python Migration Foundation (py-migrate Phase 1–3)
+
+- **Task**: Scaffold Python 3.12+ project and implement binary parsing foundation
+- **Files Changed**:
+  - `python/pyproject.toml` [NEW] — project metadata, flet + pyyaml deps
+  - `python/requirements.txt` [NEW] — runtime dependencies
+  - `python/requirements-dev.txt` [NEW] — dev dependencies (pytest)
+  - `python/.gitignore` [NEW] — Python-specific ignores
+  - `python/core/__init__.py` [NEW] — package marker
+  - `python/core/path_utils.py` [NEW] — NFC/NFD path normalization (ports cdd_sync_binary_utils)
+  - `python/core/binary_utils.py` [NEW] — low-level binary I/O helpers
+  - `python/core/serato_parser.py` [NEW] — Crate + SeratoDatabase read/write (ports cdd_sync_crate, cdd_sync_database)
+  - `python/tests/__init__.py` [NEW] — test package marker
+  - `python/tests/test_path_utils.py` [NEW] — 8 path normalization tests
+  - `python/tests/test_serato_parser.py` [NEW] — 6 crate round-trip tests
+  - `md/AGENT_LOG.md` [MODIFIED] — this entry
+- **What Was Done**: Implemented Phases 1–3 of the Python migration. Binary parser is a direct port of the Java TLV reader/writer with byte-for-byte round-trip fidelity. All 14 tests pass. Java source in `java/` untouched.
+- **Docs to Update**: None — done here
+
 ## 2026-04-02 — Python Migration Architecture + Action Plan (py-migrate)
 
 - **Task**: Senior architect assessment of Java→Python migration; produce 4-phase action plan for a builder agent
