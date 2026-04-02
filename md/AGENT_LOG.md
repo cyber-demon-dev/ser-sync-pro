@@ -2,6 +2,21 @@
 
 <!-- Newest entries go at the top, below this comment. Do NOT delete old entries. -->
 
+## 2026-04-02 — Python Migration Architecture + Action Plan (py-migrate)
+
+- **Task**: Senior architect assessment of Java→Python migration; produce 4-phase action plan for a builder agent
+- **Files Changed**:
+  - `md/actions/py-migrate/PLAN.md` [NEW] — 4-phase plan: scaffold, binary parser, tests, commit
+  - `md/actions/py-migrate/PHASE_1.md` [NEW] — Project scaffold (pyproject.toml, requirements)
+  - `md/actions/py-migrate/PHASE_2.md` [NEW] — Core binary parsing foundation (path_utils, binary_utils, serato_parser)
+  - `md/actions/py-migrate/PHASE_3.md` [NEW] — pytest suite: 14 tests (path normalization + crate round-trip)
+  - `md/actions/py-migrate/PHASE_4.md` [NEW] — AGENT_LOG update + commit
+  - `md/actions/py-migrate/ORCHESTRATE.md` [NEW] — Dispatch guide for orchestrator
+  - `md/actions/py-migrate/AUDIT.md` [NEW] — Pre-filled audit state machine (4 rows, all PENDING)
+  - `md/AGENT_LOG.md` [MODIFIED] — This entry
+- **What Was Done**: Produced full architectural assessment (6 evaluation dimensions, weighted pros/cons matrix, strategic recommendations). Locked all decisions: Flet GUI, PyYAML config, custom struct binary parser (no serato-tools), session-fixer deferred, Python 3.12+. Produced 6 action-plan artefacts per skill protocol. Plan gates Phase 2 on NFC/NFD parity test; Phase 3 on byte-for-byte binary round-trip identity; pipeline + GUI phases deferred to future plans.
+- **Docs to Update**: None — done here. Execute plan via `md/actions/py-migrate/ORCHESTRATE.md`.
+
 ## 2026-03-31 — Hygiene Audit + Action Plan (hygiene-fixes)
 
 - **Task**: Audit core components for hygiene findings; produce a 5-phase action plan for another agent to execute
