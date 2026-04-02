@@ -6,6 +6,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+- **Technical Migration**: Pre-flight scoping for Python backend conversion and architecture refactoring.
+  - Repacked all legacy Java silos, tests, and configuration into a logically separated `java/` directory as a readonly reference.
+  - Initialized an empty `python/` structural directory target for the pending Builder agent.
+  - Generated the primary Python Migration Action Plan resolving structural CLI vs GUI transitions (`md/actions/python-convert.md`).
+
 - **Fix: Step 2 crate path fixer now uses Serato's exact filename encoding**: `fixExistingCrates()` previously resolved new track paths purely from the filesystem (`normalizePathForDatabase()`) and never consulted the Serato database. When the filesystem returned NFC-encoded paths and Serato had stored the filename in NFD, the written crate path diverged from `database V2`, causing Serato to silently create an orphaned duplicate record on next open. Fix: Step 2 now calls `resolveSeratoPath()` (already used by Steps 3 & 4 via `addTrack()`) before normalizing, so the database-stored encoding is preferred when available. Falls back to the filesystem path when the database is null or has no entry — no behaviour change for tracks not in the database.
   - `cdd_sync_crate_fixer.java`: `fixExistingCrates()` gains a `database` parameter; path-fix loop applies `resolveSeratoPath()` before `normalizePathForDatabase()`; `fixBrokenPaths()` facade threads `database` through.
   - `cdd_sync_main.java`: Step 2 call site updated to pass the already-loaded `database` variable.

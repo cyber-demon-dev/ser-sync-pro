@@ -329,3 +329,4 @@
 - **New Concepts**: None (existing domain terms documented in `CONCEPTS.md`)
 - **Docs to Update**: None — these are the initial docs
 2026-03-30 | Refactor Step 2 crate path fixer | cdd_sync_crate_fixer.java, cdd_sync_main.java, cdd_sync_crate.java | Replaced multi-threaded ambiguous-lookup Step 2 with a simple sequential loop; all crates now processed from DB as source of truth; added skip logging in main | CHANGELOG.md
+2026-04-02 | Python Migration Pre-Flight | .gitignore, python/, java/, md/actions/python-convert.md | Scaffolded the Python migration plan and relocated legacy Java code to a read-only java/ directory | CHANGELOG.md, AGENT_LOG.md
