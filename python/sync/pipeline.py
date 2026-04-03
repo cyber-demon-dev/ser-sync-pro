@@ -154,40 +154,44 @@ def run_sync(config: SyncConfig, log_callback: Optional[Callable[[str], None]] =
     # ── Step 1: Fix broken paths in database V2 ──────────────────────────────
     if not config.clear_library_before_sync and config.step1_enabled:
         if config.dry_run:
-            _log("[DRY RUN] Would have: updated broken paths in database V2")
+            _dry_run_step1(serato_path, fs_library, _log)
         else:
-            update_database_paths(serato_path, fs_library)
+            _log("Step 1: Updating broken paths in database V2...")
+            update_database_paths(serato_path, fs_library, _log)
     elif not config.step1_enabled:
         _log("Step 1 skipped: step1 toggle is off.")
     else:
-        _log("Step 1 skipped: Clear Library is on (database was deleted).")
+        _log("Step 1 skipped: Clear Library is on (database was deleted.)")
 
     # ── Step 2: Fix broken paths in existing crates ───────────────────────────
     if not config.clear_library_before_sync and config.step2_enabled:
         if config.dry_run:
-            _log("[DRY RUN] Would have: updated crate paths from filesystem")
+            _dry_run_step2(serato_path, fs_library, database, _log)
         else:
-            fix_existing_crates(serato_path, fs_library, database)
+            _log("Step 2: Rewriting crate paths from filesystem...")
+            fix_existing_crates(serato_path, fs_library, database, _log)
     elif not config.step2_enabled:
         _log("Step 2 skipped: step2 toggle is off.")
     else:
-        _log("Step 2 skipped: Clear Library is on (crates were deleted).")
+        _log("Step 2 skipped: Clear Library is on (crates were deleted.)")
 
     # ── Step 3: Append new tracks to existing crates ─────────────────────────
     if config.step3_enabled:
         if config.dry_run:
-            _log("[DRY RUN] Would have: appended new tracks to existing crates")
+            _dry_run_step3(serato_path, fs_library, parent_crate_path, _log)
         else:
-            append_new_tracks(serato_path, fs_library, parent_crate_path, database)
+            _log("Step 3: Appending new tracks to existing crates...")
+            append_new_tracks(serato_path, fs_library, parent_crate_path, database, _log)
     else:
         _log("Step 3 skipped: step3 toggle is off.")
 
     # ── Step 4: Create new crates for new library paths ──────────────────────
     if config.step4_enabled:
         if config.dry_run:
-            _log("[DRY RUN] Would have: created new crates for new library paths")
+            _dry_run_step4(serato_path, fs_library, parent_crate_path, _log)
         else:
-            create_new_crates(serato_path, fs_library, parent_crate_path, database)
+            _log("Step 4: Creating new crates for new library paths...")
+            create_new_crates(serato_path, fs_library, parent_crate_path, database, _log)
     else:
         _log("Step 4 skipped: step4 toggle is off.")
 
@@ -212,26 +216,33 @@ def run_sync(config: SyncConfig, log_callback: Optional[Callable[[str], None]] =
 # Step 1 helper — update_database_paths
 # ---------------------------------------------------------------------------
 
-def update_database_paths(serato_path: str, library: MediaLibrary) -> None:
+def update_database_paths(
+    serato_path: str,
+    library: MediaLibrary,
+    _log: Optional[Callable[[str], None]] = None,
+) -> None:
     """Fix broken pfil paths in database V2 by filename lookup against the library."""
-    logger.info("Step 1: Updating broken paths in database V2...")
+    def __log(msg):
+        logger.info(msg)
+        if _log:
+            _log(msg)
 
     db_file = Path(serato_path) / "database V2"
     if not db_file.exists():
-        logger.error("No Serato database V2 found at: %s", serato_path)
+        __log("Step 1: No Serato database V2 found — skipping.")
         return
 
     try:
         database = SeratoDatabase.read_from(db_file)
     except Exception as exc:
-        logger.error("Failed to read database V2: %s", exc)
+        __log(f"Step 1: Failed to read database V2: {exc}")
         return
 
     volume_root = get_volume_root(serato_path)
     lib_index = build_library_index(library)
 
     if not lib_index:
-        logger.info("Media library is empty — skipping Step 1.")
+        __log("Step 1: Media library is empty — skipping.")
         return
 
     path_fixes: Dict[str, str] = {}
@@ -254,12 +265,12 @@ def update_database_paths(serato_path: str, library: MediaLibrary) -> None:
             path_fixes[db_track_path] = fixed
 
     if not path_fixes:
-        logger.info("No broken paths found in database V2.")
+        __log("Step 1: No broken paths found in database V2.")
         return
 
-    logger.info("Updating database V2 with %d path fixes...", len(path_fixes))
+    __log(f"Step 1: Fixing {len(path_fixes)} broken paths in database V2...")
     updated = update_paths(str(db_file), path_fixes)
-    logger.info("Updated %d paths in database V2.", updated)
+    __log(f"Step 1 complete: updated {updated} paths in database V2.")
 
 
 # ---------------------------------------------------------------------------
@@ -270,13 +281,17 @@ def fix_existing_crates(
     serato_path: str,
     library: MediaLibrary,
     database: Optional[SeratoDatabase],
+    _log: Optional[Callable[[str], None]] = None,
 ) -> None:
     """Rewrite track paths in existing .crate files using the filesystem as truth."""
-    logger.info("Step 2: Rewriting crate paths from filesystem...")
+    def __log(msg):
+        logger.info(msg)
+        if _log:
+            _log(msg)
 
     lib_index = build_library_index(library)
     if not lib_index:
-        logger.info("Media library is empty — skipping Step 2.")
+        __log("Step 2: Media library is empty — skipping.")
         return
 
     crate_files: List[Path] = []
@@ -284,10 +299,10 @@ def fix_existing_crates(
     collect_crate_files(Path(serato_path) / "Subcrates", crate_files)
 
     if not crate_files:
-        logger.info("No crate files found in Crates/ or Subcrates/.")
+        __log("Step 2: No crate files found in Crates/ or Subcrates/.")
         return
 
-    logger.info("Step 2: found %d crate files to inspect.", len(crate_files))
+    __log(f"Step 2: Inspecting {len(crate_files)} crate files...")
 
     fixed_crates = 0
     fixed_paths = 0
@@ -326,7 +341,7 @@ def fix_existing_crates(
             except Exception as exc:
                 logger.error("Failed to write crate: %s — %s", crate_file.name, exc)
 
-    logger.info("Step 2 complete: %d paths fixed across %d crates.", fixed_paths, fixed_crates)
+    __log(f"Step 2 complete: {fixed_paths} paths fixed across {fixed_crates} crates.")
 
 
 # ---------------------------------------------------------------------------
@@ -338,13 +353,17 @@ def append_new_tracks(
     library: MediaLibrary,
     parent_crate_path: Optional[str],
     database: Optional[SeratoDatabase],
+    _log: Optional[Callable[[str], None]] = None,
 ) -> None:
     """Append new tracks to existing crate files (never create new crates)."""
-    logger.info("Step 3: Appending new tracks to existing crates...")
+    def __log(msg):
+        logger.info(msg)
+        if _log:
+            _log(msg)
 
     subcrates_dir = Path(serato_path) / "Subcrates"
     if not subcrates_dir.exists():
-        logger.info("No Subcrates directory found, skipping append step.")
+        __log("Step 3: No Subcrates directory found — skipping.")
         return
 
     crate_map = build_crate_file_map(library, parent_crate_path)
@@ -379,9 +398,9 @@ def append_new_tracks(
             skipped += 1
 
     if appended > 0:
-        logger.info("Step 3 complete: %d crates updated.", appended)
+        __log(f"Step 3 complete: {appended} crates updated with new tracks ({skipped} unchanged).")
     else:
-        logger.info("Step 3 complete: no new tracks to append (%d unchanged).", skipped)
+        __log(f"Step 3 complete: no new tracks to append ({skipped} crates unchanged).")
 
 
 # ---------------------------------------------------------------------------
@@ -393,9 +412,13 @@ def create_new_crates(
     library: MediaLibrary,
     parent_crate_path: Optional[str],
     database: Optional[SeratoDatabase],
+    _log: Optional[Callable[[str], None]] = None,
 ) -> None:
     """Create new .crate files for library folders that have no matching crate yet."""
-    logger.info("Step 4: Creating new crates for new library paths...")
+    def __log(msg):
+        logger.info(msg)
+        if _log:
+            _log(msg)
 
     subcrates_dir = Path(serato_path) / "Subcrates"
     crate_map = build_crate_file_map(library, parent_crate_path)
@@ -421,9 +444,117 @@ def create_new_crates(
             logger.error("Failed to write new crate: %s — %s", crate_filename, exc)
 
     if created > 0:
-        logger.info("Step 4 complete: %d new crates created (%d existing skipped).", created, skipped)
+        __log(f"Step 4 complete: {created} new crates created ({skipped} existing skipped).")
     else:
-        logger.info("Step 4 complete: no new crates needed (%d existing skipped).", skipped)
+        __log(f"Step 4 complete: no new crates needed ({skipped} existing skipped).")
+
+
+
+# ---------------------------------------------------------------------------
+# Dry-run preview helpers — read-only analysis with real counts
+# ---------------------------------------------------------------------------
+
+def _dry_run_step1(serato_path: str, library: MediaLibrary, _log) -> None:
+    _log("[DRY RUN] Step 1: Checking database V2 for broken paths...")
+    db_file = Path(serato_path) / "database V2"
+    if not db_file.exists():
+        _log("[DRY RUN] Step 1: No database V2 found — nothing to fix.")
+        return
+    try:
+        database = SeratoDatabase.read_from(db_file)
+    except Exception as exc:
+        _log(f"[DRY RUN] Step 1: Could not read database V2: {exc}")
+        return
+    volume_root = get_volume_root(serato_path)
+    lib_index = build_library_index(library)
+    broken = 0
+    ambiguous = 0
+    for db_track_path in database.get_all_track_paths():
+        if volume_root:
+            if os.path.exists(os.path.join(volume_root, db_track_path)):
+                continue
+        filename = os.path.basename(db_track_path).lower()
+        candidates = lib_index.get(filename)
+        if not candidates:
+            continue
+        if len(candidates) > 1:
+            ambiguous += 1
+            continue
+        fixed = normalize_path_for_database(candidates[0])
+        if fixed != db_track_path:
+            broken += 1
+    _log(f"[DRY RUN] Step 1: Would fix {broken} broken paths in database V2 ({ambiguous} ambiguous skipped).")
+
+
+def _dry_run_step2(serato_path: str, library: MediaLibrary, database, _log) -> None:
+    _log("[DRY RUN] Step 2: Checking existing crate files for broken paths...")
+    lib_index = build_library_index(library)
+    crate_files: List[Path] = []
+    collect_crate_files(Path(serato_path) / "Crates", crate_files)
+    collect_crate_files(Path(serato_path) / "Subcrates", crate_files)
+    if not crate_files:
+        _log("[DRY RUN] Step 2: No crate files found.")
+        return
+    _log(f"[DRY RUN] Step 2: Inspecting {len(crate_files)} crate files...")
+    would_fix_paths = 0
+    would_fix_crates = 0
+    for crate_file in crate_files:
+        try:
+            crate = read_crate(crate_file)
+        except Exception:
+            continue
+        changed = False
+        for track_path in crate.tracks:
+            filename = os.path.basename(track_path).lower()
+            candidates = lib_index.get(filename)
+            if candidates:
+                resolved = resolve_serato_path(candidates[0], database)
+                new_rel = normalize_path_for_database(resolved)
+                if new_rel != track_path:
+                    would_fix_paths += 1
+                    changed = True
+        if changed:
+            would_fix_crates += 1
+    _log(f"[DRY RUN] Step 2: Would fix {would_fix_paths} paths across {would_fix_crates} crates.")
+
+
+def _dry_run_step3(serato_path: str, library: MediaLibrary, parent_crate_path, _log) -> None:
+    _log("[DRY RUN] Step 3: Checking for new tracks to append to existing crates...")
+    subcrates_dir = Path(serato_path) / "Subcrates"
+    if not subcrates_dir.exists():
+        _log("[DRY RUN] Step 3: No Subcrates directory — nothing to append.")
+        return
+    crate_map = build_crate_file_map(library, parent_crate_path)
+    would_update = 0
+    would_add = 0
+    for crate_filename, new_tracks in crate_map.items():
+        crate_file = subcrates_dir / crate_filename
+        if not crate_file.exists():
+            continue
+        try:
+            crate = read_crate(crate_file)
+        except Exception:
+            continue
+        existing = set(normalize_for_dedup(t) for t in crate.tracks)
+        new = [t for t in new_tracks if normalize_for_dedup(t) not in existing]
+        if new:
+            would_update += 1
+            would_add += len(new)
+    _log(f"[DRY RUN] Step 3: Would append {would_add} new tracks across {would_update} existing crates.")
+
+
+def _dry_run_step4(serato_path: str, library: MediaLibrary, parent_crate_path, _log) -> None:
+    _log("[DRY RUN] Step 4: Checking for new library folders that need crates...")
+    subcrates_dir = Path(serato_path) / "Subcrates"
+    crate_map = build_crate_file_map(library, parent_crate_path)
+    would_create = 0
+    already_exist = 0
+    for crate_filename in crate_map:
+        if (subcrates_dir / crate_filename).exists():
+            already_exist += 1
+        else:
+            would_create += 1
+    _log(f"[DRY RUN] Step 4: Would create {would_create} new crates ({already_exist} already exist).")
 
 
 # ---------------------------------------------------------------------------

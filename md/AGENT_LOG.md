@@ -2,6 +2,18 @@
 
 <!-- Newest entries go at the top, below this comment. Do NOT delete old entries. -->
 
+## 2026-04-03 — Flet Dark-Mode GUI Window (py-gui)
+
+- **Task**: Build a polished dark-mode Flet GUI equivalent to the Java `cdd_sync_pro_window.java`
+- **Files Changed**:
+  - `python/gui.py` [NEW] — Full Flet GUI: dark app shell, config panel (paths/steps/dupes), live log ListView, Start/Cancel wiring, dry-run checkbox, progress bar
+  - `python/main.py` [MODIFIED] — GUI/CLI split: `--cli` flag runs headless, default launches Flet GUI via `gui.launch()`
+  - `python/requirements.txt` [MODIFIED] — Added `flet>=0.21.0`
+  - `python/sync/pipeline.py` [MODIFIED] — Minor log callback compatibility fixes
+  - `md/AGENT_LOG.md` [MODIFIED] — This entry
+- **What Was Done**: Implemented all 4 build phases of the `py-gui` plan. GUI opens at 780×760, dark theme, SF Pro font. Config panel has 3 path rows with FilePicker Browse buttons, 7 pipeline step checkboxes (with Clear Library confirmation dialog), dry-run checkbox, and duplicate management dropdowns. Log panel streams output live via `page.run_thread`. Start validates inputs, builds SyncConfig, saves config.yaml, and launches `run_sync()` on a daemon thread. Cancel appends a stop-request message. Polish pass: min window size, section borders, status label, progress bar. `main.py --cli --dry-run` still runs headlessly.
+- **Docs to Update**: None — done here
+
 ## 2026-04-02 — Python Pipeline Implementation (py-pipeline)
 
 - **Task**: Port sync pipeline from Java to Python
