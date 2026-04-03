@@ -2,6 +2,26 @@
 
 <!-- Newest entries go at the top, below this comment. Do NOT delete old entries. -->
 
+## 2026-04-02 — Python Pipeline Implementation (py-pipeline)
+
+- **Task**: Port sync pipeline from Java to Python
+- **Files Changed**:
+  - `python/config.py` [NEW] — SyncConfig dataclass with YAML load/save
+  - `python/config.template.yaml` [NEW] — annotated config template
+  - `python/sync/__init__.py` [NEW] — sync package marker
+  - `python/sync/media_library.py` [NEW] — recursive media scanner with parallel ThreadPoolExecutor
+  - `python/sync/backup.py` [NEW] — timestamped _Serato_ backup utility
+  - `python/sync/dupe_mover.py` [NEW] — duplicate scanner and mover with dupes.log
+  - `python/sync/pref_sorter.py` [NEW] — neworder.pref generator in UTF-16BE
+  - `python/sync/database_fixer.py` [NEW] — binary database V2 TLV path patcher
+  - `python/sync/pipeline.py` [NEW] — run_sync() orchestrator + all crate-fixer helpers
+  - `python/main.py` [NEW] — CLI entry point with --dry-run flag
+  - `python/tests/test_pipeline.py` [NEW] — 4 integration tests (dry-run, step4, step2, sorting)
+  - `python/core/serato_parser.py` [MODIFIED] — fixed dynamic vrsn header skip for variable-length version strings
+  - `md/AGENT_LOG.md` [MODIFIED] — this entry
+- **What Was Done**: Implemented all 5 pipeline phases. All 21 tests pass (17 existing + 4 new). java/ directory completely unmodified. One bug fixed in serato_parser.py (vrsn header skip was hardcoded to 8-byte version field, failing on non-4-char versions in test binaries).
+- **Docs to Update**: None
+
 ## 2026-04-02 — Python Migration Foundation (py-migrate Phase 1–3)
 
 - **Task**: Scaffold Python 3.12+ project and implement binary parsing foundation

@@ -308,10 +308,22 @@ class SeratoDatabase:
         tag = buf.read(4)
         if tag != b'vrsn':
             raise ValueError(f"Not a Serato database file: {db_path}")
-        # vrsn block: 2 zero bytes + UTF-16BE version + suffix
-        buf.read(2)
-        buf.read(8)  # version
-        buf.read(len("/Serato ScratchLive Database") * 2)
+        # vrsn block: 2 zero bytes + UTF-16BE version string + UTF-16BE suffix
+        # The version length varies (e.g. "81.0" = 8 bytes, "2.0" = 6 bytes).
+        # Skip the entire vrsn blob by scanning forward for the next 4-byte ASCII tag.
+        buf.read(2)  # two literal zero bytes
+        remaining = data[buf.tell():]
+        skip = 0
+        # Find the first byte position where a 4-byte printable ASCII sequence starts
+        # followed by a valid big-endian length that fits in remaining data.
+        for i in range(len(remaining) - 8):
+            candidate = remaining[i:i + 4]
+            if all(0x20 <= b < 0x7F for b in candidate):
+                cand_len = struct.unpack('>I', remaining[i + 4:i + 8])[0]
+                if i + 8 + cand_len <= len(remaining):
+                    skip = i
+                    break
+        buf.read(skip)  # skip past vrsn payload to first TLV tag
 
         while True:
             tag_bytes = buf.read(4)
