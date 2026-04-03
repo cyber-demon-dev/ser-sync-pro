@@ -621,6 +621,9 @@ def create_new_crates(
             logger.debug("Step 4: %s already exists — skipping", crate_filename)
             continue
 
+        crate_display = crate_filename.removesuffix(".crate")
+        __log(f"Step 4: Creating '{crate_display}' ({len(tracks)} track(s))...")
+
         crate = Crate()
         if database:
             crate.set_database(database)
@@ -630,9 +633,10 @@ def create_new_crates(
             crate_file.parent.mkdir(parents=True, exist_ok=True)
             write_crate(crate, crate_file)
             created += 1
-            __log(f"Step 4: Created {crate_filename.removesuffix('.crate')} — {len(tracks)} track(s)")
+            __log(f"Step 4: ✓ Created '{crate_display}'")
         except Exception as exc:
             logger.error("Failed to write new crate: %s — %s", crate_filename, exc)
+            __log(f"Step 4: ✗ Failed to create '{crate_display}': {exc}")
             errors += 1
 
     summary_parts = [f"{created} crate(s) created", f"{skipped} already existed"]
@@ -739,14 +743,16 @@ def _dry_run_step4(serato_path: str, library: MediaLibrary, parent_crate_path, _
     _log("[DRY RUN] Step 4: Checking for new library folders that need crates...")
     subcrates_dir = Path(serato_path) / "Subcrates"
     crate_map = build_crate_file_map(library, parent_crate_path)
-    would_create = 0
+    would_create: List[str] = []
     already_exist = 0
-    for crate_filename in crate_map:
+    for crate_filename, tracks in crate_map.items():
         if (subcrates_dir / crate_filename).exists():
             already_exist += 1
         else:
-            would_create += 1
-    _log(f"[DRY RUN] Step 4: Would create {would_create} new crates ({already_exist} already exist).")
+            would_create.append((crate_filename.removesuffix(".crate"), len(tracks)))
+    for name, track_count in would_create:
+        _log(f"[DRY RUN] Step 4: Would create '{name}' ({track_count} track(s))")
+    _log(f"[DRY RUN] Step 4: Would create {len(would_create)} new crates ({already_exist} already exist).")
 
 
 # ---------------------------------------------------------------------------
