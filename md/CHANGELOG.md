@@ -6,7 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-- **Technical Migration**: Pre-flight scoping for Python backend conversion and architecture refactoring.
+- **Style: Python GUI dark-mode polish pass**: Upgraded the Flet GUI from flat grey to a GitHub-dark navy palette, added a branded header with version badge, colorized log output, and a dedicated Dry Run warning pill.
+  - `python/gui.py`: New color tokens (`#0f1117` bg, `#161b22` surface, `#21262d` border, `#58a6ff` blue, `#3fb950` green, `#d29922` amber, `#f85149` red, `#0a0c10` terminal bg). `_section()` gains `accent_color` + `header_action` params for 3px left-accent borders. Branded header row (app name, v2.0 badge, `● Live` pill). Pipeline Steps and Paths sections gain blue left-accent; Duplicate Management amber; Log panel purple. Dry Run moved to its own amber pill row below Pipeline Steps. Log panel uses terminal-dark bg with a trash Clear button in the header. Log lines colorized by prefix (✅ green / ❌ red / ⚠️ amber / 🔍 blue). Progress bar always visible at 4px height. Button radius bumped to 8. Section spacing 12→16, page padding 20.
+
   - Repacked all legacy Java silos, tests, and configuration into a logically separated `java/` directory as a readonly reference.
   - Initialized an empty `python/` structural directory target for the pending Builder agent.
   - Generated the primary Python Migration Action Plan resolving structural CLI vs GUI transitions (`md/actions/python-convert.md`).

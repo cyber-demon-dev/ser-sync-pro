@@ -19,30 +19,46 @@ if str(_HERE) not in sys.path:
 
 
 # ── Colour tokens ────────────────────────────────────────────────────────────
-_BG = "#1e1e1e"
-_SURFACE = "#2b2b2b"
-_BORDER = "#3c3f41"
-_TEXT = "#bbbbbb"
-_LABEL = "#dddddd"
-_ACCENT_GREEN = "#5fa85f"
-_ACCENT_AMBER = "#c8962a"
-_ACCENT_RED = "#c75f5f"
+_BG          = "#0f1117"  # deep navy-black
+_SURFACE     = "#161b22"  # card surface
+_BORDER      = "#21262d"  # cool border
+_TEXT        = "#8b949e"  # muted body
+_LABEL       = "#c9d1d9"  # prominent labels
+_ACCENT_GREEN  = "#3fb950"  # success / checked
+_ACCENT_AMBER  = "#d29922"  # warning / dry-run
+_ACCENT_RED    = "#f85149"  # error / cancel
+_ACCENT_BLUE   = "#58a6ff"  # primary / focus
+_TERMINAL_BG   = "#0a0c10"  # log panel bg
+_LOG_ACCENT    = "#6e40c9"  # log panel left border
 
 
-def _section(title: str, content: ft.Control) -> ft.Container:
-    """Titled dark section container."""
+def _section(
+    title: str,
+    content: ft.Control,
+    accent_color: str | None = None,
+    header_action: ft.Control | None = None,
+) -> ft.Container:
+    """Titled dark section container with optional left-accent border."""
+    left_w = 3 if accent_color else 1
+    left_c = accent_color or _BORDER
+    if header_action is not None:
+        title_row: ft.Control = ft.Row(
+            [
+                ft.Text(title, size=12, color=_LABEL, weight=ft.FontWeight.W_600, expand=True),
+                header_action,
+            ],
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        )
+    else:
+        title_row = ft.Text(title, size=12, color=_LABEL, weight=ft.FontWeight.W_600)
     return ft.Container(
         content=ft.Column(
-            [
-                ft.Text(title, size=11, color=_LABEL, weight=ft.FontWeight.W_500),
-                ft.Divider(height=1, color=_BORDER),
-                content,
-            ],
-            spacing=6,
+            [title_row, ft.Divider(height=1, color=_BORDER), content],
+            spacing=8,
         ),
         bgcolor=_SURFACE,
         border=ft.Border(
-            left=ft.BorderSide(1, _BORDER),
+            left=ft.BorderSide(left_w, left_c),
             top=ft.BorderSide(1, _BORDER),
             right=ft.BorderSide(1, _BORDER),
             bottom=ft.BorderSide(1, _BORDER),
@@ -106,7 +122,7 @@ def _field(hint: str = "", value: str = "") -> ft.TextField:
         text_size=12,
         content_padding=ft.Padding(left=10, top=4, right=10, bottom=4),
         border_color=_BORDER,
-        focused_border_color=_ACCENT_GREEN,
+        focused_border_color=_ACCENT_BLUE,
         cursor_color=_LABEL,
         expand=True,
     )
@@ -127,7 +143,7 @@ async def main(page: ft.Page) -> None:
     page.theme_mode = ft.ThemeMode.DARK
     page.theme = ft.Theme(font_family="SF Pro Display")
     page.bgcolor = _BG
-    page.padding = ft.Padding(left=16, top=16, right=16, bottom=16)
+    page.padding = ft.Padding(left=20, top=16, right=20, bottom=20)
 
     # ── File pickers ──────────────────────────────────────────────────────────
     music_picker = ft.FilePicker()
@@ -188,8 +204,8 @@ async def main(page: ft.Page) -> None:
     _cancel_event = threading.Event()
 
     # Card row style constants
-    _CARD_BG = "#313131"
-    _CARD_BORDER = "#3f3f3f"
+    _CARD_BG = "#1c2030"
+    _CARD_BORDER = "#2a3148"
 
     def _card_step_row(
         cb: ft.Checkbox,
@@ -405,13 +421,45 @@ async def main(page: ft.Page) -> None:
     page.add(
         ft.Column(
             [
-                ft.Text(
-                    "cdd-sync-pro",
-                    size=18,
-                    weight=ft.FontWeight.W_600,
-                    color=_LABEL,
+                # ── Branded header ──────────────────────────────────────────
+                ft.Row(
+                    [
+                        ft.Text(
+                            "cdd-sync-pro",
+                            size=20,
+                            weight=ft.FontWeight.W_700,
+                            color=_LABEL,
+                        ),
+                        ft.Container(
+                            content=ft.Text(
+                                "v2.0",
+                                size=10,
+                                color=_ACCENT_BLUE,
+                                weight=ft.FontWeight.W_600,
+                            ),
+                            bgcolor="#0d1f3c",
+                            border_radius=4,
+                            padding=ft.Padding(left=6, top=2, right=6, bottom=2),
+                            margin=ft.Margin(left=8, top=0, right=0, bottom=0),
+                        ),
+                        ft.Container(expand=True),
+                        ft.Container(
+                            content=ft.Text(
+                                "● Live",
+                                size=11,
+                                color=_ACCENT_GREEN,
+                                weight=ft.FontWeight.W_500,
+                            ),
+                            bgcolor="#0d2218",
+                            border_radius=20,
+                            padding=ft.Padding(left=10, top=4, right=10, bottom=4),
+                            border=ft.Border.all(1, "#1a4a2e"),
+                        ),
+                    ],
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
                 ft.Divider(height=1, color=_BORDER),
+                # ── Paths ─────────────────────────────────────────────────────
                 _section(
                     "Paths",
                     ft.Column(
@@ -422,32 +470,26 @@ async def main(page: ft.Page) -> None:
                         ],
                         spacing=8,
                     ),
+                    accent_color=_ACCENT_BLUE,
                 ),
+                # ── Pipeline Steps ─────────────────────────────────────────
                 ft.Container(
                     content=ft.Column(
                         [
-                            ft.Row(
-                                [
-                                    ft.Text(
-                                        "Pipeline Steps",
-                                        size=11,
-                                        color=_LABEL,
-                                        weight=ft.FontWeight.W_500,
-                                        expand=True,
-                                    ),
-                                    cb_dry_run,
-                                ],
-                                vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                                spacing=0,
+                            ft.Text(
+                                "Pipeline Steps",
+                                size=12,
+                                color=_LABEL,
+                                weight=ft.FontWeight.W_600,
                             ),
                             ft.Divider(height=1, color=_BORDER),
                             pipeline_grid,
                         ],
-                        spacing=6,
+                        spacing=8,
                     ),
                     bgcolor=_SURFACE,
                     border=ft.Border(
-                        left=ft.BorderSide(1, _BORDER),
+                        left=ft.BorderSide(3, _ACCENT_BLUE),
                         top=ft.BorderSide(1, _BORDER),
                         right=ft.BorderSide(1, _BORDER),
                         bottom=ft.BorderSide(1, _BORDER),
@@ -455,26 +497,84 @@ async def main(page: ft.Page) -> None:
                     border_radius=8,
                     padding=ft.Padding(left=12, top=10, right=12, bottom=10),
                 ),
-                _section("Duplicate Management", dupe_content),
-                _section(
-                    "Log Output",
-                    ft.ListView(
-                        ref=_log_ref,
-                        expand=True,
-                        auto_scroll=True,
-                        spacing=0,
-                        height=180,
+                # ── Dry Run pill ───────────────────────────────────────────
+                ft.Container(
+                    content=ft.Row(
+                        [
+                            ft.Text("⚠️", size=14),
+                            cb_dry_run,
+                            ft.Text(
+                                "— no files will be written",
+                                size=11,
+                                color=_ACCENT_AMBER,
+                                italic=True,
+                            ),
+                        ],
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                        spacing=4,
                     ),
+                    bgcolor="#1a1400",
+                    border=ft.Border.all(1, "#4a3800"),
+                    border_radius=8,
+                    padding=ft.Padding(left=12, top=6, right=12, bottom=6),
                 ),
+                # ── Duplicate Management ─────────────────────────────────
+                _section("Duplicate Management", dupe_content, accent_color=_ACCENT_AMBER),
+                # ── Log Output ──────────────────────────────────────────────
+                ft.Container(
+                    content=ft.Column(
+                        [
+                            ft.Row(
+                                [
+                                    ft.Text(
+                                        "Log Output",
+                                        size=12,
+                                        color=_LABEL,
+                                        weight=ft.FontWeight.W_600,
+                                        expand=True,
+                                    ),
+                                    ft.IconButton(
+                                        icon=ft.Icons.DELETE_SWEEP,
+                                        icon_size=16,
+                                        icon_color=_TEXT,
+                                        tooltip="Clear log",
+                                        on_click=lambda _e: _clear_log(),
+                                    ),
+                                ],
+                                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                            ),
+                            ft.Divider(height=1, color=_BORDER),
+                            ft.ListView(
+                                ref=_log_ref,
+                                expand=True,
+                                auto_scroll=True,
+                                spacing=0,
+                                height=180,
+                            ),
+                        ],
+                        spacing=4,
+                    ),
+                    bgcolor=_TERMINAL_BG,
+                    border=ft.Border(
+                        left=ft.BorderSide(3, _LOG_ACCENT),
+                        top=ft.BorderSide(1, _BORDER),
+                        right=ft.BorderSide(1, _BORDER),
+                        bottom=ft.BorderSide(1, _BORDER),
+                    ),
+                    border_radius=8,
+                    padding=ft.Padding(left=12, top=10, right=12, bottom=10),
+                ),
+                # ── Progress bar ───────────────────────────────────────────
                 ft.ProgressBar(
                     ref=_progress_ref,
-                    value=None,
-                    visible=False,
-                    height=3,
-                    color="#4a9eff",
-                    bgcolor="#2a2a2a",
+                    value=0,
+                    visible=True,
+                    height=4,
+                    color=_ACCENT_BLUE,
+                    bgcolor="#1a1f2e",
                     border_radius=2,
                 ),
+                # ── Bottom action row ─────────────────────────────────────
                 ft.Row(
                     [
                         ft.Text(
@@ -489,9 +589,10 @@ async def main(page: ft.Page) -> None:
                             ref=_save_ref,
                             height=36,
                             style=ft.ButtonStyle(
-                                bgcolor={"": "#3a6fa8"},
-                                color={"": "#ffffff"},
-                                shape={"": ft.RoundedRectangleBorder(radius=6)},
+                                bgcolor={"": "#0d1f3c"},
+                                color={"": _ACCENT_BLUE},
+                                shape={"": ft.RoundedRectangleBorder(radius=8)},
+                                side={"": ft.BorderSide(1, "#1c3a6e")},
                             ),
                             on_click=lambda e: _on_save(e),
                         ),
@@ -502,7 +603,7 @@ async def main(page: ft.Page) -> None:
                             style=ft.ButtonStyle(
                                 bgcolor={"": _ACCENT_GREEN},
                                 color={"": "#ffffff"},
-                                shape={"": ft.RoundedRectangleBorder(radius=6)},
+                                shape={"": ft.RoundedRectangleBorder(radius=8)},
                             ),
                             on_click=lambda e: _on_start(e),
                         ),
@@ -512,9 +613,9 @@ async def main(page: ft.Page) -> None:
                             height=36,
                             disabled=True,
                             style=ft.ButtonStyle(
-                                bgcolor={"disabled": "#444444", "": _ACCENT_RED},
-                                color={"disabled": "#666666", "": "#ffffff"},
-                                shape={"": ft.RoundedRectangleBorder(radius=6)},
+                                bgcolor={"disabled": "#2a2a2a", "": _ACCENT_RED},
+                                color={"disabled": "#555555", "": "#ffffff"},
+                                shape={"": ft.RoundedRectangleBorder(radius=8)},
                             ),
                             on_click=lambda e: _on_cancel(e),
                         ),
@@ -523,7 +624,7 @@ async def main(page: ft.Page) -> None:
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 ),
             ],
-            spacing=12,
+            spacing=16,
             expand=True,
             scroll=ft.ScrollMode.AUTO,
         )
@@ -532,13 +633,24 @@ async def main(page: ft.Page) -> None:
     # ── Handlers ─────────────────────────────────────────────────────────────
 
     def _append_log(msg: str) -> None:
-        """Marshal a log message onto the UI thread."""
+        """Marshal a colorized log message onto the UI thread."""
+        if msg.startswith(("✅", "[OK]")):
+            color = "#3fb950"
+        elif msg.startswith(("❌", "[ERROR]")):
+            color = "#f85149"
+        elif msg.startswith(("⚠️", "[WARN]", "[CANCELLED]")):
+            color = "#d29922"
+        elif msg.startswith(("🔍", "[SCAN]")):
+            color = "#58a6ff"
+        else:
+            color = _TEXT
+
         def _do():
             _log_ref.current.controls.append(
                 ft.Text(
                     msg,
-                    size=11,
-                    color=_TEXT,
+                    size=12,
+                    color=color,
                     font_family="Courier New",
                     selectable=True,
                 )
@@ -558,7 +670,7 @@ async def main(page: ft.Page) -> None:
         _save_ref.current.disabled = not enabled
         _cancel_ref.current.disabled = enabled
         if _progress_ref.current:
-            _progress_ref.current.visible = not enabled
+            # Always visible: indeterminate while running, empty bar when idle
             _progress_ref.current.value = None if not enabled else 0
         for run_ref in (
             _run_backup_ref, _run_sort_ref,
@@ -839,6 +951,11 @@ async def main(page: ft.Page) -> None:
         _cancel_event.set()
         _append_log("[CANCELLED] Stop requested — sync will finish current step.")
         _cancel_ref.current.disabled = True
+        page.update()
+
+    def _clear_log() -> None:
+        """Clear all log entries."""
+        _log_ref.current.controls.clear()
         page.update()
 
 
