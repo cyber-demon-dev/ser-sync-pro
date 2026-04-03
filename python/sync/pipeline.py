@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import os
+import threading
 from collections import defaultdict
 from pathlib import Path
 from typing import Callable, Dict, List, Optional
@@ -29,7 +30,11 @@ logger = logging.getLogger("cdd_sync")
 # Public entry point
 # ---------------------------------------------------------------------------
 
-def run_sync(config: SyncConfig, log_callback: Optional[Callable[[str], None]] = None) -> None:
+def run_sync(
+    config: SyncConfig,
+    log_callback: Optional[Callable[[str], None]] = None,
+    cancel_event: Optional[threading.Event] = None,
+) -> None:
     """
     Execute the full sync pipeline in the same sequence as Java's runSync().
     All write operations are guarded by config.dry_run.
@@ -157,7 +162,7 @@ def run_sync(config: SyncConfig, log_callback: Optional[Callable[[str], None]] =
             _dry_run_step1(serato_path, fs_library, _log)
         else:
             _log("Step 1: Updating broken paths in database V2...")
-            update_database_paths(serato_path, fs_library, _log)
+            update_database_paths(serato_path, fs_library, _log, cancel_event=cancel_event)
     elif not config.step1_enabled:
         _log("Step 1 skipped: step1 toggle is off.")
     else:
@@ -213,6 +218,138 @@ def run_sync(config: SyncConfig, log_callback: Optional[Callable[[str], None]] =
 
 
 # ---------------------------------------------------------------------------
+# Individual step runners (for GUI per-step ▶ buttons)
+# ---------------------------------------------------------------------------
+
+def run_step1(
+    config: SyncConfig,
+    log_callback: Optional[Callable[[str], None]] = None,
+    cancel_event: Optional[threading.Event] = None,
+) -> None:
+    """Run Step 1 (Fix database V2 paths) in isolation."""
+    def _log(msg: str) -> None:
+        logger.info(msg)
+        if log_callback:
+            log_callback(msg)
+
+    serato_path = config.serato_library_path
+    if not Path(serato_path).is_dir():
+        _log(f"Step 1: Serato library path does not exist: {serato_path}")
+        return
+
+    _log(f"Scanning media library {config.music_library_path}...")
+    fs_library = MediaLibrary.read_from(config.music_library_path)
+    if fs_library.total_tracks() <= 0:
+        _log("Step 1: No supported files found in media library — skipping.")
+        return
+    _log(f"Found {fs_library.total_tracks()} tracks in {fs_library.total_directories()} directories")
+
+    if cancel_event and cancel_event.is_set():
+        _log("[CANCELLED] Step 1 aborted before database scan.")
+        return
+
+    if config.dry_run:
+        _dry_run_step1(serato_path, fs_library, _log)
+    else:
+        _log("Step 1: Updating broken paths in database V2...")
+        update_database_paths(serato_path, fs_library, _log, cancel_event=cancel_event)
+
+
+def run_step2(config: SyncConfig, log_callback: Optional[Callable[[str], None]] = None) -> None:
+    """Run Step 2 (Fix existing crate paths) in isolation."""
+    def _log(msg: str) -> None:
+        logger.info(msg)
+        if log_callback:
+            log_callback(msg)
+
+    serato_path = config.serato_library_path
+    if not Path(serato_path).is_dir():
+        _log(f"Step 2: Serato library path does not exist: {serato_path}")
+        return
+
+    _log(f"Scanning media library {config.music_library_path}...")
+    fs_library = MediaLibrary.read_from(config.music_library_path)
+    if fs_library.total_tracks() <= 0:
+        _log("Step 2: No supported files found in media library — skipping.")
+        return
+    _log(f"Found {fs_library.total_tracks()} tracks in {fs_library.total_directories()} directories")
+
+    db_file = Path(serato_path) / "database V2"
+    database: Optional[SeratoDatabase] = None
+    if db_file.exists():
+        try:
+            database = SeratoDatabase.read_from(db_file)
+        except Exception as exc:
+            _log(f"Step 2: Could not parse database V2: {exc}")
+
+    if config.dry_run:
+        _dry_run_step2(serato_path, fs_library, database, _log)
+    else:
+        _log("Step 2: Rewriting crate paths from filesystem...")
+        fix_existing_crates(serato_path, fs_library, database, _log)
+
+
+def run_step3(config: SyncConfig, log_callback: Optional[Callable[[str], None]] = None) -> None:
+    """Run Step 3 (Append new tracks to existing crates) in isolation."""
+    def _log(msg: str) -> None:
+        logger.info(msg)
+        if log_callback:
+            log_callback(msg)
+
+    serato_path = config.serato_library_path
+    _log(f"Scanning media library {config.music_library_path}...")
+    fs_library = MediaLibrary.read_from(config.music_library_path)
+    if fs_library.total_tracks() <= 0:
+        _log("Step 3: No supported files found in media library — skipping.")
+        return
+    _log(f"Found {fs_library.total_tracks()} tracks in {fs_library.total_directories()} directories")
+
+    db_file = Path(serato_path) / "database V2"
+    database: Optional[SeratoDatabase] = None
+    if db_file.exists():
+        try:
+            database = SeratoDatabase.read_from(db_file)
+        except Exception as exc:
+            _log(f"Step 3: Could not parse database V2: {exc}")
+
+    if config.dry_run:
+        _dry_run_step3(serato_path, fs_library, config.parent_crate_path, _log)
+    else:
+        _log("Step 3: Appending new tracks to existing crates...")
+        append_new_tracks(serato_path, fs_library, config.parent_crate_path, database, _log)
+
+
+def run_step4(config: SyncConfig, log_callback: Optional[Callable[[str], None]] = None) -> None:
+    """Run Step 4 (Create new crates for new library paths) in isolation."""
+    def _log(msg: str) -> None:
+        logger.info(msg)
+        if log_callback:
+            log_callback(msg)
+
+    serato_path = config.serato_library_path
+    _log(f"Scanning media library {config.music_library_path}...")
+    fs_library = MediaLibrary.read_from(config.music_library_path)
+    if fs_library.total_tracks() <= 0:
+        _log("Step 4: No supported files found in media library — skipping.")
+        return
+    _log(f"Found {fs_library.total_tracks()} tracks in {fs_library.total_directories()} directories")
+
+    db_file = Path(serato_path) / "database V2"
+    database: Optional[SeratoDatabase] = None
+    if db_file.exists():
+        try:
+            database = SeratoDatabase.read_from(db_file)
+        except Exception as exc:
+            _log(f"Step 4: Could not parse database V2: {exc}")
+
+    if config.dry_run:
+        _dry_run_step4(serato_path, fs_library, config.parent_crate_path, _log)
+    else:
+        _log("Step 4: Creating new crates for new library paths...")
+        create_new_crates(serato_path, fs_library, config.parent_crate_path, database, _log)
+
+
+# ---------------------------------------------------------------------------
 # Step 1 helper — update_database_paths
 # ---------------------------------------------------------------------------
 
@@ -220,6 +357,7 @@ def update_database_paths(
     serato_path: str,
     library: MediaLibrary,
     _log: Optional[Callable[[str], None]] = None,
+    cancel_event: Optional[threading.Event] = None,
 ) -> None:
     """Fix broken pfil paths in database V2 by filename lookup against the library."""
     def __log(msg):
@@ -245,8 +383,17 @@ def update_database_paths(
         __log("Step 1: Media library is empty — skipping.")
         return
 
+    if cancel_event and cancel_event.is_set():
+        __log("[CANCELLED] Step 1: aborted before path scan.")
+        return
+
     path_fixes: Dict[str, str] = {}
-    for db_track_path in database.get_all_track_paths():
+    all_paths = list(database.get_all_track_paths())
+    __log(f"Step 1: Scanning {len(all_paths)} tracks in database V2...")
+    for i, db_track_path in enumerate(all_paths):
+        if cancel_event and cancel_event.is_set():
+            __log(f"[CANCELLED] Step 1: path scan stopped at {i}/{len(all_paths)}.")
+            return
         if volume_root:
             abs_path = os.path.join(volume_root, db_track_path)
             if os.path.exists(abs_path):
@@ -268,8 +415,17 @@ def update_database_paths(
         __log("Step 1: No broken paths found in database V2.")
         return
 
+    if cancel_event and cancel_event.is_set():
+        __log("[CANCELLED] Step 1: aborted before writing fixes.")
+        return
+
     __log(f"Step 1: Fixing {len(path_fixes)} broken paths in database V2...")
-    updated = update_paths(str(db_file), path_fixes)
+    updated = update_paths(
+        str(db_file),
+        path_fixes,
+        cancel_event=cancel_event,
+        log_callback=_log,
+    )
     __log(f"Step 1 complete: updated {updated} paths in database V2.")
 
 
@@ -302,21 +458,26 @@ def fix_existing_crates(
         __log("Step 2: No crate files found in Crates/ or Subcrates/.")
         return
 
-    __log(f"Step 2: Inspecting {len(crate_files)} crate files...")
+    total_crates = len(crate_files)
+    __log(f"Step 2: Inspecting {total_crates} crate files for broken paths...")
 
     fixed_crates = 0
     fixed_paths = 0
+    read_errors = 0
+    write_errors = 0
 
-    for crate_file in crate_files:
+    for idx, crate_file in enumerate(crate_files, start=1):
         try:
             crate = read_crate(crate_file)
         except Exception as exc:
             logger.error("Failed to read crate: %s — %s", crate_file.name, exc)
+            read_errors += 1
             continue
 
         original = list(crate.tracks)
         updated: List[str] = []
         changed = False
+        crate_fixes = 0
 
         for track_path in original:
             filename = os.path.basename(track_path).lower()
@@ -325,9 +486,12 @@ def fix_existing_crates(
                 resolved = resolve_serato_path(candidates[0], database)
                 new_rel = normalize_path_for_database(resolved)
                 if new_rel != track_path:
+                    logger.debug("Step 2 [%s]: fixing path %s → %s",
+                                 crate_file.stem, track_path, new_rel)
                     updated.append(new_rel)
                     changed = True
                     fixed_paths += 1
+                    crate_fixes += 1
                 else:
                     updated.append(track_path)
             else:
@@ -338,10 +502,21 @@ def fix_existing_crates(
             try:
                 write_crate(crate, crate_file)
                 fixed_crates += 1
+                __log(f"Step 2 [{idx}/{total_crates}]: {crate_file.stem} — {crate_fixes} path(s) fixed")
             except Exception as exc:
                 logger.error("Failed to write crate: %s — %s", crate_file.name, exc)
+                write_errors += 1
+        else:
+            logger.debug("Step 2 [%d/%d]: %s — no changes", idx, total_crates, crate_file.stem)
 
-    __log(f"Step 2 complete: {fixed_paths} paths fixed across {fixed_crates} crates.")
+    summary_parts = [f"{fixed_paths} path(s) fixed", f"across {fixed_crates} crate(s)"]
+    if read_errors:
+        summary_parts.append(f"{read_errors} read error(s)")
+    if write_errors:
+        summary_parts.append(f"{write_errors} write error(s)")
+    clean = total_crates - fixed_crates - read_errors
+    summary_parts.append(f"{clean} already clean")
+    __log(f"Step 2 complete: {', '.join(summary_parts)}.")
 
 
 # ---------------------------------------------------------------------------
@@ -367,12 +542,18 @@ def append_new_tracks(
         return
 
     crate_map = build_crate_file_map(library, parent_crate_path)
+    total = len(crate_map)
+    __log(f"Step 3: Checking {total} library folder(s) against existing crates...")
+
     appended = 0
+    new_tracks_total = 0
     skipped = 0
+    missing = 0
 
     for crate_filename, new_tracks in crate_map.items():
         crate_file = subcrates_dir / crate_filename
         if not crate_file.exists():
+            missing += 1
             continue  # Step 4 will create it
 
         try:
@@ -387,20 +568,24 @@ def append_new_tracks(
         for track in new_tracks:
             crate.add_track(track)
         after = len(crate.tracks)
+        added = after - before
 
-        if after > before:
+        if added > 0:
             try:
                 write_crate(crate, crate_file)
                 appended += 1
+                new_tracks_total += added
+                __log(f"Step 3: {crate_filename.removesuffix('.crate')} — +{added} track(s) appended ({after} total)")
             except Exception as exc:
                 logger.error("Failed to write appended crate: %s — %s", crate_filename, exc)
         else:
             skipped += 1
+            logger.debug("Step 3: %s — no new tracks", crate_filename)
 
-    if appended > 0:
-        __log(f"Step 3 complete: {appended} crates updated with new tracks ({skipped} unchanged).")
-    else:
-        __log(f"Step 3 complete: no new tracks to append ({skipped} crates unchanged).")
+    __log(
+        f"Step 3 complete: {new_tracks_total} track(s) appended across {appended} crate(s) — "
+        f"{skipped} unchanged, {missing} not yet created (Step 4 will handle)."
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -422,13 +607,18 @@ def create_new_crates(
 
     subcrates_dir = Path(serato_path) / "Subcrates"
     crate_map = build_crate_file_map(library, parent_crate_path)
+    total = len(crate_map)
+    __log(f"Step 4: {total} library folder(s) mapped — checking for missing crates...")
+
     created = 0
     skipped = 0
+    errors = 0
 
     for crate_filename, tracks in crate_map.items():
         crate_file = subcrates_dir / crate_filename
         if crate_file.exists():
             skipped += 1
+            logger.debug("Step 4: %s already exists — skipping", crate_filename)
             continue
 
         crate = Crate()
@@ -440,13 +630,15 @@ def create_new_crates(
             crate_file.parent.mkdir(parents=True, exist_ok=True)
             write_crate(crate, crate_file)
             created += 1
+            __log(f"Step 4: Created {crate_filename.removesuffix('.crate')} — {len(tracks)} track(s)")
         except Exception as exc:
             logger.error("Failed to write new crate: %s — %s", crate_filename, exc)
+            errors += 1
 
-    if created > 0:
-        __log(f"Step 4 complete: {created} new crates created ({skipped} existing skipped).")
-    else:
-        __log(f"Step 4 complete: no new crates needed ({skipped} existing skipped).")
+    summary_parts = [f"{created} crate(s) created", f"{skipped} already existed"]
+    if errors:
+        summary_parts.append(f"{errors} error(s)")
+    __log(f"Step 4 complete: {', '.join(summary_parts)}.")
 
 
 

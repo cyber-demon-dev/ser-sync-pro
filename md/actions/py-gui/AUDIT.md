@@ -6,6 +6,6 @@
 | 2 | `python/gui.py` | Config panel (paths, steps, dupe controls) | ✅ DONE |
 | 3 | `python/gui.py` | Log panel + Start/Cancel sync wiring | ✅ DONE |
 | 4 | `python/main.py`, `python/requirements.txt` | GUI/CLI split + polish pass | ✅ DONE |
-| 5 | all | Commit + push | ⏳ IN FLIGHT |
+| 5 | all | Commit + push | ✅ DONE |
 
 Status: 🔲 PENDING → ⏳ IN FLIGHT → ✅ DONE / ⚠️ DEVIATION

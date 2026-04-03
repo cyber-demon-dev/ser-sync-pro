@@ -1,44 +1,76 @@
 """
 DatabaseFixer — patches broken file paths in Serato's binary 'database V2' file.
 
-Single-pass TLV walk. For each otrk block, finds pfil tags whose UTF-16BE decoded
-path matches a key in path_fixes, then replaces the value, updating both the pfil
-and otrk length fields in-place.
+Algorithm (O(DbSize + N)):
+  1. Pre-encode all (old_path → new_path) into a bytes → bytes lookup dict.  O(N)
+  2. Structural TLV walk — one pass over the file, zero unnecessary copies:
+       • Jump past top-level non-otrk tags in one stride.
+       • Inside each otrk block, jump past non-pfil inner tags in one stride.
+       • For each pfil: dict-lookup the payload (O(1)) to check for a match.
+       • Record hits; no modifications during the scan.
+  3. Sort hits by payload_start descending. Apply in reverse: each bytearray
+     splice only shifts data above the current cursor, so all earlier offsets
+     remain valid. Update pfil + parent otrk length fields in-place.
+  4. Write the modified database once.
 
-Mirrors Java's cdd_sync_database_fixer.updatePaths().
+Key implementation decisions vs. the previous version:
+  • struct.unpack_from works directly on bytearray — no bytes() copy per tag.
+  • bytearray[a:b] == b"tag" works natively — no bytes() copy per comparison.
+  • path.write_bytes(bytearray) works natively — no bytes() copy on write.
+  • All three previously copied the ENTIRE file on every tag iteration.
 """
 
 from __future__ import annotations
 
 import logging
+import os
 import struct
+import threading
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
-from core.binary_utils import (
-    decode_utf16be,
-    encode_utf16be,
-    read_big_endian_int,
-    read_file,
-    write_file,
-)
+from core.binary_utils import encode_utf16be, read_file
 
 logger = logging.getLogger("cdd_sync")
 
 _OTRK = b"otrk"
 _PFIL = b"pfil"
-_TAG_HEADER = 8  # 4-byte tag + 4-byte big-endian length
+_HDR = 8  # 4-byte tag + 4-byte big-endian length
 
 
-def update_paths(database_path: str, path_fixes: Dict[str, str]) -> int:
+# ---------------------------------------------------------------------------
+# Inline helpers — avoid function-call + copy overhead in tight inner loop
+# ---------------------------------------------------------------------------
+
+def _u32(data: bytearray, offset: int) -> int:
+    """Read big-endian uint32 directly from bytearray. Zero allocations."""
+    return struct.unpack_from(">I", data, offset)[0]
+
+
+def _w32(data: bytearray, offset: int, value: int) -> None:
+    """Write big-endian uint32 directly into bytearray. Zero allocations."""
+    struct.pack_into(">I", data, offset, value)
+
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
+
+def update_paths(
+    database_path: str,
+    path_fixes: Dict[str, str],
+    cancel_event: Optional[threading.Event] = None,
+    log_callback: Optional[Callable[[str], None]] = None,
+    progress_interval: int = 100,
+) -> int:
     """
-    Walk *database_path* (binary 'database V2') and replace paths per *path_fixes*.
+    Patch broken pfil paths in Serato's binary 'database V2'.
 
-    Returns count of paths successfully patched. Writes back in-place on any hit.
-    Returns 0 and logs on IOError.
+    Complexity: O(DbSize + N) — one structural walk, one write.
+
+    Returns the number of paths successfully patched, or 0 on I/O error.
     """
     db_path = Path(database_path)
-
     if not db_path.exists():
         logger.error("database V2 not found: %s", database_path)
         return 0
@@ -49,109 +81,146 @@ def update_paths(database_path: str, path_fixes: Dict[str, str]) -> int:
         logger.error("Error reading database V2: %s", exc)
         return 0
 
-    # Build otrk index once
-    otrk_index = _index_otrk_blocks(data)
+    # Step A — pre-encode all fix pairs into a bytes→bytes dict. O(N)
+    fixes: Dict[bytes, bytes] = {
+        encode_utf16be(old): encode_utf16be(new)
+        for old, new in path_fixes.items()
+    }
 
-    updated = 0
+    # Step B — single structural TLV walk; collect all hits. O(DbSize)
+    hits = _scan_pfil_hits(data, fixes)
+    if not hits:
+        return 0
 
-    for old_path, new_path in path_fixes.items():
-        old_bytes = encode_utf16be(old_path)
-        new_bytes = encode_utf16be(new_path)
+    # Step C — apply hits highest-offset-first; earlier offsets stay valid.
+    hits.sort(key=lambda h: h[1], reverse=True)
 
-        result = _replace_pfil_path(data, old_bytes, new_bytes, otrk_index)
-        if result is not None:
-            data = result
-            updated += 1
-            # Rebuild index if byte length changed (otrk offsets have shifted)
-            if len(old_bytes) != len(new_bytes):
-                otrk_index = _index_otrk_blocks(data)
+    applied = 0
+    total = len(hits)
+    for pfil_len_off, payload_start, old_len, new_payload, otrk_start in hits:
+        if cancel_event and cancel_event.is_set():
+            logger.info("database_fixer: cancelled after %d/%d patches", applied, total)
+            if log_callback:
+                log_callback(f"[CANCELLED] Step 1: stopped after {applied}/{total} paths patched.")
+            break
 
-    if updated > 0:
+        new_len = len(new_payload)
+        diff = new_len - old_len
+
+        # Splice — bytearray handles the memory shift natively (C-level memmove)
+        data[payload_start: payload_start + old_len] = new_payload
+
+        # Update pfil length (before splice point — unaffected by above splice)
+        _w32(data, pfil_len_off, new_len)
+
+        # Update parent otrk length (also before splice point)
+        if otrk_start != -1 and diff != 0:
+            _w32(data, otrk_start + 4, _u32(data, otrk_start + 4) + diff)
+
+        applied += 1
+        if log_callback and progress_interval > 0 and applied % progress_interval == 0:
+            msg = f"Step 1: patching… {applied}/{total} fixed"
+            logger.info(msg)
+            log_callback(msg)
+
+    if applied > 0:
+        # Atomic write: write to a sibling .tmp then rename.
+        # os.replace() is a single syscall on POSIX — the original file is
+        # never touched until the new data is fully flushed to disk.
+        # This prevents a corrupt database V2 if the process is killed mid-write.
+        tmp_path = db_path.with_suffix(".tmp")
         try:
-            write_file(db_path, bytes(data))
+            tmp_path.write_bytes(data)
+            os.replace(tmp_path, db_path)
         except IOError as exc:
             logger.error("Error writing database V2: %s", exc)
+            try:
+                tmp_path.unlink(missing_ok=True)
+            except OSError:
+                pass
             return 0
 
-    return updated
+    return applied
 
 
 # ---------------------------------------------------------------------------
-# Internal helpers
+# Internal — structural TLV walk
+# ---------------------------------------------------------------------------
+
+def _scan_pfil_hits(
+    data: bytearray,
+    fixes: Dict[bytes, bytes],
+) -> List[Tuple[int, int, int, bytes, int]]:
+    """
+    Walk the database V2 TLV structure in one pass. Zero unnecessary copies.
+
+    Returns a list of hits:
+        (pfil_len_field_offset, payload_start, old_len, new_payload, otrk_start)
+    """
+    hits: List[Tuple[int, int, int, bytes, int]] = []
+    end = len(data)
+    pos = 0
+
+    while pos + _HDR <= end:
+        # Read tag + length directly — no bytes() copy
+        tag_len = _u32(data, pos + 4)
+        body_start = pos + _HDR
+        body_end = body_start + tag_len
+
+        if body_end > end:
+            break  # malformed top-level record
+
+        if data[pos: pos + 4] == _OTRK:
+            otrk_start = pos
+            inner = body_start
+
+            while inner + _HDR <= body_end:
+                inner_len = _u32(data, inner + 4)
+                inner_body_start = inner + _HDR
+                inner_body_end = inner_body_start + inner_len
+
+                if inner_body_end > body_end:
+                    break  # malformed inner record
+
+                if data[inner: inner + 4] == _PFIL:
+                    # bytes() here is unavoidable — dict keys must be hashable.
+                    # The slice is only as large as the path (~200–400 bytes),
+                    # not the whole file.
+                    payload = bytes(data[inner_body_start: inner_body_end])
+                    if payload in fixes:
+                        hits.append((
+                            inner + 4,          # pfil length field offset
+                            inner_body_start,   # payload start
+                            inner_len,          # old payload length
+                            fixes[payload],     # replacement bytes
+                            otrk_start,         # for parent otrk length patch
+                        ))
+
+                inner = inner_body_end  # stride to next inner tag
+
+            pos = body_end  # stride past entire otrk
+
+        else:
+            pos = body_end  # stride past unknown top-level tag
+
+    return hits
+
+
+# ---------------------------------------------------------------------------
+# Legacy shim — retained for any callers that imported this directly
 # ---------------------------------------------------------------------------
 
 def _index_otrk_blocks(data: bytearray) -> List[Tuple[int, int]]:
-    """Return list of (otrk_start, otrk_end) pairs."""
+    """Retained for backward compatibility. Not used internally."""
     blocks: List[Tuple[int, int]] = []
     pos = 0
     end = len(data)
-    while pos < end - _TAG_HEADER:
+    while pos + _HDR <= end:
         if data[pos: pos + 4] == _OTRK:
-            length = read_big_endian_int(bytes(data), pos + 4)
-            block_end = pos + _TAG_HEADER + length
+            length = _u32(data, pos + 4)
+            block_end = pos + _HDR + length
             blocks.append((pos, block_end))
             pos = block_end
         else:
             pos += 1
     return blocks
-
-
-def _find_parent_otrk(otrk_index: List[Tuple[int, int]], target_pos: int) -> int:
-    """Return the start offset of the otrk block containing *target_pos*, or -1."""
-    for start, end in otrk_index:
-        if start <= target_pos < end:
-            return start
-    return -1
-
-
-def _replace_pfil_path(
-    data: bytearray,
-    old_bytes: bytes,
-    new_bytes: bytes,
-    otrk_index: List[Tuple[int, int]],
-) -> bytearray | None:
-    """
-    Find the first pfil tag whose payload matches *old_bytes* and replace it with
-    *new_bytes*, adjusting pfil and parent otrk length fields. Returns the updated
-    bytearray or None if not found.
-    """
-    pos = 0
-    end = len(data)
-    old_len = len(old_bytes)
-
-    while pos + _TAG_HEADER + old_len <= end:
-        if data[pos: pos + 4] == _PFIL:
-            pfil_len = read_big_endian_int(bytes(data), pos + 4)
-            path_start = pos + _TAG_HEADER
-
-            if pfil_len == old_len and path_start + pfil_len <= end:
-                if data[path_start: path_start + old_len] == old_bytes:
-                    # Match — rebuild buffer
-                    length_diff = len(new_bytes) - old_len
-
-                    otrk_pos = _find_parent_otrk(otrk_index, pos)
-
-                    new_pfil_len = len(new_bytes)
-                    after_old = path_start + old_len
-
-                    new_data = bytearray(len(data) + length_diff)
-                    new_data[:path_start] = data[:path_start]
-
-                    # Patch pfil length
-                    struct.pack_into(">I", new_data, pos + 4, new_pfil_len)
-
-                    # Write new path payload
-                    new_data[path_start: path_start + new_pfil_len] = new_bytes
-
-                    # Copy remainder
-                    new_data[path_start + new_pfil_len:] = data[after_old:]
-
-                    # Patch parent otrk length
-                    if otrk_pos != -1:
-                        old_otrk_len = read_big_endian_int(bytes(new_data), otrk_pos + 4)
-                        struct.pack_into(">I", new_data, otrk_pos + 4, old_otrk_len + length_diff)
-
-                    return new_data
-        pos += 1
-
-    return None
