@@ -2,6 +2,18 @@
 
 <!-- Newest entries go at the top, below this comment. Do NOT delete old entries. -->
 
+## 2026-04-04 — Doc Hygiene + Plan Closure
+
+- **Task**: Run pending `/run-phase` commits (`py-bugfix` Phase 6, `session-fixer` Phase 4), archive both plans, update all md/ docs to reflect current Python app state
+- **Files Changed**:
+  - `md/CODEBASE_GUIDE.md` [MODIFIED] — Project overview updated: Python marked as primary; directory tree rewritten for `python/` layout; Major Modules table replaced with Python module table; Java section demoted to read-only reference
+  - `md/CHANGELOG.md` [MODIFIED] — `[Unreleased]` block promoted to `[2.0] — Python reimplementation (2026-04)`; clean `[Unreleased]` stub added
+  - `md/AGENT_LOG.md` [MODIFIED] — This entry
+  - `md/actions/archive/py-bugfix/` [ARCHIVED] — All 6 phases done
+  - `md/actions/archive/session-fixer/` [ARCHIVED] — All 4 phases done
+- **What Was Done**: Closed two pending PENDING commit phases via `/run-phase`. Archived both completed plans. Performed a full codebase investigation (all `python/` modules, `main.py`, `config.py`, `gui.py`, `session_fixer.py`, `pipeline.py`, `path_utils.py`, test count) and updated CODEBASE_GUIDE, CHANGELOG, and AGENT_LOG to reflect the Python v2 app as the canonical implementation. Test suite: 21 tests passing.
+- **Docs to Update**: None — done here
+
 ## 2026-04-03 — Flet Dark-Mode GUI Window (py-gui)
 
 - **Task**: Build a polished dark-mode Flet GUI equivalent to the Java `cdd_sync_pro_window.java`

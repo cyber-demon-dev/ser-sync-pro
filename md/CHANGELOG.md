@@ -6,6 +6,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+_(nothing pending)_
+
+---
+
+## [2.0] — Python reimplementation (2026-04)
+
 - **Feat: History Session Fixer ported to Python GUI**: New `sync/session_fixer.py` module ports the Java `session_fixer` tool. Scans `~/Music/_Serato_/History/Sessions/*.session` binary files for broken track paths and rewrites them using the Music Folder as the lookup source. Scan (dry-run) and Run (live) are exposed via dedicated buttons in the GUI — no checkbox required to run.
   - `python/sync/session_fixer.py`: New module. Uses `MediaLibrary.read_from()` + parallel `os.scandir` (same strategy as pipeline Step 2) to build a `lowercase_filename → [abs_path]` index upfront. Session files store absolute paths so no database normalisation is needed — `candidates[0]` is used directly. Ambiguous filename matches are skipped (consistent with Step 2). Live fix uses `ThreadPoolExecutor(max_workers=4)` for parallel session rewrites. Atomic write via `.tmp` rename.
   - `python/sync/session_fixer.py`: `scan_broken_paths()` writes a full `session_scan_report.txt` to `~/Music/_Serato_/` after every scan, categorising unfixable paths into **EXISTS BUT OUTSIDE MUSIC FOLDER** vs **NOT FOUND ANYWHERE** for easy diagnosis.
