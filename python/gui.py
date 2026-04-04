@@ -6,8 +6,10 @@ Dark mode, SF Pro Display font, 780×760 window.
 from __future__ import annotations
 
 import dataclasses
+import queue
 import sys
 import threading
+import time
 from pathlib import Path
 
 import flet as ft
@@ -201,7 +203,10 @@ async def main(page: ft.Page) -> None:
     _scan2_ref: ft.Ref[ft.FilledButton] = ft.Ref()
     _scan3_ref: ft.Ref[ft.FilledButton] = ft.Ref()
     _scan4_ref: ft.Ref[ft.FilledButton] = ft.Ref()
+    _sf_scan_ref: ft.Ref[ft.FilledButton] = ft.Ref()
+    _sf_run_ref: ft.Ref[ft.FilledButton] = ft.Ref()
     _cancel_event = threading.Event()
+    _update_lock = threading.Lock()  # serialise all page.update() calls across threads
 
     # Card row style constants
     _CARD_BG = "#1c2030"
@@ -368,6 +373,79 @@ async def main(page: ft.Page) -> None:
             padding=ft.Padding(left=8, top=4, right=8, bottom=4),
         )
 
+    def _card_session_fixer_row(
+        cb: ft.Checkbox,
+        scan_ref: ft.Ref,
+        run_ref: ft.Ref,
+    ) -> ft.Container:
+        """Session Fixer pill: [checkbox  label──────────  🔍 Scan  ▶ Run]"""
+        scan_btn = ft.FilledButton(
+            "🔍  Scan",
+            ref=scan_ref,
+            height=30,
+            style=ft.ButtonStyle(
+                bgcolor={"": "#1e4a3a", ft.ControlState.HOVERED: "#2a6b52"},
+                color={"": "#7dc9ae", ft.ControlState.HOVERED: "#a8e6cf"},
+                overlay_color={ft.ControlState.HOVERED: "#00000000"},
+                padding={"": ft.Padding(left=10, top=0, right=10, bottom=0)},
+                shape={"": ft.RoundedRectangleBorder(radius=6)},
+                text_style={"": ft.TextStyle(size=11, weight=ft.FontWeight.W_500)},
+            ),
+            on_click=lambda _e: _run_session_scan(),
+        )
+        run_btn = ft.FilledButton(
+            "▶  Run",
+            ref=run_ref,
+            height=30,
+            style=ft.ButtonStyle(
+                bgcolor={"": "#2d5f96", ft.ControlState.HOVERED: "#3a78bd"},
+                color={"": "#e0eaf5", ft.ControlState.HOVERED: "#ffffff"},
+                overlay_color={ft.ControlState.HOVERED: "#00000000"},
+                padding={"": ft.Padding(left=12, top=0, right=12, bottom=0)},
+                shape={"": ft.RoundedRectangleBorder(radius=6)},
+                text_style={"": ft.TextStyle(size=11, weight=ft.FontWeight.W_500)},
+            ),
+            on_click=lambda _e: _run_session_fix(),
+        )
+        cb.label = ""
+        return ft.Container(
+            content=ft.Column(
+                [
+                    ft.Row(
+                        [
+                            cb,
+                            ft.Text(
+                                "Fix broken session paths",
+                                size=12,
+                                color=_LABEL,
+                                expand=True,
+                            ),
+                            scan_btn,
+                            run_btn,
+                        ],
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                        spacing=6,
+                    ),
+                    ft.Text(
+                        "Scans ~/Music/_Serato_/History/Sessions/*.session — fixes broken paths using your Music Folder",
+                        size=11,
+                        color=_TEXT,
+                        italic=True,
+                    ),
+                ],
+                spacing=4,
+            ),
+            bgcolor=_CARD_BG,
+            border=ft.Border(
+                left=ft.BorderSide(1, _CARD_BORDER),
+                top=ft.BorderSide(1, _CARD_BORDER),
+                right=ft.BorderSide(1, _CARD_BORDER),
+                bottom=ft.BorderSide(1, _CARD_BORDER),
+            ),
+            border_radius=8,
+            padding=ft.Padding(left=8, top=4, right=8, bottom=4),
+        )
+
     pipeline_grid = ft.Column(
         [
             _card_backup_row(cb_backup, _run_backup_ref),
@@ -384,6 +462,7 @@ async def main(page: ft.Page) -> None:
     cb_dupe_scan = _checkbox("Scan for duplicates", value=False)
     dd_detection = _dropdown(["name-and-size", "name-only", "off"], "name-and-size")
     dd_move = _dropdown(["keep-oldest", "keep-newest", "false"], "false")
+    cb_session_fix = _checkbox("Fix broken session paths", value=False)
 
     dupe_content = ft.Column(
         [
@@ -501,29 +580,14 @@ async def main(page: ft.Page) -> None:
                     border_radius=8,
                     padding=ft.Padding(left=12, top=10, right=12, bottom=10),
                 ),
-                # ── Dry Run pill ───────────────────────────────────────────
-                ft.Container(
-                    content=ft.Row(
-                        [
-                            ft.Text("⚠️", size=14),
-                            cb_dry_run,
-                            ft.Text(
-                                "— no files will be written",
-                                size=11,
-                                color=_ACCENT_AMBER,
-                                italic=True,
-                            ),
-                        ],
-                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                        spacing=4,
-                    ),
-                    bgcolor="#1a1400",
-                    border=ft.Border.all(1, "#4a3800"),
-                    border_radius=8,
-                    padding=ft.Padding(left=12, top=6, right=12, bottom=6),
-                ),
                 # ── Duplicate Management ─────────────────────────────────
                 _section("Duplicate Management", dupe_content, accent_color=_ACCENT_AMBER),
+                # ── History Session Fixer ────────────────────────────────
+                _section(
+                    "History Session Fixer",
+                    _card_session_fixer_row(cb_session_fix, _sf_scan_ref, _sf_run_ref),
+                    accent_color=_ACCENT_AMBER,
+                ),
                 # ── Log Output ──────────────────────────────────────────────
                 ft.Container(
                     content=ft.Column(
@@ -567,6 +631,27 @@ async def main(page: ft.Page) -> None:
                     ),
                     border_radius=8,
                     padding=ft.Padding(left=12, top=10, right=12, bottom=10),
+                ),
+                # ── Dry Run pill ───────────────────────────────────────────
+                ft.Container(
+                    content=ft.Row(
+                        [
+                            ft.Text("⚠️", size=14),
+                            cb_dry_run,
+                            ft.Text(
+                                "— no files will be written",
+                                size=11,
+                                color=_ACCENT_AMBER,
+                                italic=True,
+                            ),
+                        ],
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                        spacing=4,
+                    ),
+                    bgcolor="#1a1400",
+                    border=ft.Border.all(1, "#4a3800"),
+                    border_radius=8,
+                    padding=ft.Padding(left=12, top=6, right=12, bottom=6),
                 ),
                 # ── Progress bar ───────────────────────────────────────────
                 ft.ProgressBar(
@@ -634,10 +719,15 @@ async def main(page: ft.Page) -> None:
         )
     )
 
-    # ── Handlers ─────────────────────────────────────────────────────────────
+    # ── Log queue + flusher ───────────────────────────────────────────────────
+    # Worker threads enqueue (msg, color) tuples; a single daemon drains them
+    # every 100 ms in one page.update() — prevents Flet's diff from crashing
+    # when dozens of callbacks mutate the ListView simultaneously.
+
+    _log_queue: queue.Queue[tuple[str, str]] = queue.Queue()
 
     def _append_log(msg: str) -> None:
-        """Marshal a colorized log message onto the UI thread."""
+        """Thread-safe: enqueue a log message. Never calls page.update() directly."""
         if msg.startswith(("✅", "[OK]")):
             color = "#3fb950"
         elif msg.startswith(("❌", "[ERROR]")):
@@ -648,19 +738,40 @@ async def main(page: ft.Page) -> None:
             color = "#58a6ff"
         else:
             color = _TEXT
+        _log_queue.put((msg, color))
 
-        def _do():
-            _log_ref.current.controls.append(
-                ft.Text(
-                    msg,
-                    size=12,
-                    color=color,
-                    font_family="Courier New",
-                    selectable=True,
-                )
-            )
-            page.update()
-        page.run_thread(_do)
+    def _start_log_flusher() -> None:
+        """Drain _log_queue every 100 ms in a single page.update() batch."""
+        def _flush_loop():
+            while True:
+                time.sleep(0.1)
+                pending: list[tuple[str, str]] = []
+                try:
+                    while True:
+                        pending.append(_log_queue.get_nowait())
+                except queue.Empty:
+                    pass
+                if not pending:
+                    continue
+                def _do(items: list[tuple[str, str]] = pending) -> None:
+                    for _msg, _color in items:
+                        _log_ref.current.controls.append(
+                            ft.Text(
+                                _msg,
+                                size=12,
+                                color=_color,
+                                font_family="Courier New",
+                                selectable=True,
+                            )
+                        )
+                    with _update_lock:
+                        page.update()
+                page.run_thread(_do)
+        threading.Thread(target=_flush_loop, daemon=True).start()
+
+    _start_log_flusher()
+
+    # ── Handlers ─────────────────────────────────────────────────────────────
 
     def _set_controls_enabled(enabled: bool) -> None:
         """Enable/disable all config controls atomically."""
@@ -680,19 +791,17 @@ async def main(page: ft.Page) -> None:
             _run_backup_ref, _run_sort_ref,
             _run1_ref, _run2_ref, _run3_ref, _run4_ref,
             _scan1_ref, _scan2_ref, _scan3_ref, _scan4_ref,
+            _sf_scan_ref, _sf_run_ref,
         ):
             if run_ref.current:
                 run_ref.current.disabled = not enabled
-        page.update()
+        with _update_lock:
+            page.update()
 
     def _run_backup_alone() -> None:
         """Run backup in isolation on a daemon thread."""
         if not serato_field.value or not serato_field.value.strip():
-            page.open(ft.SnackBar(
-                content=ft.Text("Serato Path is required."),
-                bgcolor=_ACCENT_AMBER,
-                open=True,
-            ))
+            _append_log(f"⚠️ Serato Path is required.")
             return
         serato_path = serato_field.value.strip()
         _log_ref.current.controls.clear()
@@ -712,8 +821,8 @@ async def main(page: ft.Page) -> None:
                     _set_controls_enabled(True)
                 page.run_thread(_done)
             except Exception as exc:
-                def _err():
-                    _append_log(f"❌ Backup error: {exc}")
+                def _err(_exc=exc):
+                    _append_log(f"❌ Backup error: {_exc}")
                     _status_ref.current.value = "Error"
                     _set_controls_enabled(True)
                 page.run_thread(_err)
@@ -723,11 +832,7 @@ async def main(page: ft.Page) -> None:
     def _run_sort_alone() -> None:
         """Run sort_crates (Reset A→Z) in isolation on a daemon thread."""
         if not serato_field.value or not serato_field.value.strip():
-            page.open(ft.SnackBar(
-                content=ft.Text("Serato Path is required."),
-                bgcolor=_ACCENT_AMBER,
-                open=True,
-            ))
+            _append_log(f"⚠️ Serato Path is required.")
             return
         serato_path = serato_field.value.strip()
         _log_ref.current.controls.clear()
@@ -744,8 +849,8 @@ async def main(page: ft.Page) -> None:
                     _set_controls_enabled(True)
                 page.run_thread(_done)
             except Exception as exc:
-                def _err():
-                    _append_log(f"❌ Sort failed: {exc}")
+                def _err(_exc=exc):
+                    _append_log(f"❌ Sort failed: {_exc}")
                     _status_ref.current.value = "Error"
                     _set_controls_enabled(True)
                 page.run_thread(_err)
@@ -755,18 +860,10 @@ async def main(page: ft.Page) -> None:
     def _run_step_alone(step_n: int) -> None:
         """Run a single pipeline step in isolation on a daemon thread."""
         if not music_field.value or not music_field.value.strip():
-            page.open(ft.SnackBar(
-                content=ft.Text("Music Folder is required."),
-                bgcolor=_ACCENT_AMBER,
-                open=True,
-            ))
+            _append_log(f"⚠️ Music Folder is required.")
             return
         if not serato_field.value or not serato_field.value.strip():
-            page.open(ft.SnackBar(
-                content=ft.Text("Serato Path is required."),
-                bgcolor=_ACCENT_AMBER,
-                open=True,
-            ))
+            _append_log(f"⚠️ Serato Path is required.")
             return
         try:
             cfg = _build_config(
@@ -776,11 +873,7 @@ async def main(page: ft.Page) -> None:
                 cb_dupe_scan, dd_detection, dd_move, cb_dry_run,
             )
         except Exception as exc:
-            page.open(ft.SnackBar(
-                content=ft.Text(f"Config error: {exc}"),
-                bgcolor=_ACCENT_RED,
-                open=True,
-            ))
+            _append_log(f"⚠️ Config error: {exc}")
             return
 
         _log_ref.current.controls.clear()
@@ -805,8 +898,8 @@ async def main(page: ft.Page) -> None:
                     _set_controls_enabled(True)
                 page.run_thread(_done)
             except Exception as exc:
-                def _err():
-                    _append_log(f"❌ Step {step_n} failed: {exc}")
+                def _err(_exc=exc):
+                    _append_log(f"❌ Step {step_n} failed: {_exc}")
                     _status_ref.current.value = "Error"
                     _set_controls_enabled(True)
                 page.run_thread(_err)
@@ -816,18 +909,10 @@ async def main(page: ft.Page) -> None:
     def _run_scan_alone(step_n: int) -> None:
         """Scan a single pipeline step (forced dry-run) on a daemon thread."""
         if not music_field.value or not music_field.value.strip():
-            page.open(ft.SnackBar(
-                content=ft.Text("Music Folder is required."),
-                bgcolor=_ACCENT_AMBER,
-                open=True,
-            ))
+            _append_log(f"⚠️ Music Folder is required.")
             return
         if not serato_field.value or not serato_field.value.strip():
-            page.open(ft.SnackBar(
-                content=ft.Text("Serato Path is required."),
-                bgcolor=_ACCENT_AMBER,
-                open=True,
-            ))
+            _append_log(f"⚠️ Serato Path is required.")
             return
         try:
             cfg = _build_config(
@@ -837,11 +922,7 @@ async def main(page: ft.Page) -> None:
                 cb_dupe_scan, dd_detection, dd_move, cb_dry_run,
             )
         except Exception as exc:
-            page.open(ft.SnackBar(
-                content=ft.Text(f"Config error: {exc}"),
-                bgcolor=_ACCENT_RED,
-                open=True,
-            ))
+            _append_log(f"⚠️ Config error: {exc}")
             return
 
         # Force dry_run regardless of the checkbox state
@@ -868,8 +949,83 @@ async def main(page: ft.Page) -> None:
                     _set_controls_enabled(True)
                 page.run_thread(_done)
             except Exception as exc:
-                def _err():
-                    _append_log(f"❌ Scan step {step_n} failed: {exc}")
+                def _err(_exc=exc):
+                    _append_log(f"❌ Scan step {step_n} failed: {_exc}")
+                    _status_ref.current.value = "Error"
+                    _set_controls_enabled(True)
+                page.run_thread(_err)
+
+        threading.Thread(target=_worker, daemon=True).start()
+
+    def _run_session_scan() -> None:
+        """Scan for broken session paths (dry_run=True) on a daemon thread.
+
+        Session files always live in ~/Music/_Serato_/History/Sessions/ —
+        independent of the external drive Serato path configured above.
+        """
+        if not music_field.value or not music_field.value.strip():
+            _append_log(f"⚠️ Music Folder is required.")
+            return
+        local_serato_path = str(Path.home() / "Music" / "_Serato_")
+        music_path = music_field.value.strip()
+        _log_ref.current.controls.clear()
+        _append_log(f"🔍 Session path: {local_serato_path}")
+        _status_ref.current.value = "Scanning session paths…"
+        _set_controls_enabled(False)
+
+        def _worker():
+            try:
+                from sync.session_fixer import scan_broken_paths
+                result = scan_broken_paths(
+                    local_serato_path, [music_path], dry_run=True, log_callback=_append_log
+                )
+                fixable = len(result["fixable"])
+                unfixable = len(result["unfixable"])
+                def _done():
+                    _append_log(f"🔍 Scan complete — {fixable} fixable, {unfixable} unfixable")
+                    _status_ref.current.value = "Scan complete"
+                    _set_controls_enabled(True)
+                page.run_thread(_done)
+            except Exception as exc:
+                def _err(_exc=exc):
+                    _append_log(f"❌ Session scan failed: {_exc}")
+                    _status_ref.current.value = "Error"
+                    _set_controls_enabled(True)
+                page.run_thread(_err)
+
+        threading.Thread(target=_worker, daemon=True).start()
+
+    def _run_session_fix() -> None:
+        """Fix broken session paths on a daemon thread.
+
+        Session files always live in ~/Music/_Serato_/History/Sessions/ —
+        independent of the external drive Serato path configured above.
+        """
+        if not music_field.value or not music_field.value.strip():
+            _append_log(f"⚠️ Music Folder is required.")
+            return
+
+        local_serato_path = str(Path.home() / "Music" / "_Serato_")
+        music_path = music_field.value.strip()
+        _log_ref.current.controls.clear()
+        _append_log(f"🔍 Session path: {local_serato_path}")
+        _status_ref.current.value = "Fixing session paths…"
+        _set_controls_enabled(False)
+
+        def _worker():
+            try:
+                from sync.session_fixer import fix_broken_paths
+                sessions_fixed, entries_fixed = fix_broken_paths(
+                    local_serato_path, [music_path], dry_run=False, log_callback=_append_log
+                )
+                def _done():
+                    _append_log(f"✅ Session fix complete — {entries_fixed} entries across {sessions_fixed} file(s)")
+                    _status_ref.current.value = "Done"
+                    _set_controls_enabled(True)
+                page.run_thread(_done)
+            except Exception as exc:
+                def _err(_exc=exc):
+                    _append_log(f"❌ Session fix failed: {_exc}")
                     _status_ref.current.value = "Error"
                     _set_controls_enabled(True)
                 page.run_thread(_err)
@@ -879,18 +1035,10 @@ async def main(page: ft.Page) -> None:
     def _on_start(_e) -> None:
         # Validate required fields
         if not music_field.value or not music_field.value.strip():
-            page.open(ft.SnackBar(
-                content=ft.Text("Music Folder is required."),
-                bgcolor=_ACCENT_AMBER,
-                open=True,
-            ))
+            _append_log(f"⚠️ Music Folder is required.")
             return
         if not serato_field.value or not serato_field.value.strip():
-            page.open(ft.SnackBar(
-                content=ft.Text("Serato Path is required."),
-                bgcolor=_ACCENT_AMBER,
-                open=True,
-            ))
+            _append_log(f"⚠️ Serato Path is required.")
             return
 
         # Build config (no save — use 💾 Save for that)
@@ -902,11 +1050,7 @@ async def main(page: ft.Page) -> None:
                 cb_dupe_scan, dd_detection, dd_move, cb_dry_run,
             )
         except Exception as exc:
-            page.open(ft.SnackBar(
-                content=ft.Text(f"Config error: {exc}"),
-                bgcolor=_ACCENT_RED,
-                open=True,
-            ))
+            _append_log(f"⚠️ Config error: {exc}")
             return
 
         # Clear log + set UI state
@@ -926,8 +1070,8 @@ async def main(page: ft.Page) -> None:
                     _set_controls_enabled(True)
                 page.run_thread(_done)
             except Exception as exc:
-                def _err():
-                    _append_log(f"❌ Sync failed: {exc}")
+                def _err(_exc=exc):
+                    _append_log(f"❌ Sync failed: {_exc}")
                     _status_ref.current.value = "Error"
                     _set_controls_enabled(True)
                 page.run_thread(_err)
@@ -945,22 +1089,23 @@ async def main(page: ft.Page) -> None:
             _status_ref.current.value = "Settings saved."
             page.update()
         except Exception as exc:
-            page.open(ft.SnackBar(
-                content=ft.Text(f"Save failed: {exc}"),
-                bgcolor=_ACCENT_RED,
-                open=True,
-            ))
-
+            _append_log(f"⚠️ Save failed: {exc}")
     def _on_cancel(_e) -> None:
         _cancel_event.set()
-        _append_log("[CANCELLED] Stop requested — sync will finish current step.")
         _cancel_ref.current.disabled = True
-        page.update()
+        _append_log("[CANCELLED] Stop requested — sync will finish current step.")
 
     def _clear_log() -> None:
-        """Clear all log entries."""
+        """Clear all log entries and drain any pending queue."""
+        # Drain queue first so stale messages don't appear after the clear
+        try:
+            while True:
+                _log_queue.get_nowait()
+        except queue.Empty:
+            pass
         _log_ref.current.controls.clear()
-        page.update()
+        with _update_lock:
+            page.update()
 
 
 def _build_config(

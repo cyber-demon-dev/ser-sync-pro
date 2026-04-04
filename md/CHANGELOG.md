@@ -6,6 +6,20 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+- **Feat: History Session Fixer ported to Python GUI**: New `sync/session_fixer.py` module ports the Java `session_fixer` tool. Scans `~/Music/_Serato_/History/Sessions/*.session` binary files for broken track paths and rewrites them using the Music Folder as the lookup source. Scan (dry-run) and Run (live) are exposed via dedicated buttons in the GUI — no checkbox required to run.
+  - `python/sync/session_fixer.py`: New module. Uses `MediaLibrary.read_from()` + parallel `os.scandir` (same strategy as pipeline Step 2) to build a `lowercase_filename → [abs_path]` index upfront. Session files store absolute paths so no database normalisation is needed — `candidates[0]` is used directly. Ambiguous filename matches are skipped (consistent with Step 2). Live fix uses `ThreadPoolExecutor(max_workers=4)` for parallel session rewrites. Atomic write via `.tmp` rename.
+  - `python/sync/session_fixer.py`: `scan_broken_paths()` writes a full `session_scan_report.txt` to `~/Music/_Serato_/` after every scan, categorising unfixable paths into **EXISTS BUT OUTSIDE MUSIC FOLDER** vs **NOT FOUND ANYWHERE** for easy diagnosis.
+  - `python/gui.py`: Session Fixer section wired up with `_run_session_scan()` and `_run_session_fix()` handlers on daemon threads.
+
+- **Fix: GUI log panel thread-safety (Flet IndexError crash)**: Concurrent `page.run_thread()` calls from rapid log output were causing Flet's `_compare_lists` diff to hit `IndexError: list index out of range`. Fixed by replacing per-message `page.run_thread(_do)` with a queue-based flusher: `_append_log()` enqueues `(msg, color)` tuples into a `queue.Queue`; a single 100ms daemon loop drains the entire queue and calls `page.update()` once per batch.
+  - `python/gui.py`: `_log_queue`, `_append_log()`, `_start_log_flusher()`, `_clear_log()` updated.
+
+- **Fix: Flet API compatibility (`page.open` / `page.snack_bar` / `_err` closures)**: Three API issues fixed across the GUI for Flet v0.84.0.
+  - `page.open(ft.SnackBar(...))` — removed in this Flet version. All 15 instances replaced with `_append_log(f"⚠️ ...")` — no external API needed.
+  - `page.snack_bar` — also absent. Removed along with the above.
+  - `NameError: cannot access free variable 'exc'` — Python 3 deletes the `exc` binding after an `except` block exits. All 7 `_err` closures now use `def _err(_exc=exc)` to capture the value at definition time.
+  - `python/gui.py`: All instances patched.
+
 - **Fix: Step 4 "Create New Crates" now logs each crate being created**: Dry-run output now lists every crate that would be created (with track count) instead of only a total count. Live run emits a `Creating '...' (N track(s))...` line before writing and a `✓ Created` / `✗ Failed` result line after — failures now also appear in the log panel (previously silent).
   - `python/sync/pipeline.py`: `create_new_crates()` and `_dry_run_step4()` updated.
 

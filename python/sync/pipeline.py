@@ -163,6 +163,14 @@ def run_sync(
         else:
             _log("Step 1: Updating broken paths in database V2...")
             update_database_paths(serato_path, fs_library, _log, cancel_event=cancel_event)
+            # Reload database — Step 1 patched paths on disk; the in-memory object
+            # is now stale. Steps 2–4 rely on it for resolve_serato_path() lookups,
+            # so they must see the post-patch state or they'll write old broken paths.
+            if db_file.exists():
+                try:
+                    database = SeratoDatabase.read_from(db_file)
+                except Exception as exc:
+                    _log(f"Warning: could not reload database after Step 1: {exc}")
     elif not config.step1_enabled:
         _log("Step 1 skipped: step1 toggle is off.")
     else:
